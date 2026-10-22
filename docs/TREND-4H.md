@@ -48,6 +48,29 @@ drawdowns are deeper):
 Plan on live results well below these (slippage at 4h closes, missed alerts, skipped trades, regime change). Half the
 months are losing months; 2025 was flat for the whole year.
 
+## Reach rates and scale-out (run 39818552055)
+
+How often a trade's best price before any stop bar reached a level (what a take profit there would have filled),
+2023-01..2026-09, 1,999 trades: **+1R 41.4% · +2R 21.7% · +3R 12.9% · +5R 5.9%**; stopped before +1R 16.3%; the
+other 42.3% left by the channel before +1R. Per coin in `reachRows`.
+
+Six scale-out plans, listed before the run, each keeping a runner (so entries and final exits are the rule's). Chosen
+by average R on 2020-2022 only, then reported on 2023-2026:
+
+| Plan | 2020-22 avg R | 2023-26 win | 2023-26 avg R | PF |
+|---|---|---|---|---|
+| no take profit (the rule) | +0.265 | 33.9% | **+0.131** | 1.31 |
+| **50% at +3R (chosen)** | +0.212 | 34.1% | **+0.105** | 1.25 |
+| 1/3 at +2R · 1/3 at +4R | +0.181 | 34.5% | +0.093 | 1.22 |
+| 50% at +2R | +0.200 | 34.7% | +0.091 | 1.22 |
+| 1/3 at +1R · 1/3 at +3R | +0.168 | 40.2% | +0.074 | 1.19 |
+| 25% at +1R · +2R · +3R | +0.160 | 39.1% | +0.068 | 1.17 |
+| 1/3 at +1R · 1/3 at +2R | +0.161 | 40.4% | +0.064 | 1.16 |
+
+Every scale-out plan earned less than holding the whole position; earlier take profits raise the win rate but cut
+the average. The chosen plan at 0.5% risk: CAGR 30.5% (vs 38.9%), max drawdown 31.5% (vs 30.4%), positive months 58%
+(vs 49%). The app offers both (Settings → Take Profit); scale-out is the default because the user asked for it.
+
 ## In the app
 
 - Default timeframe is H4 Trend (every install moved once; M5/M15/H1 stay selectable and are labelled as losing in
@@ -57,6 +80,9 @@ months are losing months; 2025 was flat for the whole year.
 - Main screen: exits first, then positions the rule holds (stop and exit level), then the evidence for the selected
   coins and the coaching steps (TP left empty).
 - Paper: the rule on the selected coins since the start date (1,500 bars of warm-up so its state matches the alerts).
+- Every valid signal gets its own sheet (sorted by the coin's record): signal, prices, TP plan with the coins to sell,
+  size in coins / USDT / baht, outcomes if right or wrong at that size, and the coin's test record (win rate with its
+  95% range, reach rates, average R) labelled as history, not a promise.
 
 ## Tests
 

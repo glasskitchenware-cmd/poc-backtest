@@ -158,7 +158,11 @@ final class SignalAlerts {
         if (expires > candle) b.append(" · ยกเลิกถ้ายังไม่เข้าภายใน ").append(bangkok(expires, "HH:mm")).append(" น.");
         b.append("\nเข้าอ้างอิง ").append(entry).append(" · SL ").append(sl);
         if (!tp5.isEmpty()) b.append("\nTP1 ").append(tp1).append(" (1R) · TP2 ").append(tp2).append(" (2R) · TP5 ").append(tp5).append(" (5R)");
-        else b.append("\n").append(cut(exitRule, 200));
+        else {
+            String plan = item.optString("tp_plan", "");
+            if (!plan.isEmpty()) b.append("\n").append(cut(plan, 200));
+            b.append("\n").append(cut(exitRule, 200));
+        }
         if (item.has("margin_usdt")) {
             b.append("\nMargin ≈ ").append(item.optString("margin_usdt")).append(" USDT (≈ ").append(item.optString("margin_thb")).append(" ฿)")
                     .append(" · ถ้าโดน SL เสีย ≈ ").append(item.optString("risk_thb")).append(" ฿");

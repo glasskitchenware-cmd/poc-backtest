@@ -154,7 +154,8 @@ def main():
     # ---- Trend 4H (main strategy since v4.4) ----
     three = ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
     h4 = {"alertCoins": json.dumps(three), "tradeTf": "4h", "trendDefault": "1"}
-    r = run(page, "h4_entry", {"storage": h4, "capital": 10_000_000, "trendForce": {"BTCUSDT": "LONG", "ETHUSDT": "SHORT"}})
+    h4n = dict(h4, tpMode="none")   # no take profit: the contract checked below; the scale-out plan has its own cases
+    r = run(page, "h4_entry", {"storage": h4n, "capital": 10_000_000, "trendForce": {"BTCUSDT": "LONG", "ETHUSDT": "SHORT"}})
     pk = r["packet"]
     check(pk and pk["error"] == "" and pk["interval_minutes"] == 240 and pk["candle"] % 14_400_000 == 0 and pk["scanned"] == 3,
           "H4: packet for the 4-hour candle that just closed, 3 coins scanned")
@@ -173,7 +174,7 @@ def main():
     check(b["evidence"].startswith("ยังไม่มีข้อมูลยืนยัน") or "walk-forward" in b["evidence"], "H4 evidence: walk-forward table or 'no confirming data'")
     (OUT / "h4_entry.json").write_text(json.dumps(pk, ensure_ascii=False), encoding="utf-8")
 
-    r = run(page, "h4_exit", {"storage": h4, "capital": 10_000_000, "trendForce": {"BTCUSDT": "EXIT_LONG", "ETHUSDT": "HOLD_SHORT"}})
+    r = run(page, "h4_exit", {"storage": h4n, "capital": 10_000_000, "trendForce": {"BTCUSDT": "EXIT_LONG", "ETHUSDT": "HOLD_SHORT"}})
     pk = r["packet"]
     check(len(pk["signals"]) == 1 and pk["signals"][0]["kind"] == "EXIT" and pk["signals"][0]["symbol"] == "BTCUSDT" and pk["signals"][0]["side"] == "LONG",
           "H4: the rule closing BTC LONG gives one EXIT; a held position gives nothing")
@@ -194,16 +195,25 @@ def main():
     r = run(page, "h4_default", {"storage": {"alertCoins": json.dumps(["BTCUSDT"]), "tradeTf": "15m"}, "capital": 1_000_000, "trendForce": {}})
     check(r["packet"]["interval_minutes"] == 240 and 240 in r["scanMinutes"], "update moves an old M15 install to Trend 4H once, alarm to 240 minutes")
 
-    r = run(page, "h4_coach", {"storage": h4, "capital": 1_000_000, "trendForce": {"BTCUSDT": "LONG", "SOLUSDT": "HOLD_LONG"}, "clickTf": "4h", "waitMs": 15000,
-                               "justClosed": 14_400_000}, bg=False)
+    r = run(page, "h4_ladder", {"storage": h4, "capital": 10_000_000, "trendForce": {"BTCUSDT": "LONG"}})
+    b = r["packet"]["signals"][0]
+    check(b["tp_plan"].startswith("TP แบ่งขาย: TP1 ") and b["tp1"] and on_grid(b["tp1"], 0.1) and b["tp5"] == "" and b["exit_rule"].startswith("ส่วนที่เหลือ"),
+          "scale-out mode: packet carries TP1 on the tick grid, the plan text and the runner's exit")
+    check(float(b["tp1"].replace(",", "")) > float(b["entry"].replace(",", "")), "LONG take profit above the entry")
+    (OUT / "h4_ladder.json").write_text(json.dumps(r["packet"], ensure_ascii=False), encoding="utf-8")
+
+    r = run(page, "h4_coach", {"storage": h4, "capital": 1_000_000, "trendForce": {"BTCUSDT": "LONG", "ETHUSDT": "SHORT", "SOLUSDT": "HOLD_LONG"}, "clickTf": "4h",
+                               "waitMs": 15000, "justClosed": 14_400_000}, bg=False)
     shown = r["smMain"] + r["coach"]
-    check("BTC LONG" in r["smMain"] and "สูตรถืออยู่ 1 ไม้" in r["smMain"] and "SOL" in r["smMain"], "main screen: Trend entry, held SOL listed")
-    for must in ["BTCUSDT Perp", "LONG (Buy)", "แท่งสัญญาณปิด", "เข้าภายใน", "ราคาเข้าอ้างอิง", "Stop Loss", "Take Profitไม่มีราคาตายตัว", "จุดออก",
-                 "Liquidation (ประมาณ)", "Isolated", "Leverage", "ขนาด (Size)", "มูลค่าสัญญา", "Margin ที่ใช้", "ถ้าโดน SL", "ค่าธรรมเนียม+slippage",
-                 "ราคาขยับ 1%", "เข้าแล้ว · บันทึกลงพอร์ต"]:
+    check("สัญญาณน่าเข้า 2 ตัว" in r["smMain"] and "BTCUSDT Perp" in r["smMain"] and "ETHUSDT Perp" in r["smMain"], "every signal worth entering is shown (BTC and ETH)")
+    check(r["charts"] >= 3, "a 4h chart per signal plus one for the held position (" + str(r["charts"]) + ")")
+    check("สูตรถืออยู่ 1 ไม้" in r["smMain"] and "SOL" in r["smMain"], "held SOL listed")
+    for must in ["LONG (Buy)", "SHORT (Sell)", "แท่งสัญญาณปิด", "เข้าภายใน", "ราคาเข้าอ้างอิง", "Stop Loss", "TP1 · ขาย", "ส่วนที่เหลือ", "Liquidation (ประมาณ)",
+                 "Isolated", "Leverage", "ขนาด (Size)", "มูลค่าสัญญา", "Margin ที่ใช้", "ค่าธรรมเนียม+slippage", "ราคาขยับ 1%", "ผิดทาง: โดน SL ทั้งไม้",
+                 "ถึง TP1 แล้วกลับมาโดน SL", "ถึงทุก TP แล้วส่วนที่เหลือวิ่งถึง +5R", "ปิดกำไร", "ราคาไปถึง +1R", "ไม่ถึง +1R เลย", "กำไรเฉลี่ยต่อไม้",
+                 "เข้าแล้ว · บันทึกลงพอร์ต"]:
         check(must in r["smMain"], "trade sheet shows: " + must)
     check("ขั้นที่" not in shown and "ภาพจำลองหน้า Binance" not in shown and "ทำตามภาพ" not in shown, "no coaching steps or Binance look-alike")
-    check(r["chart"] and "สัญญาณเข้า LONG" in r["smMain"] and "เข้า " in r["smMain"] and "SL " in r["smMain"], "4h chart drawn with entry and SL for the signal")
     check("NaN" not in shown and "undefined" not in shown, "main screen has no NaN/undefined for a signal without TP")
 
     r = run(page, "h4_small", {"storage": h4, "capital": 37, "trendForce": {"ETHUSDT": "SHORT", "SOLUSDT": "HOLD_SHORT"}, "clickTf": "4h", "waitMs": 15000,

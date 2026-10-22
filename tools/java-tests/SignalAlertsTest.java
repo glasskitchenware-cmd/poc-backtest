@@ -122,6 +122,10 @@ public class SignalAlertsTest {
         check(t4.ok && t4.notes.size() == 1 && t4.notes.get(0).title.startsWith("ทดลอง · BTCUSDT LONG · H4"), "H4 entry without TP is notified, title says H4");
         check(t4.notes.get(0).body.contains("ไม่มี TP ตายตัว") && !t4.notes.get(0).body.contains("TP5") && t4.notes.get(0).body.contains("SL 98.20"),
             "H4 entry shows SL and the exit rule instead of TP levels");
+        JSONObject laddered = new JSONObject(trend.toString()).put("tp1", "102.00").put("tp2", "104.00")
+            .put("tp_plan", "TP แบ่งขาย: TP1 102.00 (+1R ขาย 1/3) · TP2 104.00 (+2R ขาย 1/3) · ที่เหลือถือจนแอปเด้งปิดไม้");
+        String lb = SignalAlerts.plan(packet(240, c4, new JSONArray().put(laddered)), n4, key -> -1L).notes.get(0).body;
+        check(lb.contains("TP1 102.00 (+1R ขาย 1/3)") && lb.contains("ไม่มี TP ตายตัว"), "H4 entry with a scale-out plan shows the plan and the runner's exit");
         JSONObject neither = new JSONObject(trend.toString()).put("exit_rule", "");
         check(SignalAlerts.plan(packet(240, c4, new JSONArray().put(neither)), n4, key -> -1L).invalid == 1, "entry with neither TP nor exit rule is dropped");
         check(SignalAlerts.plan(packet(240, c4, new JSONArray().put(trend)), c4 + 16 * 60_000L, key -> -1L).notes.isEmpty(), "H4 alert older than 15 minutes is refused");

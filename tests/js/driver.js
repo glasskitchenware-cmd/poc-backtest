@@ -32,7 +32,7 @@
       if (f === "LONG" || f === "SHORT") res.pend = { dir: f === "LONG" ? 1 : -1 };
       else if (f) {
         var d = /LONG$/.test(f) ? 1 : -1, risk = c * 0.05;
-        res.pos = { dir: d, entry: c - d * risk, risk: risk, stop: c - 2 * d * risk, entry_time: bars[n - 21].time, entry_index: n - 21 };
+        res.pos = { dir: d, entry: c - d * risk, risk: risk, stop: c - 2 * d * risk, entry_time: bars[n - 21].time, entry_index: n - 21, best: c, left: 1, fills: [] };
         if (/^EXIT/.test(f)) res.pend = { exit: true };
       }
       return res;
@@ -48,6 +48,7 @@
     document.title = "RESULT " + JSON.stringify({ packets: __T.packets.length, posts: __T.posts.length, scanMinutes: __T.scanMinutes,
       spot: __T.requests.filter(function (r) { return r.indexOf("SPOT") === 0; }), status: (document.getElementById("scanStatus") || {}).textContent || "",
       scanCards: text("scanCards"), smMain: text("smMain"), coach: text("coach"), paper: text("ppSimple") + " | " + text("ppHero") + " | " + text("ppTrades"),
-      paperStatus: text("ppStatus"), paperTitle: text("ppTitle"), help: text("sgHelp"), chart: !!document.querySelector("#smChart canvas") });
+      paperStatus: text("ppStatus"), paperTitle: text("ppTitle"), help: text("sgHelp"), chart: !!document.querySelector("#smChart canvas"),
+      charts: Array.prototype.filter.call(document.querySelectorAll("#smMain .sm-chart"), function (el) { return !!el.querySelector("canvas"); }).length });
   }, cfg.waitMs || 12000);
 })();

@@ -227,6 +227,9 @@ a{color:var(--accent)}
     <label style="margin-top:8px">เสี่ยงต่อไม้ (ถ้าโดน SL เสียกี่ % ของทุน)
       <select id="riskSel"><option value="0.25">0.25% · ระวังสุด</option><option value="0.5">0.5% · มาตรฐานเทรดเดอร์อาชีพ</option><option value="1">1% · เสี่ยงสูง ขาดทุนลึก</option></select>
     </label>
+    <label style="margin-top:8px">Take Profit (Trend 4H)
+      <select id="tpModeSel"><option value="ladder">แบ่งขายตามแผนที่ทดสอบ</option><option value="none">ไม่ตั้ง TP · ถือตามเทรนด์จนแอปเด้งปิด</option></select>
+    </label>
     <div id="alertCoinList" class="checks" style="flex-wrap:wrap;gap:8px 12px;margin-top:10px"></div>
     <div class="btnrow"><button class="mini ghost" id="alertAllCoins" type="button">เลือกทุกเหรียญ</button><button class="mini ghost" id="alertCoreCoins" type="button">เฉพาะ BTC · ETH · SOL</button></div>
     <small>สัญญาณ 12 เหรียญจาก Binance USDⓈ-M Futures · วิเคราะห์แท่งที่ปิดแล้ว · ไม่ส่งคำสั่งซื้อขาย · Leverage ที่เลือกเป็นเพดาน แอปลดให้เองเมื่อ SL กว้าง · ผลย้อนหลังไม่ใช่สิ่งที่รับประกัน</small>

@@ -50,6 +50,7 @@
         return reply(id, true, { symbol: sym, markPrice: String(close * (cfg.markFar ? 1.02 : 1.0002)) });
       }
       if (u.pathname === "/fapi/v1/ticker/24hr") return reply(id, true, { lastPrice: "1", priceChangePercent: "0" });
+      if (u.pathname === "/fapi/v1/ticker/price") return reply(id, true, Object.keys(SPEC).map(function (s) { return { symbol: s, price: String(SPEC[s][0]) }; }));
       if (u.pathname === "/fapi/v1/depth") return reply(id, true, { asks: [], bids: [] });
       if (u.pathname.indexOf("/api/v3/") === 0) { __T.requests.push("SPOT " + u.pathname); return reply(id, false, "spot endpoint used in test"); }
       reply(id, false, "unmocked " + url);
