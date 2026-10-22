@@ -143,7 +143,7 @@ a{color:var(--accent)}
   </div>
   <label for="sgStrat">สูตรสัญญาณ Futures</label>
   <select id="sgStrat"><option value="squeeze3_ls">Squeeze v2 · Momentum2 + Squeeze 3 ชม. (งานวิจัย 10,000 แบบ)</option><option value="squeeze_ls">Squeeze v1 · ONE BEST COMBO</option></select>
-  <label class="checks" style="margin-top:10px;align-items:flex-start"><input type="checkbox" id="sgLock" checked> <span><b>ใช้สูตรที่ผมเลือก</b>: BTCUSDT · Squeeze v2 · 10x Isolated · เสี่ยง 0.25%/ไม้ · กรอง FOMC</span></label>
+  <label class="checks" style="margin-top:10px;align-items:flex-start"><input type="checkbox" id="sgLock" checked> <span><b>ใช้สูตรที่ผมเลือก</b>: ทุกเหรียญ · Squeeze v2 · 10x Isolated · เสี่ยง 0.25%/ไม้ · กรอง FOMC</span></label>
   <details style="margin-top:6px"><summary class="muted" style="font-size:13px">วันประกาศผล FOMC (แก้ได้)</summary>
     <textarea id="sgFomc" rows="4" style="width:100%;background:var(--deep);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:8px;font:12px ui-monospace,monospace"></textarea>
     <button class="mini" id="sgFomcOk" type="button">ตรวจแล้ว ✓</button>
@@ -2034,7 +2034,7 @@ a{color:var(--accent)}
 
   function futuresScan() {
     var results = [], errors = [], done = 0, fxInfo, end, lev = locked() ? LOCK.lev : Math.max(1, Math.min(125, readNumber("sgLev", 10)));
-    var coins = locked() ? [LOCK.symbol] : COINS;
+    var coins = COINS;   // every coin uses the same rules; only BTCUSDT was covered by the research
     scanStatus("กำลังดึงแท่ง 1 ชม. และอัตราแลกเปลี่ยน…");
     return Promise.all([binance("/api/v3/time"), fetchFx()]).then(function (res) {
       fxInfo = res[1];
@@ -2135,7 +2135,7 @@ a{color:var(--accent)}
   // Step-by-step for the Binance app, filled in with this signal's numbers.
   function binanceHowTo(r, g) {
     var coin = r.symbol.replace("USDT", ""), long = g.dir > 0;
-    var lowNotional = g.notional < 100;
+    var lowNotional = g.notional < ({ BTCUSDT: 100, ETHUSDT: 20 }[r.symbol] || 5);
     return '<button class="mini" data-how="' + r.symbol + '">ดูหน้าตั้งค่าใน Binance (ทำตามภาพ)</button><div class="how hidden" id="how-' + r.symbol + '">' +
       '<b>ช่วง Paper Trading ยังไม่ต้องทำ</b> แอปจดผลให้เอง ใช้หน้านี้เมื่อพร้อมใช้เงินจริง' + orderPanel(r, g) +
       '<details style="margin-top:8px"><summary class="muted" style="font-size:13px">ขั้นตอนแบบข้อความ</summary><ol>' +
@@ -2147,7 +2147,7 @@ a{color:var(--accent)}
       "<li>กด <b>" + (long ? "Buy/Long (สีเขียว)" : "Sell/Short (สีแดง)") + "</b> แล้วตรวจในแท็บ Positions ว่า TP/SL ขึ้นครบ</li>" +
       "<li>กลับมาแอปนี้ กด <b>เข้าแล้ว · บันทึกลงพอร์ต</b></li>" +
       "<li>ถ้าครบ <b>" + g.hold + " ชม.</b> แล้วยังไม่ชน TP/SL ให้ปิดเองด้วย Market (ภายใน " + thai(g.expires + (g.hold - 1) * 3600000).slice(0, 14) + " น.)</li></ol>" +
-      (lowNotional ? '<small class="down">มูลค่าไม้ต่ำกว่าประมาณ 100 USDT อาจต่ำกว่าขั้นต่ำของ Binance สำหรับ BTCUSDT ถ้าเปิดไม่ได้แปลว่าทุนยังน้อยเกินสำหรับความเสี่ยง 0.25% อย่าเพิ่มขนาดไม้เอง</small><br>' : "") +
+      (lowNotional ? '<small class="down">มูลค่าไม้ต่ำ อาจต่ำกว่าขั้นต่ำของ Binance สำหรับ ' + r.symbol + ' ถ้าเปิดไม่ได้แปลว่าทุนยังน้อยเกินสำหรับความเสี่ยง 0.25% อย่าเพิ่มขนาดไม้เอง</small><br>' : "") +
       '<small class="muted">TP1/TP2 ในการ์ดเป็นระดับอ้างอิง งานวิจัยทดสอบเฉพาะ TP 5R + ออกเมื่อครบเวลา ชื่อปุ่มใน Binance อาจต่างเล็กน้อยตามเวอร์ชันแอป</small></details></div>';
   }
 
@@ -2179,7 +2179,7 @@ a{color:var(--accent)}
       }
       var stats = h.trades ? "<br><small>สูตรนี้กับ " + name + " 100 วันล่าสุด: " + h.trades + " ไม้ · win " + fmt(h.win_rate, 0) + "% · เฉลี่ย " + fmt(h.exp_r, 2, true) + "R</small>" :
         "<br><small>100 วันล่าสุดยังไม่มีสัญญาณในเหรียญนี้</small>";
-      return '<div class="coin' + (g ? " go" : "") + '"><div class="coin-head"><span><b>' + r.symbol + '</b> <small class="tag">Perp</small></span>' + pill + "</div>" +
+      return '<div class="coin' + (g ? " go" : "") + '"><div class="coin-head"><span><b>' + r.symbol + '</b> <small class="tag">Perp</small>' + (r.symbol === LOCK.symbol ? "" : ' <small class="tag" style="color:var(--yel)">ยังไม่ผ่านงานวิจัย</small>') + "</span>" + pill + "</div>" +
         '<div class="mrow"><b class="' + (r.trend > 0 ? "up" : r.trend < 0 ? "down" : "") + '">' + price(r.close) + '</b> <small>USDT</small> <button class="mini ghost" data-chart="' + r.symbol + '">ดูกราฟ</button></div>' + stats + body + "</div>";
     }).join("");
     bindCardButtons();
@@ -2332,7 +2332,7 @@ a{color:var(--accent)}
         " · ขนาดไม้คิดจาก % เสี่ยงในแท็บพอร์ต ไม่ใช่จาก Leverage"
       : "Spot: สแกนแนวโน้ม 1 ชม. เลือกกลยุทธ์ที่ได้ผลดีสุดใน 90 วันล่าสุดของแต่ละเหรียญ แล้วดูแท่ง 15 นาทีที่เพิ่งปิด";
     if ($("sgMode").value !== "futures") $("sgLev").disabled = $("sgStrat").disabled = true;
-    if (lock && $("sgMode").value === "futures") $("sgHelp").textContent = "สูตรที่เลือก: BTCUSDT · Momentum2 + Squeeze 3 ชม. · Volume ≥ 1.8x · กรอง FOMC · SL 1.8 ATR · TP1/2/3 = 1R/2R/5R · ถือ ≤ 48 ชม. · 10x Isolated · เสี่ยง 0.25%/ไม้ (Margin ≤ 5% ของพอร์ต) · ใช้เพื่อ Paper Trading ก่อน";
+    if (lock && $("sgMode").value === "futures") $("sgHelp").textContent = "สูตรที่เลือก: ทุกเหรียญ (งานวิจัยทดสอบเฉพาะ BTC) · Momentum2 + Squeeze 3 ชม. · Volume ≥ 1.8x · กรอง FOMC · SL 1.8 ATR · TP1/2/3 = 1R/2R/5R · ถือ ≤ 48 ชม. · 10x Isolated · เสี่ยง 0.25%/ไม้ (Margin ≤ 5% ของพอร์ต) · ใช้เพื่อ Paper Trading ก่อน";
   }
   ["sgMode", "sgLev", "sgStrat"].forEach(function (id) {
     try { var v = localStorage.getItem(id); if (v !== null) $(id).value = v; } catch (e) { /* ignore */ }
