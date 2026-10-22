@@ -46,6 +46,14 @@ button:disabled{opacity:.5}
 .mini.ghost{background:var(--deep);color:var(--ink);border:1px solid var(--line)}
 .ai{background:var(--deep);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-top:8px;font-size:13.5px;white-space:pre-wrap}
 .ai a{word-break:break-all}
+.guide-step{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--line)}
+.guide-step .dot{flex:none;width:26px;height:26px;border-radius:50%;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600}
+.guide-step.done .dot{background:var(--upText);border-color:var(--upText);color:#06221b}
+.guide-step.next{background:rgba(86,214,180,.08);border-radius:10px;padding:10px 8px}
+.guide-step .body{flex:1;min-width:0;font-size:14px;overflow-wrap:anywhere}.guide-step .body small{display:block}
+.flash{outline:3px solid var(--warn);outline-offset:3px;border-radius:10px;transition:outline-color .3s}
+.how{background:var(--deep);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-top:8px;font-size:13.5px}
+.how ol{margin:0;padding-left:20px}.how li{margin:4px 0}
 .inline{display:flex;gap:8px;align-items:center;margin-top:8px}.inline input{flex:1;min-width:0}
 #status.err{color:var(--down)}
 .hero{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
@@ -71,7 +79,24 @@ a{color:var(--accent)}
 <h1>POC Signal</h1>
 <p class="muted" style="margin:0">สแกนเหรียญหลักจาก Binance หาเหรียญขาขึ้นที่มีจุดเข้า พร้อม backtest</p>
 
-<div class="tabs" id="mainTabs" style="margin-top:12px"><button data-tab="signalTab" class="on">สัญญาณ</button><button data-tab="chartTab">กราฟ</button><button data-tab="portTab">พอร์ต</button><button data-tab="backtestTab">Backtest</button></div>
+<div class="tabs" id="mainTabs" style="margin-top:12px;flex-wrap:wrap"><button data-tab="guideTab">เริ่มต้น</button><button data-tab="signalTab" class="on">สัญญาณ</button><button data-tab="chartTab">กราฟ</button><button data-tab="portTab">พอร์ต</button><button data-tab="backtestTab">Backtest</button></div>
+
+<div id="guideTab" class="hidden">
+<section>
+  <h2>คู่มือทีละขั้น</h2>
+  <p class="muted" style="margin:0;font-size:13px">ทำตามลำดับจากบนลงล่าง กด <b>พาไป</b> แอปจะเปิดหน้าที่ถูกต้องและไฮไลต์ตรงที่ต้องกด ขั้นที่ทำเสร็จจะติ๊กถูกเอง</p>
+  <div id="guideProgress" class="bar" style="margin-top:10px"><i style="width:0%"></i></div>
+  <div id="guideSteps"></div>
+</section>
+<section>
+  <h2>ช่วงนี้คือ Paper Trading</h2>
+  <ul style="margin:0;padding-left:18px;font-size:14px">
+    <li>ยังไม่ต้องเปิดไม้ด้วยเงินจริง แอปจดผลให้เองทุกครั้งที่เปิดแท็บพอร์ต</li>
+    <li>รอให้ Paper มีอย่างน้อย 30 ไม้ (ประมาณ 5–6 เดือน) และผลยังเป็นบวก ค่อยคิดเรื่องเงินจริง</li>
+    <li>ถ้ามีสัญญาณ แอปแจ้งเตือน และการ์ดสัญญาณมีปุ่ม "วิธีเปิดไม้ใน Binance" บอกทุกขั้นพร้อมตัวเลข</li>
+  </ul>
+</section>
+</div>
 
 <div id="signalTab">
 <section>
@@ -1908,6 +1933,23 @@ a{color:var(--accent)}
     return out;
   }
 
+  // Step-by-step for the Binance app, filled in with this signal's numbers.
+  function binanceHowTo(r, g) {
+    var coin = r.symbol.replace("USDT", ""), long = g.dir > 0;
+    var lowNotional = g.notional < 100;
+    return '<button class="mini ghost" data-how="' + r.symbol + '">วิธีเปิดไม้ใน Binance</button><div class="how hidden" id="how-' + r.symbol + '">' +
+      '<b>ช่วง Paper Trading ยังไม่ต้องทำ</b> แอปจดผลให้เอง ใช้ขั้นตอนนี้เมื่อพร้อมใช้เงินจริง<ol>' +
+      "<li>เปิดแอป Binance → แท็บ <b>Futures</b> → <b>USDⓈ-M</b> → เลือก <b>" + r.symbol + " Perpetual</b></li>" +
+      "<li>กดปุ่มโหมด Margin เลือก <b>Isolated</b> และกดปุ่ม Leverage ตั้งเป็น <b>" + g.lev + "x</b></li>" +
+      "<li>ประเภทคำสั่งเลือก <b>Market</b> ใส่จำนวน <b>" + g.qty + " " + coin + "</b> (≈ " + fmt(g.notional, 0) + " USDT · Margin ≈ " + fmt(g.margin, 1) + " USDT)</li>" +
+      "<li>ติ๊ก <b>TP/SL</b>: Take Profit <b>" + price(g.tps[2]) + "</b> (TP3 = 5R ตามสูตร) · Stop Loss <b>" + price(g.stop) + "</b> · Trigger เลือก <b>Mark Price</b></li>" +
+      "<li>กด <b>" + (long ? "Buy/Long (สีเขียว)" : "Sell/Short (สีแดง)") + "</b> แล้วตรวจในแท็บ Positions ว่า TP/SL ขึ้นครบ</li>" +
+      "<li>กลับมาแอปนี้ กด <b>เข้าแล้ว · บันทึกลงพอร์ต</b></li>" +
+      "<li>ถ้าครบ <b>" + g.hold + " ชม.</b> แล้วยังไม่ชน TP/SL ให้ปิดเองด้วย Market (ภายใน " + thai(g.expires + (g.hold - 1) * 3600000).slice(0, 14) + " น.)</li></ol>" +
+      (lowNotional ? '<small class="down">มูลค่าไม้ต่ำกว่าประมาณ 100 USDT อาจต่ำกว่าขั้นต่ำของ Binance สำหรับ BTCUSDT ถ้าเปิดไม่ได้แปลว่าทุนยังน้อยเกินสำหรับความเสี่ยง 0.25% อย่าเพิ่มขนาดไม้เอง</small><br>' : "") +
+      '<small class="muted">TP1/TP2 ในการ์ดเป็นระดับอ้างอิง งานวิจัยทดสอบเฉพาะ TP 5R + ออกเมื่อครบเวลา ชื่อปุ่มใน Binance อาจต่างเล็กน้อยตามเวอร์ชันแอป</small></div>';
+  }
+
   function renderFutures(results, fxInfo, lev, end) {
     var fx = fxInfo.rate, sigs = results.filter(function (r) { return r.signal; });
     results.sort(function (a, b) { return (b.signal ? 1 : 0) - (a.signal ? 1 : 0) || (b.hist.exp_r || -9) - (a.hist.exp_r || -9); });
@@ -1927,7 +1969,7 @@ a{color:var(--accent)}
           "ขนาด " + g.qty + " " + name + " (≈ " + fmt(g.notional, 0) + " USDT) · Margin ≈ " + fmt(g.margin, 1) + " USDT · ถ้าโดน SL เสีย ≈ " +
           fmt(g.riskUsdt * fx, 0) + " ฿<br>ราคา Liquidate ≈ " + price(g.liq) + "</small>" +
           (g.sizeLimited ? '<div class="banner wait" style="margin:8px 0 0;font-size:13px">ลดขนาดลงให้ Margin ไม่เกิน ' + (locked() ? "5" : "25") + '% ของทุน (เสี่ยงน้อยกว่าที่ตั้งไว้)</div>' : "") +
-          '<div id="ai-' + r.symbol + '"></div>' +
+          '<div id="ai-' + r.symbol + '"></div>' + binanceHowTo(r, g) +
           '<br><button class="mini" data-record="' + esc(JSON.stringify({ symbol: r.symbol, dir: g.dir, entry: g.entry, stop: g.stop, target: g.tps[2], tps: g.tps,
             qty: g.qty, fx: fx, risk: g.riskUsdt * fx, fee: FUT.fee + FUT.slippage, lev: g.lev, hold_hours: g.hold })) + '">เข้าแล้ว · บันทึกลงพอร์ต</button> ' +
           '<button class="mini ghost" data-ai="' + r.symbol + '">AI วิเคราะห์</button>';
@@ -1946,6 +1988,9 @@ a{color:var(--accent)}
   }
 
   function bindCardButtons() {
+    Array.prototype.forEach.call(document.querySelectorAll("[data-how]"), function (b) {
+      b.onclick = function () { $("how-" + b.getAttribute("data-how")).classList.toggle("hidden"); };
+    });
     Array.prototype.forEach.call(document.querySelectorAll("[data-ai]"), function (b) {
       b.onclick = function () {
         var r = lastFutures.filter(function (x) { return x.symbol === b.getAttribute("data-ai"); })[0];
@@ -2309,6 +2354,70 @@ a{color:var(--accent)}
     if (c) AI.analyseChart(c); else $("cvAiOut").innerHTML = '<div class="ai">รอกราฟโหลดก่อน</div>';
   };
 
+  // ---- Step-by-step guide ----
+  var Guide = (function () {
+    var KEY = "guide.flags";
+    function flags() { try { return JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) { return {}; } }
+    function mark(name) { var f = flags(); f[name] = 1; try { localStorage.setItem(KEY, JSON.stringify(f)); } catch (e) { /* ignore */ } render(); }
+    function has(key) { try { return !!localStorage.getItem(key); } catch (e) { return false; } }
+    var STEPS = [
+      { id: "mode", title: "เลือกตลาด Futures และสูตรที่เลือก", how: "แท็บสัญญาณ → ช่อง \"ตลาด\" เลือก Futures และติ๊ก \"ใช้สูตรที่ผมเลือก\"",
+        tab: "signalTab", target: "sgMode", done: function () { return $("sgMode").value === "futures" && $("sgLock").checked; } },
+      { id: "capital", title: "ใส่เงินทุนที่จะใช้เทรด", how: "แท็บพอร์ต → ช่อง \"ทุนเริ่มต้น (บาท)\" ใส่เงินที่เสียได้ทั้งหมดโดยไม่เดือดร้อน",
+        tab: "portTab", target: "pfCapital", done: function () { return !!flags().capital; } },
+      { id: "fomc", title: "ตรวจวันประกาศ FOMC ปี 2026", how: "เปิด federalreserve.gov/monetarypolicy/fomccalendars.htm เทียบกับรายการในแอป ผิดตรงไหนแก้ได้เลย แล้วกด \"ตรวจแล้ว\"",
+        tab: "signalTab", target: "sgFomc", done: function () { return !!flags().fomc; }, confirm: "ตรวจแล้ว" },
+      { id: "test2026", title: "ดูผลปี 2026 ว่าสูตรยังได้กำไรไหม", how: "แท็บพอร์ต → ปุ่ม \"ดูผลปี 2026 (ข้อมูลใหม่)\" ถ้า R เฉลี่ยเป็นบวกและ PF มากกว่า 1 = ยังดี แคปส่งให้ผู้ช่วยดูได้",
+        tab: "portTab", target: "pp2026", done: function () { return !!flags().test2026; } },
+      { id: "paper", title: "เริ่ม Paper Trading", how: "แท็บพอร์ต → ปุ่ม \"เริ่ม Paper วันนี้\" แอปจะจดผลให้เองนับจากวันนี้",
+        tab: "portTab", target: "ppStart", done: function () { return has("paper.v2"); } },
+      { id: "alerts", title: "เปิดแจ้งเตือนสัญญาณ", how: "แท็บสัญญาณ → ติ๊ก \"แจ้งเตือนทุก 15 นาที\" แล้วกดอนุญาตการแจ้งเตือน (ในแอป Android ตั้งแบตเตอรี่เป็น \"ไม่จำกัด\" ด้วย)",
+        tab: "signalTab", target: "autoScan", done: function () { return $("autoScan").checked; } },
+      { id: "ai", title: "(ไม่บังคับ) ใส่ Gemini API key ให้ AI ช่วยเช็กข่าว", how: "aistudio.google.com → Get API key → คัดลอก → แท็บสัญญาณ ช่อง \"Gemini API key\" → กดทดสอบคีย์",
+        tab: "signalTab", target: "aiKey", done: function () { return !!$("aiKey").value.trim(); }, optional: true },
+      { id: "wait", title: "รอแจ้งเตือน แล้วเปิดดูการ์ดสัญญาณ", how: "สูตรนี้มีสัญญาณประมาณ 5 ครั้งต่อเดือน ช่วง Paper แค่เปิดแท็บพอร์ตดูผลเป็นระยะ ไม่ต้องเปิดไม้จริง",
+        tab: "portTab", target: "ppHero", done: function () { return false; }, info: true }
+    ];
+    function go(step) {
+      var btn = document.querySelector('[data-tab="' + step.tab + '"]');
+      if (btn) btn.click();
+      var el = $(step.target);
+      if (!el) return;
+      var d = el.closest("details");
+      if (d) d.open = true;
+      setTimeout(function () {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.classList.add("flash");
+        if (el.focus && /INPUT|TEXTAREA|SELECT/.test(el.tagName) && el.type !== "checkbox") el.focus();
+        setTimeout(function () { el.classList.remove("flash"); }, 2500);
+      }, 150);
+    }
+    function render() {
+      var required = STEPS.filter(function (s) { return !s.optional && !s.info; });
+      var doneCount = required.filter(function (s) { return s.done(); }).length, nextFound = false;
+      $("guideProgress").firstChild.style.width = (doneCount / required.length * 100).toFixed(0) + "%";
+      $("guideSteps").innerHTML = STEPS.map(function (s, k) {
+        var done = s.done(), next = !done && !nextFound && !s.optional;
+        if (next) nextFound = true;
+        return '<div class="guide-step' + (done ? " done" : "") + (next ? " next" : "") + '"><div class="dot">' + (done ? "✓" : k + 1) + '</div><div class="body"><b>' +
+          esc(s.title) + "</b>" + (next ? ' <span class="pill go">ทำขั้นนี้ต่อ</span>' : "") + "<small class=\"muted\">" + esc(s.how) + '</small><button class="mini' + (next ? "" : " ghost") +
+          '" data-go="' + s.id + '">พาไป</button>' + (s.confirm && !done ? ' <button class="mini ghost" data-confirm="' + s.id + '">' + s.confirm + "</button>" : "") + "</div></div>";
+      }).join("");
+      Array.prototype.forEach.call(document.querySelectorAll("[data-go]"), function (b) {
+        b.onclick = function () { go(STEPS.filter(function (s) { return s.id === b.getAttribute("data-go"); })[0]); };
+      });
+      Array.prototype.forEach.call(document.querySelectorAll("[data-confirm]"), function (b) {
+        b.onclick = function () { mark(b.getAttribute("data-confirm")); };
+      });
+      return doneCount === required.length;
+    }
+    $("pfCapital").addEventListener("change", function () { mark("capital"); });
+    $("pp2026").addEventListener("click", function () { mark("test2026"); });
+    ["sgMode", "sgLock", "autoScan", "aiKey"].forEach(function (id) { $(id).addEventListener("change", render); });
+    $("ppStart").addEventListener("click", function () { setTimeout(render, 50); });
+    return { render: render };
+  })();
+
   Array.prototype.forEach.call($("mainTabs").children, function (b) {
     b.onclick = function () {
       Array.prototype.forEach.call($("mainTabs").children, function (x) {
@@ -2318,6 +2427,7 @@ a{color:var(--accent)}
       if (last && b.getAttribute("data-tab") === "backtestTab") render();
       if (b.getAttribute("data-tab") === "chartTab") ChartView.open(); else ChartView.stop();
       if (b.getAttribute("data-tab") === "portTab") Paper.refresh();
+      if (b.getAttribute("data-tab") === "guideTab") Guide.render();
     };
   });
 
@@ -2384,6 +2494,7 @@ a{color:var(--accent)}
   Portfolio.render();
   $("run").onclick = run;
   if (location.hash === "#bg") scan();
+  else if (!Guide.render()) document.querySelector('[data-tab="guideTab"]').click();
 })();
 
 </script>
