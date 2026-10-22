@@ -65,7 +65,7 @@ a{color:var(--accent)}
 </head>
 <body>
 <main>
-<div class="eyebrow">BACKTEST ONLY · BINANCE SPOT · ไม่มีคำสั่งเงินจริง</div>
+<div class="eyebrow">BINANCE SPOT/FUTURES · แอปไม่ส่งคำสั่งซื้อขายให้ · ผลอดีตไม่รับประกันอนาคต</div>
 <h1>POC Signal</h1>
 <p class="muted" style="margin:0">สแกนเหรียญหลักจาก Binance หาเหรียญขาขึ้นที่มีจุดเข้า พร้อม backtest</p>
 
@@ -74,7 +74,11 @@ a{color:var(--accent)}
 <div id="signalTab">
 <section>
   <h2>สัญญาณตอนนี้</h2>
-  <p class="muted" style="margin:0;font-size:13px">สแกน 12 เหรียญ: ดูแนวโน้ม 1 ชม. เลือกกลยุทธ์ที่ได้ผลดีสุดใน 90 วันล่าสุดของแต่ละเหรียญ แล้วดูว่าแท่ง 15 นาทีที่เพิ่งปิดให้สัญญาณเข้าหรือไม่</p>
+  <div class="row">
+    <div><label for="sgMode">ตลาด</label><select id="sgMode"><option value="futures">Futures · Long/Short</option><option value="spot">Spot · ซื้ออย่างเดียว</option></select></div>
+    <div><label for="sgLev">Leverage (Futures)</label><input id="sgLev" type="number" inputmode="numeric" min="1" max="125" value="10"></div>
+  </div>
+  <p class="muted" style="margin:8px 0 0;font-size:13px" id="sgHelp"></p>
   <button id="scan">สแกนหาสัญญาณตอนนี้</button>
   <label class="checks" style="margin-top:10px"><input type="checkbox" id="autoScan"> <span id="autoScanLabel">สแกนเองทุก 15 นาที (ต้องเปิดหน้านี้ไว้)</span></label>
   <div id="scanStatus" class="status-line">ใช้เวลาประมาณ 1 นาที ใช้ทุนจากช่อง "ทุน" ในแท็บ Backtest (ค่าเริ่มต้น 10,000 บาท)</div>
@@ -1484,13 +1488,15 @@ a{color:var(--accent)}
 
     function open(sig) {
       data.trades.push({ id: data.nextId++, symbol: sig.symbol, entry: sig.entry, stop: sig.stop, target: sig.target,
-        qty: sig.qty, fx: sig.fx, risk: sig.risk, entry_time: Date.now(), closed: false });
+        qty: sig.qty, fx: sig.fx, risk: sig.risk, dir: sig.dir || 1, fee: sig.fee, lev: sig.lev, tps: sig.tps,
+        hold_hours: sig.hold_hours || 4, entry_time: Date.now(), closed: false });
       save(); render();
     }
     function close(id, exitPrice) {
       var t = data.trades.filter(function (x) { return x.id === id; })[0];
       if (!t || !(exitPrice > 0)) return;
-      var usdt = (exitPrice * (1 - FEE) - t.entry * (1 + FEE)) * t.qty;
+      var dir = t.dir || 1, fee = t.fee === undefined ? FEE : t.fee;
+      var usdt = (dir * (exitPrice - t.entry) - fee * (exitPrice + t.entry)) * t.qty;
       t.exit = exitPrice; t.exit_time = Date.now(); t.pnl = usdt * t.fx; t.r = t.risk > 0 ? t.pnl / t.risk : null; t.closed = true;
       save(); render();
     }
@@ -1529,9 +1535,10 @@ a{color:var(--accent)}
 
       var openTrades = data.trades.filter(function (t) { return !t.closed; });
       $("pfOpen").innerHTML = openTrades.map(function (t) {
-        return '<div class="trade" style="display:block"><b>' + t.symbol.replace("USDT", "") + "</b> " + t.qty + " เหรียญ · เข้า " + price(t.entry) +
-          '<br><small>Stop <span class="down">' + price(t.stop) + '</span> · เป้า <span class="up">' + price(t.target) + "</span> · เสี่ยง " + fmt(t.risk, 0) +
-          " ฿ · ปิดภายใน " + thai(t.entry_time + 4 * 3600000).slice(9) + ' น.</small><div class="inline"><input type="number" inputmode="decimal" step="any" placeholder="ราคาที่ขาย" id="exit' + t.id +
+        var side = (t.dir || 1) > 0 ? '<span class="up">LONG</span>' : '<span class="down">SHORT</span>';
+        return '<div class="trade" style="display:block"><b>' + t.symbol.replace("USDT", "") + "</b> " + side + (t.lev ? " x" + t.lev : "") + " · " + t.qty + " เหรียญ · เข้า " + price(t.entry) +
+          '<br><small>SL <span class="down">' + price(t.stop) + "</span> · " + (t.tps ? "TP " + t.tps.map(price).join(" / ") : 'เป้า <span class="up">' + price(t.target) + "</span>") +
+          " · เสี่ยง " + fmt(t.risk, 0) + " ฿ · ปิดภายใน " + thai(t.entry_time + (t.hold_hours || 4) * 3600000).slice(0, 14) + ' น.</small><div class="inline"><input type="number" inputmode="decimal" step="any" placeholder="ราคาที่ปิด" id="exit' + t.id +
           '"><button class="mini" data-close="' + t.id + '">ปิดไม้</button><button class="mini ghost" data-del="' + t.id + '">ลบ</button></div></div>';
       }).join("") || '<p class="muted">ไม่มีไม้ที่ถืออยู่ กด "ซื้อแล้ว · บันทึกลงพอร์ต" ที่การ์ดสัญญาณเพื่อเพิ่ม</p>';
       $("pfClosed").innerHTML = p.closed.slice(-20).reverse().map(function (t) {
@@ -1567,8 +1574,106 @@ a{color:var(--accent)}
   }
   function scanStatus(text, isError) { var el = $("scanStatus"); el.textContent = text; el.className = "status-line" + (isError ? " err" : ""); }
 
+  // ---- Futures: ONE BEST COMBO (Momentum + Squeeze, 1H) long/short with leverage-aware sizing ----
+  var FUT = { fee: 0.0005, slippage: 0.0002, mmr: 0.005, enterWithinMin: 15 };
+
+  function futuresScan() {
+    var results = [], errors = [], done = 0, fxInfo, end, lev = Math.max(1, Math.min(125, readNumber("sgLev", 10)));
+    scanStatus("กำลังดึงแท่ง 1 ชม. และอัตราแลกเปลี่ยน…");
+    return Promise.all([binance("/api/v3/time"), fetchFx()]).then(function (res) {
+      fxInfo = res[1];
+      end = Math.floor(res[0].serverTime / 3600000) * 3600000;
+      var start = end - 100 * 86400000, queue = COINS.slice();
+      function worker() {
+        var s = queue.shift();
+        if (!s) return Promise.resolve();
+        return fetchCandles(s, start, end, function () {}, "1h").then(function (bars) {
+          results.push(futuresCard(s, bars, fxInfo.rate, lev));
+        }).catch(function (e) { errors.push(s.replace("USDT", "") + ": " + e.message); }).then(function () {
+          done++; scanStatus("สแกนแล้ว " + done + "/" + COINS.length + " เหรียญ…");
+          return worker();
+        });
+      }
+      return Promise.all([worker(), worker(), worker()]);
+    }).then(function () {
+      renderFutures(results, fxInfo, lev, end);
+      reportScan(results, end, null);
+      scanStatus("สแกนล่าสุด " + thai(Date.now()) + " น. · แท่ง 1 ชม. ที่ปิดเมื่อ " + thai(end) + " น. · ราคาจาก Binance Spot ใช้แทน Futures (ต่างกันเล็กน้อย)" +
+        (errors.length ? "\nข้ามบางเหรียญ: " + errors.join(" · ") : ""), !results.length);
+    });
+  }
+
+  function futuresCard(symbol, bars, fx, lev) {
+    var opt = Object.assign({}, Swing.DEFAULTS, { fee: FUT.fee, slippage: FUT.slippage }), n = bars.length;
+    var ind = Swing.indicators(bars, opt), last = bars[n - 1];
+    var hist = Swing.stats(Swing.runTechnique("squeeze_ls", bars, ind, 270, n, opt), 0.01);
+    var e = ind.e50[n - 1], e2 = ind.e200[n - 1];
+    var out = { symbol: symbol, close: last.close, trend: e > e2 && last.close > e2 ? 1 : e < e2 && last.close < e2 ? -1 : 0, hist: hist, signal: null };
+    var sig = Swing.signal("squeeze_ls", bars, ind, n - 1, opt);
+    if (!sig || !(sig.dist / last.close >= 0.0015)) return out;
+    var plan = Portfolio.plan(), dir = sig.dir, entry = last.close, dist = sig.dist, cost = 2 * (FUT.fee + FUT.slippage);
+    var balance = plan.balance / fx, riskUsdt = balance * plan.riskPct / 100;
+    var qty = riskUsdt / (dist + cost * entry), notional = qty * entry, margin = notional / lev;
+    var liq = dir > 0 ? entry * (1 - 1 / lev + FUT.mmr) : entry * (1 + 1 / lev - FUT.mmr);
+    var stop = entry - dir * dist, safeLev = Math.max(1, Math.floor(1 / (dist / entry + FUT.mmr + 0.003)));
+    out.signal = { dir: dir, entry: entry, stop: stop, tps: [1, 2, 5].map(function (r) { return entry + dir * r * dist; }),
+      qty: +qty.toPrecision(4), notional: notional, margin: margin, liq: liq, riskUsdt: riskUsdt, lev: lev, safeLev: safeLev,
+      liqFirst: dir > 0 ? liq >= stop : liq <= stop, marginShort: margin > balance, expires: last.close_time + 1 + FUT.enterWithinMin * 60000,
+      stopPct: dist / entry * 100 };
+    return out;
+  }
+
+  function renderFutures(results, fxInfo, lev, end) {
+    var fx = fxInfo.rate, sigs = results.filter(function (r) { return r.signal; });
+    results.sort(function (a, b) { return (b.signal ? 1 : 0) - (a.signal ? 1 : 0) || (b.hist.exp_r || -9) - (a.hist.exp_r || -9); });
+    $("scanSummary").innerHTML = sigs.length
+      ? '<div class="banner go">มีสัญญาณ ' + sigs.length + " เหรียญ: " + sigs.map(function (r) { return r.symbol.replace("USDT", "") + " " + (r.signal.dir > 0 ? "LONG" : "SHORT"); }).join(", ") + "</div>"
+      : '<div class="banner wait">ตอนนี้ไม่มีสัญญาณ — รอแท่ง 1 ชม. ถัดไปปิด แล้วสแกนใหม่</div>';
+    $("scanCards").innerHTML = results.map(function (r) {
+      var name = r.symbol.replace("USDT", ""), g = r.signal, h = r.hist, body = "", pill;
+      if (g) pill = '<span class="pill go">' + (g.dir > 0 ? "LONG" : "SHORT") + "</span>";
+      else pill = '<span class="pill no">' + (r.trend > 0 ? "ขาขึ้น · รอ" : r.trend < 0 ? "ขาลง · รอ" : "ไม่ชัด · รอ") + "</span>";
+      if (g) {
+        body = '<div class="levels"><div><small>เข้า (Market)</small><b>' + price(g.entry) + '</b></div><div><small>SL (' + fmt(g.stopPct, 2) + '%)</small><b class="down">' + price(g.stop) +
+          '</b></div><div><small>TP1 · TP2 · TP3</small><b class="up" style="font-size:13px">' + g.tps.map(price).join("<br>") + "</b></div></div>" +
+          "<small>TP1 = 1R · TP2 = 2R · TP3 = 5R · ถือไม่เกิน 24 ชม. · เข้าก่อน " + thai(g.expires).slice(9) + " น.<br>" +
+          "ขนาด " + g.qty + " " + name + " (≈ " + fmt(g.notional, 0) + " USDT) · Margin x" + g.lev + " ≈ " + fmt(g.margin, 1) + " USDT · ถ้าโดน SL เสีย ≈ " +
+          fmt(g.riskUsdt * fx, 0) + " ฿<br>ราคา Liquidate ≈ " + price(g.liq) + "</small>" +
+          (g.liqFirst ? '<div class="banner stop" style="margin:8px 0 0;font-size:13px">x' + g.lev + " จะโดน Liquidate ก่อนถึง SL — ลด Leverage ไม่เกิน x" + g.safeLev + "</div>" : "") +
+          (g.marginShort ? '<div class="banner stop" style="margin:8px 0 0;font-size:13px">Margin ไม่พอ: ลดความเสี่ยงต่อไม้ หรือเพิ่ม Leverage (ไม่เกิน x' + g.safeLev + ")</div>" : "") +
+          '<br><button class="mini" data-record="' + esc(JSON.stringify({ symbol: r.symbol, dir: g.dir, entry: g.entry, stop: g.stop, target: g.tps[2], tps: g.tps,
+            qty: g.qty, fx: fx, risk: g.riskUsdt * fx, fee: FUT.fee + FUT.slippage, lev: g.lev, hold_hours: 24 })) + '">เข้าแล้ว · บันทึกลงพอร์ต</button>';
+      }
+      var stats = h.trades ? "<br><small>สูตรนี้กับ " + name + " 100 วันล่าสุด: " + h.trades + " ไม้ · win " + fmt(h.win_rate, 0) + "% · เฉลี่ย " + fmt(h.exp_r, 2, true) + "R</small>" :
+        "<br><small>100 วันล่าสุดยังไม่มีสัญญาณในเหรียญนี้</small>";
+      return '<div class="coin' + (g ? " go" : "") + '"><div class="coin-head"><b>' + name + "</b>" + pill + "</div><small>ราคา " + price(r.close) +
+        ' USDT</small> <button class="mini ghost" data-chart="' + r.symbol + '">ดูกราฟ</button>' + stats + body + "</div>";
+    }).join("");
+    bindCardButtons();
+    var plan = Portfolio.plan();
+    if (plan.state !== "ok") $("scanSummary").innerHTML = '<div class="banner stop">' + esc(plan.message) + "</div>" + $("scanSummary").innerHTML;
+    if (sigs.length && window.Notification && Notification.permission === "granted") {
+      try { new Notification("Signal: " + sigs.map(function (r) { return r.symbol.replace("USDT", "") + " " + (r.signal.dir > 0 ? "LONG" : "SHORT"); }).join(", ")); } catch (e) { /* optional */ }
+    }
+  }
+
+  function bindCardButtons() {
+    Array.prototype.forEach.call(document.querySelectorAll("[data-chart]"), function (b) {
+      b.onclick = function () { $("cvSymbol").value = b.getAttribute("data-chart"); document.querySelector('[data-tab="chartTab"]').click(); ChartView.open(b.getAttribute("data-chart")); };
+    });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-record]"), function (b) {
+      b.onclick = function () { Portfolio.open(JSON.parse(b.getAttribute("data-record"))); b.textContent = "บันทึกแล้ว ✓"; b.disabled = true; };
+    });
+  }
+
   function scan() {
     if (scanning) return;
+    if ($("sgMode").value === "futures") {
+      scanning = true; $("scan").disabled = true;
+      futuresScan().catch(function (e) { scanStatus(e.message || String(e), true); reportScan([], 0, e.message || String(e)); })
+        .then(function () { scanning = false; $("scan").disabled = false; });
+      return;
+    }
     scanning = true; $("scan").disabled = true;
     var results = [], errors = [], done = 0, fxInfo, end;
     scanStatus("กำลังดึงเวลา Binance และอัตราแลกเปลี่ยน…");
@@ -1605,7 +1710,9 @@ a{color:var(--accent)}
     window.NativeHttp.scanDone(JSON.stringify({ candle: end, error: error,
       note: plan.state === "ok" ? "" : plan.message,
       signals: results.filter(function (r) { return r.signal && !r.signal.below_minimum; }).map(function (r) {
-        return { coin: r.symbol.replace("USDT", ""), entry: price(r.signal.entry), stop: price(r.signal.stop), target: price(r.signal.target) };
+        var g = r.signal, side = g.dir ? (g.dir > 0 ? " LONG" : " SHORT") : "";
+        return { coin: r.symbol.replace("USDT", "") + side, entry: price(g.entry), stop: price(g.stop),
+          target: g.tps ? g.tps.map(price).join(" / ") : price(g.target) };
       }) }));
   }
 
@@ -1638,12 +1745,7 @@ a{color:var(--accent)}
       return '<div class="coin' + (r.signal && !r.signal.below_minimum ? " go" : "") + '"><div class="coin-head"><b>' + name + "</b>" + pill + "</div>" +
         "<small>ราคา " + price(r.close) + ' USDT</small> <button class="mini ghost" data-chart="' + r.symbol + '">ดูกราฟ</button>' + stats + body + "</div>";
     }).join("");
-    Array.prototype.forEach.call(document.querySelectorAll("[data-chart]"), function (b) {
-      b.onclick = function () { $("cvSymbol").value = b.getAttribute("data-chart"); document.querySelector('[data-tab="chartTab"]').click(); ChartView.open(b.getAttribute("data-chart")); };
-    });
-    Array.prototype.forEach.call(document.querySelectorAll("[data-record]"), function (b) {
-      b.onclick = function () { Portfolio.open(JSON.parse(b.getAttribute("data-record"))); b.textContent = "บันทึกแล้ว ✓"; b.disabled = true; };
-    });
+    bindCardButtons();
     var plan = Portfolio.plan();
     if (plan.state !== "ok") $("scanSummary").innerHTML = '<div class="banner stop">' + esc(plan.message) + "</div>" + $("scanSummary").innerHTML;
     if (signals.length && window.Notification && Notification.permission === "granted") {
@@ -1670,6 +1772,17 @@ a{color:var(--accent)}
     scheduleAuto();
   };
   $("scan").onclick = scan;
+  function modeHelp() {
+    $("sgHelp").textContent = $("sgMode").value === "futures"
+      ? "สูตร Momentum + Squeeze (ONE BEST COMBO) แท่ง 1 ชม.: เทรนด์ EMA20/50/200 + บีบตัวแล้วทะลุพร้อม Volume + แท่งโมเมนตัม · SL 2.5 ATR · TP1/TP2/TP3 = 1R/2R/5R · ถือไม่เกิน 24 ชม. · ขนาดไม้คิดจาก % เสี่ยงในแท็บพอร์ต ไม่ใช่จาก Leverage"
+      : "Spot: สแกนแนวโน้ม 1 ชม. เลือกกลยุทธ์ที่ได้ผลดีสุดใน 90 วันล่าสุดของแต่ละเหรียญ แล้วดูแท่ง 15 นาทีที่เพิ่งปิด";
+    $("sgLev").disabled = $("sgMode").value !== "futures";
+  }
+  ["sgMode", "sgLev"].forEach(function (id) {
+    try { var v = localStorage.getItem(id); if (v !== null) $(id).value = v; } catch (e) { /* ignore */ }
+    $(id).addEventListener("change", function () { try { localStorage.setItem(id, $(id).value); } catch (e) { /* ignore */ } modeHelp(); });
+  });
+  modeHelp();
 
   // ---- Realtime chart: EMA, Bollinger, RSI, auto Fibonacci, trendlines, plan ----
   var ChartView = (function () {
