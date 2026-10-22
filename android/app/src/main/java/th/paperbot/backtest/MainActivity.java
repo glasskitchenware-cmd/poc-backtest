@@ -1,33 +1,17 @@
 package th.paperbot.backtest;
 
+import android.Manifest;
 import android.app.Activity;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
-import android.webkit.JavascriptInterface;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 
-import org.json.JSONObject;
-
-import java.io.ByteArrayOutputStream;
-import java.io.InputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
-/** Hosts the offline web UI. The only native capability is public, read-only HTTPS GET. */
+/** Hosts the offline web UI; native help is limited to read-only HTTPS GET and alerts. */
 public class MainActivity extends Activity {
-    private static final List<String> ALLOWED_HOSTS = Arrays.asList(
-            "data-api.binance.vision", "api.binance.com", "api.bitkub.com", "open.er-api.com");
-
-    private final ExecutorService pool = Executors.newFixedThreadPool(3);
-    private final Handler main = new Handler(Looper.getMainLooper());
     private WebView web;
+    private NativeBridge bridge;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -38,7 +22,22 @@ public class MainActivity extends Activity {
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
         settings.setAllowContentAccess(false);
-        web.addJavascriptInterface(new Bridge(), "NativeHttp");
+        bridge = new NativeBridge(this, web, new NativeBridge.Host() {
+            @Override
+            public void onScanDone(String json) {
+                // The open app shows signals on screen; background scans notify.
+            }
+
+            @Override
+            public void onAlertsChanged(boolean enabled) {
+                if (enabled && Build.VERSION.SDK_INT >= 33
+                        && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                    requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 1);
+                }
+                Alerts.setEnabled(MainActivity.this, enabled);
+            }
+        });
+        web.addJavascriptInterface(bridge, "NativeHttp");
         setContentView(web);
         if (savedInstanceState != null) {
             web.restoreState(savedInstanceState);
@@ -64,53 +63,8 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
-        pool.shutdownNow();
+        bridge.shutdown();
         web.destroy();
         super.onDestroy();
-    }
-
-    private final class Bridge {
-        @JavascriptInterface
-        public void get(final String id, final String address) {
-            pool.execute(() -> {
-                boolean ok = false;
-                String body;
-                try {
-                    URL url = new URL(address);
-                    if (!"https".equals(url.getProtocol()) || !ALLOWED_HOSTS.contains(url.getHost())) {
-                        throw new IllegalArgumentException("host not allowed: " + url.getHost());
-                    }
-                    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-                    connection.setConnectTimeout(15000);
-                    connection.setReadTimeout(30000);
-                    connection.setRequestProperty("Accept", "application/json");
-                    connection.setRequestProperty("User-Agent", "POC-Backtest-Android/1.0");
-                    int status = connection.getResponseCode();
-                    InputStream stream = status >= 400 ? connection.getErrorStream() : connection.getInputStream();
-                    body = stream == null ? "" : read(stream);
-                    connection.disconnect();
-                    ok = status >= 200 && status < 300;
-                    if (!ok) {
-                        body = "HTTP " + status + " " + body;
-                    }
-                } catch (Exception error) {
-                    body = error.getClass().getSimpleName() + ": " + error.getMessage();
-                }
-                final String script = "window.__nativeDone(" + JSONObject.quote(id) + "," + ok + ","
-                        + JSONObject.quote(body) + ")";
-                main.post(() -> web.evaluateJavascript(script, null));
-            });
-        }
-    }
-
-    private static String read(InputStream stream) throws Exception {
-        try (InputStream in = stream; ByteArrayOutputStream out = new ByteArrayOutputStream()) {
-            byte[] buffer = new byte[16384];
-            int count;
-            while ((count = in.read(buffer)) != -1) {
-                out.write(buffer, 0, count);
-            }
-            return new String(out.toByteArray(), StandardCharsets.UTF_8);
-        }
     }
 }

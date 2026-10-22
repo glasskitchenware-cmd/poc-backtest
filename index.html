@@ -76,7 +76,7 @@ a{color:var(--accent)}
   <h2>สัญญาณตอนนี้</h2>
   <p class="muted" style="margin:0;font-size:13px">สแกน 12 เหรียญ: ดูแนวโน้ม 1 ชม. เลือกกลยุทธ์ที่ได้ผลดีสุดใน 90 วันล่าสุดของแต่ละเหรียญ แล้วดูว่าแท่ง 15 นาทีที่เพิ่งปิดให้สัญญาณเข้าหรือไม่</p>
   <button id="scan">สแกนหาสัญญาณตอนนี้</button>
-  <label class="checks" style="margin-top:10px"><input type="checkbox" id="autoScan"> สแกนเองทุก 15 นาที (ต้องเปิดหน้านี้ไว้)</label>
+  <label class="checks" style="margin-top:10px"><input type="checkbox" id="autoScan"> <span id="autoScanLabel">สแกนเองทุก 15 นาที (ต้องเปิดหน้านี้ไว้)</span></label>
   <div id="scanStatus" class="status-line">ใช้เวลาประมาณ 1 นาที ใช้ทุนจากช่อง "ทุน" ในแท็บ Backtest (ค่าเริ่มต้น 10,000 บาท)</div>
 </section>
 <div id="scanSummary"></div>
@@ -1154,9 +1154,21 @@ a{color:var(--accent)}
       return Promise.all([worker(), worker(), worker()]);
     }).then(function () {
       renderScan(results, fxInfo, end);
+      reportScan(results, end, null);
       scanStatus("สแกนล่าสุด " + thai(Date.now()) + " น. · ใช้แท่งที่ปิดเมื่อ " + thai(end) + " น." + (errors.length ? "\nข้ามบางเหรียญ: " + errors.join(" · ") : ""), !results.length);
-    }).catch(function (e) { scanStatus(e.message || String(e), true); })
+    }).catch(function (e) { scanStatus(e.message || String(e), true); reportScan([], 0, e.message || String(e)); })
       .then(function () { scanning = false; $("scan").disabled = false; });
+  }
+
+  // Background scans in the Android app hand their result to the native alert.
+  function reportScan(results, end, error) {
+    if (!window.NativeHttp || !window.NativeHttp.scanDone) return;
+    var plan = Portfolio.plan();
+    window.NativeHttp.scanDone(JSON.stringify({ candle: end, error: error,
+      note: plan.state === "ok" ? "" : plan.message,
+      signals: results.filter(function (r) { return r.signal && !r.signal.below_minimum; }).map(function (r) {
+        return { coin: r.symbol.replace("USDT", ""), entry: price(r.signal.entry), stop: price(r.signal.stop), target: price(r.signal.target) };
+      }) }));
   }
 
   function rank(r) { return r.signal ? 0 : r.trend_up && r.strategy ? 1 : r.trend_up ? 2 : 3; }
@@ -1204,7 +1216,13 @@ a{color:var(--accent)}
     var wait = Engine.BAR_MS - (Date.now() % Engine.BAR_MS) + 20000;
     autoTimer = setTimeout(function () { scan(); scheduleAuto(); }, wait);
   }
+  var nativeAlerts = !!(window.NativeHttp && window.NativeHttp.setAlerts);
+  if (nativeAlerts) {
+    $("autoScanLabel").textContent = "แจ้งเตือนทุก 15 นาที แม้ปิดแอป";
+    try { $("autoScan").checked = window.NativeHttp.alertsEnabled(); } catch (e) { /* ignore */ }
+  }
   $("autoScan").onchange = function () {
+    if (nativeAlerts) { window.NativeHttp.setAlerts($("autoScan").checked); return; }
     if ($("autoScan").checked && window.Notification && Notification.permission === "default") {
       try { Notification.requestPermission(); } catch (e) { /* optional */ }
     }
@@ -1225,6 +1243,7 @@ a{color:var(--accent)}
   loadSettings();
   Portfolio.render();
   $("run").onclick = run;
+  if (location.hash === "#bg") scan();
 })();
 
 </script>
