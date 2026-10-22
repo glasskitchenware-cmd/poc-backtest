@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       job:
-        description: "mtf10000, skills, evidence or tune"
+        description: "mtf10000, skills, evidence, tune or pro"
         default: "skills"
 
 jobs:
@@ -63,6 +63,24 @@ jobs:
         run: python fetch.py BTCUSDT,ETHUSDT,BNBUSDT,SOLUSDT,XRPUSDT,DOGEUSDT,ADAUSDT,AVAXUSDT,LINKUSDT,DOTUSDT,TRXUSDT,LTCUSDT 1h,4h
       - working-directory: research/tune
         run: node --max-old-space-size=6000 tune.js BTCUSDT,ETHUSDT,BNBUSDT,SOLUSDT,XRPUSDT,DOGEUSDT,ADAUSDT,AVAXUSDT,LINKUSDT,DOTUSDT,TRXUSDT,LTCUSDT
+
+  pro:
+    if: ${{ inputs.job == 'pro' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: python -m pip install requests
+      - working-directory: research/evidence
+        run: python fetch.py BTCUSDT,ETHUSDT,BNBUSDT,SOLUSDT,XRPUSDT,DOGEUSDT,ADAUSDT,AVAXUSDT,LINKUSDT,DOTUSDT,TRXUSDT,LTCUSDT 4h,1d 2020-01
+      - working-directory: research/pro
+        run: node --max-old-space-size=6000 pro.js BTCUSDT,ETHUSDT,BNBUSDT,SOLUSDT,XRPUSDT,DOGEUSDT,ADAUSDT,AVAXUSDT,LINKUSDT,DOTUSDT,TRXUSDT,LTCUSDT
 
   mtf10000:
     if: ${{ inputs.job == 'mtf10000' }}

@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """Download Binance USD-M futures klines (official monthly archives) into bars/<SYMBOL>_<TF>.json.
-Usage: python fetch.py SYMBOL[,SYMBOL...] TF[,TF...]"""
+Usage: python fetch.py SYMBOL[,SYMBOL...] TF[,TF...] [FIRST_MONTH]   (default 2023-10; months before a
+coin was listed are skipped, a missing month after the first one is an error)"""
 import io, json, sys, zipfile
 from pathlib import Path
 import requests
 
 SYMBOLS = sys.argv[1].split(",")
 TFS = sys.argv[2].split(",")
-MONTHS = [f"{y}-{m:02d}" for y in (2023, 2024, 2025, 2026) for m in range(1, 13) if "2023-10" <= f"{y}-{m:02d}" <= "2026-09"]
+FIRST = sys.argv[3] if len(sys.argv) > 3 else "2023-10"
+MONTHS = [f"{y}-{m:02d}" for y in range(2019, 2027) for m in range(1, 13) if FIRST <= f"{y}-{m:02d}" <= "2026-09"]
 BASE = "https://data.binance.vision/data/futures/um/monthly/klines"
 out = Path("bars"); out.mkdir(exist_ok=True)
 s = requests.Session()
@@ -16,6 +18,8 @@ for sym in SYMBOLS:
         rows = []
         for ym in MONTHS:
             r = s.get(f"{BASE}/{sym}/{tf}/{sym}-{tf}-{ym}.zip", timeout=60)
+            if r.status_code == 404 and not rows:
+                continue   # not listed yet
             r.raise_for_status()
             with zipfile.ZipFile(io.BytesIO(r.content)) as z:
                 text = z.read(z.namelist()[0]).decode()
