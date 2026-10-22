@@ -67,10 +67,10 @@
       if (pos) close(n - 1, b[n - 1].close, "end");
       return { trades: trades };
     }
-    // Levels for the bar that opens next: the channel a close must break, the EMA filter and the stop size.
+    // Channel levels the last close was tested against, and the ones the next close will be tested against.
+    var levels = function (i) { return { upper: rollMax(Hh, o.n, i), lower: rollMin(Ll, o.n, i), exitLong: rollMin(Ll, o.m, i), exitShort: rollMax(Hh, o.m, i) }; };
     return { trades: trades, pos: pos, pend: pend, ready: n > warm,
-      last: n ? { atr: A[n - 1], stopDist: o.k * A[n - 1], ema: e200[n - 1], upper: rollMax(Hh, o.n, n), lower: rollMin(Ll, o.n, n),
-        exitLong: rollMin(Ll, o.m, n), exitShort: rollMax(Hh, o.m, n) } : null };
+      last: n > warm ? { atr: A[n - 1], stopDist: o.k * A[n - 1], ema: e200[n - 1], tested: levels(n - 1), next: levels(n) } : null };
   }
 
   return { DEFAULTS: DEFAULTS, run: run, ema: ema, atr: atr };

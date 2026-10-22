@@ -11,7 +11,7 @@ import java.nio.charset.StandardCharsets;
  * Debug build only. Lets the emulator test drive the same code paths as production:
  * DEBUG_INJECT posts a scan packet (extra json_b64) through Alerts.onScan; DEBUG_SCAN fires the real exact
  * alarm two seconds later (the alarm, not this receiver, may start the foreground scan on Android 14);
- * DEBUG_CONFIG points the futures API at the mock server and sets the scan interval.
+ * DEBUG_CONFIG points the futures API at the mock server, pins the signal timeframe (tf) and sets the scan interval.
  */
 public class DebugHooks extends BroadcastReceiver {
     @Override
@@ -26,6 +26,10 @@ public class DebugHooks extends BroadcastReceiver {
             String base = intent.getStringExtra("base");
             if (base != null) {
                 context.getSharedPreferences("alerts", Context.MODE_PRIVATE).edit().putString("debugFuturesBase", base).apply();
+            }
+            String tf = intent.getStringExtra("tf");
+            if (tf != null) {
+                context.getSharedPreferences("alerts", Context.MODE_PRIVATE).edit().putString("debugTradeTf", tf).apply();
             }
             int minutes = intent.getIntExtra("minutes", 0);
             if (minutes > 0) Alerts.setScanMinutes(context, minutes);

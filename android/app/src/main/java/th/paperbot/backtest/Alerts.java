@@ -17,7 +17,7 @@ import org.json.JSONObject;
 
 /**
  * Read-only multi-symbol signal notification scheduler.
- * Scans on CLOSED 5m/15m/1h candles. Android may delay alarms when power restrictions apply.
+ * Scans on CLOSED 5m/15m/1h/4h candles. Android may delay alarms when power restrictions apply.
  * Never sends any orders or infers that experimental signals have verified accuracy.
  */
 final class Alerts {
@@ -51,11 +51,15 @@ final class Alerts {
 
     static int scanMinutes(Context context) {
         int value = prefs(context).getInt("scanMinutes", 15);
-        return value == 5 || value == 15 || value == 60 ? value : 15;
+        return validMinutes(value) ? value : 15;
+    }
+
+    static boolean validMinutes(int value) {
+        return value == 5 || value == 15 || value == 60 || value == 240;
     }
 
     static void setScanMinutes(Context context, int value) {
-        if (value != 5 && value != 15 && value != 60) return;
+        if (!validMinutes(value)) return;
         prefs(context).edit().putInt("scanMinutes", value).apply();
         if (isEnabled(context)) armAlarm(context);
     }
@@ -136,7 +140,7 @@ final class Alerts {
             }
             edit.apply();
             if (plan.notes.size() >= 2) {
-                showSummary(context, "สัญญาณทดลอง " + plan.notes.size() + " เหรียญ", SignalAlerts.summaryText(plan.notes));
+                showSummary(context, "สัญญาณทดลอง " + plan.notes.size() + " รายการ", SignalAlerts.summaryText(plan.notes));
             }
             recordStatus(context, true, plan.status);
         } catch (Exception error) {

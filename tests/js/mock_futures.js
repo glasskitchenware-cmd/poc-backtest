@@ -3,6 +3,12 @@
 (function () {
   var Q = new URLSearchParams(location.search), CASE = Q.get("case") || "all";
   var cfg = JSON.parse(decodeURIComponent(Q.get("cfg") || "%7B%7D"));
+  // cfg.justClosed (ms): the page sees a clock one minute after the latest candle of that size closed, so a foreground
+  // test can show a signal that is still within its entry window.
+  if (cfg.justClosed) {
+    var realNow = Date.now.bind(Date), shift = realNow() % cfg.justClosed - 60000;
+    Date.now = function () { return realNow() - shift; };
+  }
   localStorage.clear();
   Object.keys(cfg.storage || {}).forEach(function (k) { localStorage.setItem(k, cfg.storage[k]); });
   // name, base price, tick, lot step, min notional
@@ -39,7 +45,7 @@
       }) });
       if (u.pathname === "/fapi/v1/klines") return reply(id, true, klines(sym, p.get("interval"), +p.get("startTime") || (Date.now() - 500 * 900000), +p.get("endTime") || Date.now(), +p.get("limit")));
       if (u.pathname === "/fapi/v1/premiumIndex") {
-        var step = { "5m": 300000, "15m": 900000, "1h": 3600000 }[localStorage.getItem("tradeTf") || "15m"];
+        var step = { "5m": 300000, "15m": 900000, "1h": 3600000, "4h": 14400000 }[localStorage.getItem("tradeTf") || "4h"];
         var close = price(sym, Math.floor(Date.now() / step) * step);
         return reply(id, true, { symbol: sym, markPrice: String(close * (cfg.markFar ? 1.02 : 1.0002)) });
       }

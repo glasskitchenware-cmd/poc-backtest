@@ -212,15 +212,18 @@ a{color:var(--accent)}
     <b>Crypto Signal · เลือกเหรียญสำหรับแจ้งเตือน</b>
     <div class="row" style="margin-top:8px">
       <label>กราฟสัญญาณ
-        <select id="alertTf"><option value="5m">M5 · ทดลอง</option><option value="15m" selected>M15 · ทดลอง</option><option value="1h">H1 · สูตรเดิม</option></select>
+        <select id="alertTf"><option value="4h" selected>H4 · Trend (สูตรหลัก)</option><option value="1h">H1 · Squeeze เดิม</option><option value="15m">M15 · ทดลอง</option><option value="5m">M5 · ทดลอง</option></select>
       </label>
       <label>เพดาน Leverage (Isolated)
         <select id="alertLev"><option value="5">5x</option><option value="10" selected>10x</option><option value="20">20x</option><option value="50">50x</option></select>
       </label>
     </div>
+    <label style="margin-top:8px">เสี่ยงต่อไม้ (ถ้าโดน SL เสียกี่ % ของทุน)
+      <select id="riskSel"><option value="0.25">0.25% · ระวังสุด</option><option value="0.5">0.5% · มาตรฐานเทรดเดอร์อาชีพ</option><option value="1">1% · เสี่ยงสูง ขาดทุนลึก</option></select>
+    </label>
     <div id="alertCoinList" class="checks" style="flex-wrap:wrap;gap:8px 12px;margin-top:10px"></div>
     <div class="btnrow"><button class="mini ghost" id="alertAllCoins" type="button">เลือกทุกเหรียญ</button><button class="mini ghost" id="alertCoreCoins" type="button">เฉพาะ BTC · ETH · SOL</button></div>
-    <small>สัญญาณทดลอง 12 เหรียญจาก Binance USDⓈ-M Futures · วิเคราะห์แท่งที่ปิดแล้ว · ไม่ส่งคำสั่งซื้อขาย · Win rate ย้อนหลังไม่ใช่ความแม่นยำที่รับประกัน</small>
+    <small>สัญญาณ 12 เหรียญจาก Binance USDⓈ-M Futures · วิเคราะห์แท่งที่ปิดแล้ว · ไม่ส่งคำสั่งซื้อขาย · Leverage ที่เลือกเป็นเพดาน แอปลดให้เองเมื่อ SL กว้าง · ผลย้อนหลังไม่ใช่สิ่งที่รับประกัน</small>
   </div>
   <button id="scan" style="margin-top:0">สแกนหาสัญญาณตอนนี้</button>
   <p class="muted" style="margin:8px 0 0;font-size:12px" id="sgHelp"></p>
@@ -237,8 +240,9 @@ a{color:var(--accent)}
 <details class="tips"><summary>กฎก่อนเปิดไม้</summary>
   <ul>
     <li>เข้าภายใน 15 นาทีหลังสัญญาณ ราคาวิ่งไปไกลแล้วให้ข้าม ห้ามไล่ราคา</li>
-    <li>Isolated 10x ตั้ง TP/SL ตอนเปิดไม้ ห้ามเลื่อน SL ห้ามถัว</li>
-    <li>ครบ 48 ชม. ยังไม่ชน TP/SL ให้ปิดเอง</li>
+    <li>Isolated ตาม Leverage ในการ์ด ตั้ง SL ตอนเปิดไม้ ห้ามเลื่อน SL ห้ามถัว</li>
+    <li>Trend 4H: ไม่มี TP ตายตัว ถือจนแอปเด้ง "ปิดไม้" · แพ้บ่อยกว่าชนะเป็นเรื่องปกติ กำไรมาจากไม้ใหญ่ไม่กี่ไม้</li>
+    <li>Squeeze (H1/M15/M5): ครบ 48 ชม. ยังไม่ชน TP/SL ให้ปิดเอง</li>
     <li>มีข่าวแรง (hack, ล้มละลาย, ระงับถอน) ให้ข้าม</li>
   </ul>
 </details>
@@ -271,7 +275,7 @@ a{color:var(--accent)}
 
 <div id="portTab" class="hidden">
 <section>
-  <h2>Paper Trading <small class="muted">BTC · Squeeze v2 · 10x</small></h2>
+  <h2>Paper Trading <small class="muted" id="ppTitle">Trend 4H · เหรียญที่เลือก</small></h2>
   <div class="row">
     <button class="mini" id="ppStart" style="width:100%;margin:0">เริ่ม Paper วันนี้</button>
     <button class="mini ghost" id="pp2026" style="width:100%;margin:0">ดูผลปี 2026</button>
@@ -282,7 +286,7 @@ a{color:var(--accent)}
   <div id="ppTrades"></div>
   <details style="margin-top:10px"><summary>ตัวเลขเทคนิค</summary>
     <div class="hero" id="ppHero" style="margin-top:8px"></div>
-    <p class="muted" style="font-size:12px;margin:8px 0 0">งานวิจัยปี 2025: 61 ไม้ · win 32.8% · +0.38R · PF 1.50 · Max DD 2.52% · ต้องมี 30 ไม้ก่อนสรุป</p>
+    <p class="muted" style="font-size:12px;margin:8px 0 0" id="ppResearch"></p>
   </details>
 </section>
 <div id="pfState"></div>
@@ -398,6 +402,8 @@ a{color:var(--accent)}
 <script src="engine.js"></script>
 <script src="swing.js"></script>
 <script src="evidence.js"></script>
+<script src="trend.js"></script>
+<script src="evidence_trend.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

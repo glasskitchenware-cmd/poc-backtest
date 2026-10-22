@@ -48,6 +48,21 @@ print(json.dumps({"v": 2, "candle": c, "interval_minutes": 15, "error": "", "sca
 EOF
 }
 
+packet_h4() {  # an H4 entry without take profit and an exit, candle = 30 s ago (freshness is checked against the device clock)
+  python3 - <<'EOF'
+import json, time
+c = int(time.time() * 1000) - 30_000
+print(json.dumps({"v": 2, "candle": c, "interval_minutes": 240, "error": "", "scanned": 2, "failed": [], "signals": [
+    {"kind": "ENTRY", "symbol": "BTCUSDT", "side": "LONG", "tf": "H4", "strategy": "donchian4h", "candle_close": c, "expires": c + 900000,
+     "entry": "60000.0", "sl": "57000.0", "tp1": "", "tp2": "", "tp5": "", "exit_rule": "ไม่มี TP ตายตัว: ปิดเมื่อแท่ง 4 ชม. ปิดต่ำกว่าจุดต่ำสุด 10 แท่ง",
+     "qty": "0.010", "margin_usdt": "60.00", "margin_thb": "1980", "risk_thb": "1000", "leverage": 10, "leverage_cap": 20, "liq_est": "54600.0",
+     "rationale": "e2e inject", "evidence": "ยังไม่มีข้อมูลยืนยัน", "evidence_ok": False, "experimental": True},
+    {"kind": "EXIT", "symbol": "ETHUSDT", "side": "SHORT", "tf": "H4", "strategy": "donchian4h", "candle_close": c, "expires": c + 14_400_000,
+     "entry": "3000.00", "sl": "3150.00", "exit_ref": "2900.00", "exit_level": "2890.00", "opened": c - 30 * 14_400_000, "r_now": "+0.67",
+     "rationale": "e2e inject", "experimental": True}]}, ensure_ascii=False))
+EOF
+}
+
 log "device: $(adb shell getprop ro.build.version.release) sdk $(adb shell getprop ro.build.version.sdk)"
 adb install -r -g app-debug.apk >> "$LOG" 2>&1
 adb shell pm grant "$PKG" android.permission.POST_NOTIFICATIONS 2>/dev/null
@@ -64,7 +79,8 @@ adb logcat -d -b crash > "$OUT/crash_first_launch.txt"
 adb logcat -d | grep -E "AndroidRuntime|th.paperbot|ActivityTaskManager|chromium" | tail -80 > "$OUT/logcat_first_launch.txt"
 check "$( [ -s "$OUT/crash_first_launch.txt" ] && echo 0 || echo 1)" "no crash on first launch"
 check "$(echo "$FOCUS" | grep -q "$PKG" && echo 1 || echo 0)" "app is in the foreground 25 s after first launch"
-hook DEBUG_CONFIG --es base "http://10.0.2.2:8765"
+# The mock replays real 15m candles, so pin the debug build to M15 (the release default is Trend 4H).
+hook DEBUG_CONFIG --es base "http://10.0.2.2:8765" --es tf 15m --ei minutes 15
 check "$(adb shell dumpsys alarm | grep -c "$PKG" | awk '{print ($1>0)}')" "alarm armed after first launch"
 check "$(prefs | grep -c 'name="enabled" value="true"' | awk '{print ($1>0)}')" "alerts enabled by default"
 check "$(adb shell dumpsys jobscheduler | grep -c "$PKG/.ScanJobService" | awk '{print ($1>0)}')" "15-minute backup job registered"
@@ -113,6 +129,15 @@ check "$(status_text | grep -q 'แจ้งเตือนถูกปิด' &
 adb shell pm grant "$PKG" android.permission.POST_NOTIFICATIONS; sleep 2
 inject "$(packet DOGEUSDT LONG)"
 check "$( titles | grep -q 'DOGEUSDT LONG' && echo 1 || echo 0)" "after granting, the same candle's DOGE alert is delivered (dedup not consumed)"
+
+# 7b. Trend 4H packet (no TP, exit rule) and its EXIT notification, through the same Alerts.onScan path.
+inject "$(packet_h4)"
+T=$(titles)
+check "$(echo "$T" | grep -q 'BTCUSDT LONG · H4' && echo 1 || echo 0)" "H4 Trend entry (no TP) is posted"
+check "$(echo "$T" | grep -q 'ปิดไม้ ETHUSDT SHORT · H4' && echo 1 || echo 0)" "H4 exit is posted as its own 'close position' notification"
+adb shell cmd statusbar expand-notifications; sleep 3
+adb exec-out screencap -p > "$OUT/05_notifications_h4.png"
+adb shell cmd statusbar collapse
 
 # 8. Screen off + Doze + background-killed process: the real 5-minute alarm still runs a scan.
 hook DEBUG_CONFIG --ei minutes 5

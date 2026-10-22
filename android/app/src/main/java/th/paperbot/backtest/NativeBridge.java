@@ -218,6 +218,13 @@ final class NativeBridge {
         return context.getSharedPreferences("alerts", Context.MODE_PRIVATE).getString("debugFuturesBase", "");
     }
 
+    /** Timeframe override for emulator tests (the mock replays 15m candles); always empty in the release APK. */
+    @JavascriptInterface
+    public String debugTradeTf() {
+        if (!isDebuggable()) return "";
+        return context.getSharedPreferences("alerts", Context.MODE_PRIVATE).getString("debugTradeTf", "");
+    }
+
     private boolean isDebuggable() {
         return (context.getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0;
     }
@@ -232,7 +239,7 @@ final class NativeBridge {
         main.post(() -> host.onAlertsChanged(enabled));
     }
 
-    /** Alert timeframe options are 5m, 15m, and 1h; synchronized with the Android alarm. */
+    /** Alert timeframe options are 5m, 15m, 1h and 4h; synchronized with the Android alarm. */
     @JavascriptInterface
     public void setScanMinutes(int minutes) {
         main.post(() -> Alerts.setScanMinutes(context, minutes));

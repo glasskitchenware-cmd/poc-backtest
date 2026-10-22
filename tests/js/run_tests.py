@@ -3,7 +3,7 @@
 Each case loads the app, lets it scan, and checks the JSON packet the app hands to the Android alerts.
 Packets with signals are written to tests/js/out/ and re-checked by tools/java-tests (same contract).
 Usage: python3 tests/js/run_tests.py"""
-import glob, html, json, os, re, shutil, subprocess, sys, tempfile, urllib.parse
+import glob, html, json, os, re, shutil, subprocess, sys, tempfile, time, urllib.parse
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -70,7 +70,7 @@ def on_grid(text, tick):
 def main():
     page = harness()
     shutil.rmtree(OUT, ignore_errors=True); OUT.mkdir()
-    store12 = {"alertCoins": json.dumps(COINS), "tradeTf": "15m"}
+    store12 = {"alertCoins": json.dumps(COINS), "tradeTf": "15m", "trendDefault": "1"}
     sides = {c: ("LONG" if i % 2 == 0 else "SHORT") for i, c in enumerate(COINS)}
     ticks = {"BTCUSDT": 0.1, "ETHUSDT": 0.01, "XRPUSDT": 0.0001, "DOGEUSDT": 0.00001}
 
@@ -95,14 +95,14 @@ def main():
     check(r["spot"] == [], "no Spot endpoints used for futures signals")
     (OUT / "all12.json").write_text(json.dumps(pk, ensure_ascii=False), encoding="utf-8")
 
-    r = run(page, "smallcap", {"storage": {"alertCoins": json.dumps(["BTCUSDT", "ETHUSDT"]), "tradeTf": "15m"}, "capital": 10000,
+    r = run(page, "smallcap", {"storage": {"alertCoins": json.dumps(["BTCUSDT", "ETHUSDT"]), "tradeTf": "15m", "trendDefault": "1"}, "capital": 10000,
                                "force": {"BTCUSDT": "LONG", "ETHUSDT": "SHORT"}})
     pk = r["packet"]
     check([s["symbol"] for s in pk["signals"]] == ["ETHUSDT"], "10,000 THB: BTC under Binance min notional is not notified, ETH is")
     check(any(x.startswith("BTCUSDT") and "ต่ำกว่า" in x for x in pk["rejected"]), "BTC rejection reason recorded (below minQty / min notional)")
     (OUT / "smallcap.json").write_text(json.dumps(pk, ensure_ascii=False), encoding="utf-8")
 
-    r = run(page, "m5", {"storage": {"alertCoins": json.dumps(["SOLUSDT", "XRPUSDT"]), "tradeTf": "5m"}, "capital": 1_000_000,
+    r = run(page, "m5", {"storage": {"alertCoins": json.dumps(["SOLUSDT", "XRPUSDT"]), "tradeTf": "5m", "trendDefault": "1"}, "capital": 1_000_000,
                          "force": {"SOLUSDT": "LONG", "XRPUSDT": "SHORT"}})
     pk = r["packet"]
     check(pk["interval_minutes"] == 5 and pk["candle"] % 300000 == 0, "M5: 5-minute closed candle")
@@ -123,7 +123,7 @@ def main():
     pk = r["packet"]
     check(pk["signals"] == [] and len(pk["rejected"]) == 12 and all("mark" in x for x in pk["rejected"]), "mark price 2% away: all 12 rejected")
 
-    wide = {"storage": {"alertCoins": json.dumps(["BTCUSDT"]), "tradeTf": "15m", "alertLeverage": "50"}, "capital": 10_000_000, "force": {"BTCUSDT": "LONG"}}
+    wide = {"storage": {"alertCoins": json.dumps(["BTCUSDT"]), "tradeTf": "15m", "trendDefault": "1", "alertLeverage": "50"}, "capital": 10_000_000, "force": {"BTCUSDT": "LONG"}}
     r = run(page, "stop8", dict(wide, stopFrac=0.08))
     s8 = r["packet"]["signals"][0]
     check(s8["leverage_cap"] == 50 and s8["leverage"] == 7, "8% stop with a 50x cap: leverage lowered to 7x so liquidation stays beyond SL")
@@ -135,7 +135,7 @@ def main():
     ev = {"periods": {"oos": "2026-01-01..2026-09-30"}, "costs": "x", "rows": {
         "BTCUSDT|15m": {"oos": {"n": 40, "win": 30.0, "winCI": [18.1, 45.4], "tp5": 15.0, "tp5CI": [7.1, 29.1], "avgR": -0.05, "pf": 0.9}},
         "ETHUSDT|15m": {"oos": {"n": 12, "win": 40.0, "winCI": [15, 70], "tp5": 20.0, "tp5CI": [5, 50], "avgR": 0.3, "pf": 1.4}}}}
-    r = run(page, "evidence", {"storage": {"alertCoins": json.dumps(["BTCUSDT", "ETHUSDT"]), "tradeTf": "15m"}, "capital": 10_000_000,
+    r = run(page, "evidence", {"storage": {"alertCoins": json.dumps(["BTCUSDT", "ETHUSDT"]), "tradeTf": "15m", "trendDefault": "1"}, "capital": 10_000_000,
                                "force": {"BTCUSDT": "LONG", "ETHUSDT": "LONG"}, "evidence": ev})
     by = {s["symbol"]: s for s in r["packet"]["signals"]}
     check("95% CI 18.1–45.4%" in by["BTCUSDT"]["evidence"] and "40 ไม้" in by["BTCUSDT"]["evidence"] and by["BTCUSDT"]["evidence_ok"],
@@ -151,6 +151,60 @@ def main():
     check(5 in r["scanMinutes"], "main-screen 5m button also moves the Android alarm to 5 minutes")
     check("Paper เท่านั้น" in r["smMain"], "main screen states trial / paper only")
     check(r["spot"] == [], "foreground screen uses futures endpoints only")
+    # ---- Trend 4H (main strategy since v4.4) ----
+    three = ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
+    h4 = {"alertCoins": json.dumps(three), "tradeTf": "4h", "trendDefault": "1"}
+    r = run(page, "h4_entry", {"storage": h4, "capital": 10_000_000, "trendForce": {"BTCUSDT": "LONG", "ETHUSDT": "SHORT"}})
+    pk = r["packet"]
+    check(pk and pk["error"] == "" and pk["interval_minutes"] == 240 and pk["candle"] % 14_400_000 == 0 and pk["scanned"] == 3,
+          "H4: packet for the 4-hour candle that just closed, 3 coins scanned")
+    sig = {s["symbol"]: s for s in pk["signals"]}
+    check(sorted(sig) == ["BTCUSDT", "ETHUSDT"] and all(s["kind"] == "ENTRY" and s["tf"] == "H4" and s["strategy"] == "donchian4h" for s in sig.values()),
+          "H4: one ENTRY per coin the rule enters, strategy donchian4h")
+    check(all(all(f in s for f in FIELDS) for s in sig.values()), "H4 entries carry the full field contract")
+    check(all(s["tp1"] == s["tp2"] == s["tp5"] == "" and "ไม่มี TP ตายตัว" in s["exit_rule"] for s in sig.values()), "H4 entries: no take profit, the exit rule instead")
+    check(all(s["expires"] == pk["candle"] + 900000 for s in sig.values()), "H4 entries: enter within 15 minutes of the close")
+    b, e = sig["BTCUSDT"], sig["ETHUSDT"]
+    bE, bS, eE, eS = (float(x[k].replace(",", "")) for x in (b, e) for k in ("entry", "sl"))
+    check(bS < bE and eS > eE and 0.002 < (bE - bS) / bE < 0.2, "LONG stop below, SHORT stop above, stop = 3 ATR of the real bars")
+    check(on_grid(b["entry"], 0.1) and on_grid(b["sl"], 0.1), "H4 BTC prices on tick grid 0.1")
+    check(5 <= b["leverage"] <= 10 and b["leverage_cap"] == 10, "H4 leverage within the user cap")
+    check("ทะลุจุดสูงสุด 20 แท่ง" in b["rationale"] and "EMA200" in b["rationale"], "H4 rationale names the 20-bar breakout and EMA200")
+    check(b["evidence"].startswith("ยังไม่มีข้อมูลยืนยัน") or "walk-forward" in b["evidence"], "H4 evidence: walk-forward table or 'no confirming data'")
+    (OUT / "h4_entry.json").write_text(json.dumps(pk, ensure_ascii=False), encoding="utf-8")
+
+    r = run(page, "h4_exit", {"storage": h4, "capital": 10_000_000, "trendForce": {"BTCUSDT": "EXIT_LONG", "ETHUSDT": "HOLD_SHORT"}})
+    pk = r["packet"]
+    check(len(pk["signals"]) == 1 and pk["signals"][0]["kind"] == "EXIT" and pk["signals"][0]["symbol"] == "BTCUSDT" and pk["signals"][0]["side"] == "LONG",
+          "H4: the rule closing BTC LONG gives one EXIT; a held position gives nothing")
+    x = pk["signals"][0]
+    check(x["tf"] == "H4" and x["candle_close"] == pk["candle"] and x["opened"] < pk["candle"] and x["r_now"] == "+1.00" and x["exit_ref"] and x["exit_level"],
+          "EXIT carries entry, open time, reference close, channel level and R now")
+    check("ปิดไม้ BTC LONG" in r["scanCards"] and "ไม้ที่สูตรถืออยู่" in r["scanCards"] and "ETH" in r["scanCards"], "signal tab shows the exit and the held ETH SHORT")
+    (OUT / "h4_exit.json").write_text(json.dumps(pk, ensure_ascii=False), encoding="utf-8")
+
+    now = int(time.time() * 1000)
+    loss = {"trades": [{"id": 1, "symbol": "BTCUSDT", "entry": 1, "stop": 0.9, "qty": 1, "fx": 33, "risk": 1000, "dir": 1, "fee": 0.0007, "lev": 10,
+                        "entry_time": now - 3 * 86_400_000, "exit_time": now - 2 * 86_400_000, "exit": 0.85, "pnl": -150_000, "r": -150, "closed": True}], "nextId": 2}
+    r = run(page, "h4_paused", {"storage": dict(h4, **{"portfolio.v1": json.dumps(loss)}), "capital": 1_000_000,
+                                "trendForce": {"BTCUSDT": "EXIT_LONG", "ETHUSDT": "LONG"}})
+    pk = r["packet"]
+    check(pk["note"] != "" and [s["kind"] for s in pk["signals"]] == ["EXIT"], "drawdown stop: new entries paused, the exit still goes out")
+
+    r = run(page, "h4_default", {"storage": {"alertCoins": json.dumps(["BTCUSDT"]), "tradeTf": "15m"}, "capital": 1_000_000, "trendForce": {}})
+    check(r["packet"]["interval_minutes"] == 240 and 240 in r["scanMinutes"], "update moves an old M15 install to Trend 4H once, alarm to 240 minutes")
+
+    r = run(page, "h4_coach", {"storage": h4, "capital": 1_000_000, "trendForce": {"BTCUSDT": "LONG", "SOLUSDT": "HOLD_LONG"}, "clickTf": "4h", "waitMs": 15000,
+                               "justClosed": 14_400_000}, bg=False)
+    shown = r["smMain"] + r["coach"]
+    check("ไม่มี TP ตายตัว" in r["smMain"] and "BTC LONG" in r["smMain"] and "ไม้ที่สูตรถืออยู่" in r["smMain"], "main screen: Trend entry without TP, held SOL listed")
+    check("NaN" not in shown and "undefined" not in shown, "main screen has no NaN/undefined for a signal without TP")
+    check("Trend 4H" in r["help"] and "SL 3 ATR" in r["help"], "settings explain the Trend 4H rule")
+
+    r = run(page, "paper_trend", {"storage": h4, "capital": 100_000, "clickId": "pp2026", "waitMs": 20000}, bg=False)
+    check("Trend 4H · 3 เหรียญ" in r["paperTitle"] and "บาท" in r["paper"] and "อัปเดต" in r["paperStatus"], "Paper runs Trend 4H on the selected coins: " + r["paperStatus"][:60])
+    check("NaN" not in r["paper"] and "undefined" not in r["paper"], "Paper Trend view has no NaN/undefined")
+    check(r["spot"] == [], "Paper uses futures endpoints only")
     print(f"PASSED {passed} checks; packets in {OUT}")
 
 

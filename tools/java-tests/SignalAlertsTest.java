@@ -114,6 +114,37 @@ public class SignalAlertsTest {
             "missing evidence is shown as 'no confirming data', never as a number");
         check(SignalAlerts.plan(packet(15, candle, new JSONArray()), now, key -> -1L).ok, "no signals is a normal, successful scan");
 
+        // H4 Trend: entries carry no take profit, only the exit rule; exits are their own notification stream.
+        long h4 = 4 * 3_600_000L, c4 = candle / h4 * h4, n4 = c4 + 60_000L;
+        JSONObject trend = item("BTCUSDT", "LONG", "H4", c4).put("strategy", "donchian4h").put("tp1", "").put("tp2", "").put("tp5", "")
+            .put("exit_rule", "ไม่มี TP ตายตัว: ปิดเมื่อแท่ง 4 ชม. ปิดต่ำกว่าจุดต่ำสุด 10 แท่ง");
+        SignalAlerts.Plan t4 = SignalAlerts.plan(packet(240, c4, new JSONArray().put(trend)), n4, key -> -1L);
+        check(t4.ok && t4.notes.size() == 1 && t4.notes.get(0).title.startsWith("ทดลอง · BTCUSDT LONG · H4"), "H4 entry without TP is notified, title says H4");
+        check(t4.notes.get(0).body.contains("ไม่มี TP ตายตัว") && !t4.notes.get(0).body.contains("TP5") && t4.notes.get(0).body.contains("SL 98.20"),
+            "H4 entry shows SL and the exit rule instead of TP levels");
+        JSONObject neither = new JSONObject(trend.toString()).put("exit_rule", "");
+        check(SignalAlerts.plan(packet(240, c4, new JSONArray().put(neither)), n4, key -> -1L).invalid == 1, "entry with neither TP nor exit rule is dropped");
+        check(SignalAlerts.plan(packet(240, c4, new JSONArray().put(trend)), c4 + 16 * 60_000L, key -> -1L).notes.isEmpty(), "H4 alert older than 15 minutes is refused");
+        JSONObject exit = new JSONObject().put("kind", "EXIT").put("symbol", "BTCUSDT").put("side", "LONG").put("tf", "H4").put("strategy", "donchian4h")
+            .put("candle_close", c4).put("expires", c4 + h4).put("entry", "60000.0").put("sl", "57000.0").put("exit_ref", "66000.0").put("exit_level", "66100.0")
+            .put("opened", c4 - 30 * h4).put("r_now", "+2.00").put("rationale", "แท่ง 4 ชม. ปิดต่ำกว่าจุดต่ำสุด 10 แท่ง").put("experimental", true);
+        Map<String, Long> seen4 = new HashMap<>();
+        SignalAlerts.Seen lookup4 = key -> seen4.getOrDefault(key, -1L);
+        SignalAlerts.Plan both = SignalAlerts.plan(packet(240, c4, new JSONArray().put(trend).put(exit)), n4, lookup4);
+        check(both.notes.size() == 2 && !both.notes.get(0).key.equals(both.notes.get(1).key), "entry and exit of the same coin/side/candle are separate notifications");
+        SignalAlerts.Note ex = both.notes.get(1);
+        check(ex.exit && ex.title.startsWith("ทดลอง · ปิดไม้ BTCUSDT LONG · H4"), "exit title says close + symbol + side + H4");
+        for (String must : new String[]{"ที่เข้า 60000.0", "ปิด 66000.0 ต่ำกว่า 66100.0", "≈ +2.00R", "SL เดิม 57000.0", "Close → Market", "ถ้าไม่ได้ถือ", "ไม่ใช่คำสั่งซื้อขาย"}) {
+            check(ex.body.contains(must), "exit body contains: " + must);
+        }
+        check(SignalAlerts.summaryText(both.notes).equals("BTC LONG · ปิด BTC LONG"), "group summary marks exits");
+        for (SignalAlerts.Note x : both.notes) seen4.put(x.key, x.candle);
+        check(SignalAlerts.plan(packet(240, c4, new JSONArray().put(exit)), n4 + 30_000L, lookup4).duplicates == 1, "exit on the same candle is not repeated");
+        check(SignalAlerts.plan(packet(240, c4, new JSONArray().put(new JSONObject(exit.toString()).put("exit_ref", ""))), n4, key -> -1L).invalid == 1,
+            "exit without a reference price is dropped");
+        check(SignalAlerts.plan(packet(240, c4, new JSONArray().put(new JSONObject(exit.toString()).put("kind", "CLOSE_ALL"))), n4, key -> -1L).invalid == 1,
+            "unknown kind is dropped");
+
         // Real packets produced by web/app.js in headless Chrome (tests/js) must pass the same contract.
         for (String path : args) {
             JSONObject pkt = new JSONObject(new String(Files.readAllBytes(Paths.get(path)), "UTF-8"));

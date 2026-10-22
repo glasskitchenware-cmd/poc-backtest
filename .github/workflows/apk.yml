@@ -27,6 +27,9 @@ jobs:
       - name: Verify UI JavaScript and alert settings
         run: python3 tools/check_embedded_js.py
 
+      - name: Trend 4H rule unit tests (web/trend.js)
+        run: node tests/js/trend_test.js
+
       - name: JS tests (real index.html in headless Chrome, mock USD-M API)
         run: CHROME=$(which google-chrome) python3 tests/js/run_tests.py
 

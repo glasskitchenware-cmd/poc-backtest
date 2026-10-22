@@ -433,7 +433,7 @@
 
     function open(sig) {
       data.trades.push({ id: data.nextId++, symbol: sig.symbol, entry: sig.entry, stop: sig.stop, target: sig.target,
-        qty: sig.qty, fx: sig.fx, risk: sig.risk, dir: sig.dir || 1, fee: sig.fee, lev: sig.lev, tps: sig.tps,
+        qty: sig.qty, fx: sig.fx, risk: sig.risk, dir: sig.dir || 1, fee: sig.fee, lev: sig.lev, tps: sig.tps, exit_rule: sig.exit_rule,
         hold_hours: sig.hold_hours || 4, entry_time: Date.now(), closed: false });
       save(); render();
     }
@@ -503,8 +503,8 @@
       $("pfOpen").innerHTML = openTrades.map(function (t) {
         var side = (t.dir || 1) > 0 ? '<span class="up">LONG</span>' : '<span class="down">SHORT</span>';
         return '<div class="trade" style="display:block"><b>' + t.symbol.replace("USDT", "") + "</b> " + side + (t.lev ? " x" + t.lev : "") + " · " + t.qty + " เหรียญ · เข้า " + price(t.entry) +
-          '<br><small>SL <span class="down">' + price(t.stop) + "</span> · " + (t.tps ? "TP " + t.tps.map(price).join(" / ") : 'เป้า <span class="up">' + price(t.target) + "</span>") +
-          " · เสี่ยง " + fmt(t.risk, 0) + " ฿ · ปิดภายใน " + thai(t.entry_time + (t.hold_hours || 4) * 3600000).slice(0, 14) + ' น.</small><div class="inline"><input type="number" inputmode="decimal" step="any" placeholder="ราคาที่ปิด" id="exit' + t.id +
+          '<br><small>SL <span class="down">' + price(t.stop) + "</span> · " + (t.exit_rule ? esc(t.exit_rule) : t.tps ? "TP " + t.tps.map(price).join(" / ") : 'เป้า <span class="up">' + price(t.target) + "</span>") +
+          " · เสี่ยง " + fmt(t.risk, 0) + " ฿" + (t.exit_rule ? "" : " · ปิดภายใน " + thai(t.entry_time + (t.hold_hours || 4) * 3600000).slice(0, 14) + " น.") + '</small><div class="inline"><input type="number" inputmode="decimal" step="any" placeholder="ราคาที่ปิด" id="exit' + t.id +
           '"><button class="mini" data-close="' + t.id + '">ปิดไม้</button><button class="mini ghost" data-del="' + t.id + '">ลบ</button></div></div>';
       }).join("") || '<p class="muted">ไม่มีไม้ที่ถืออยู่ กด "ซื้อแล้ว · บันทึกลงพอร์ต" ที่การ์ดสัญญาณเพื่อเพิ่ม</p>';
       $("pfClosed").innerHTML = p.closed.slice(-20).reverse().map(function (t) {
@@ -563,6 +563,15 @@
       saveCoins();
     };
     tf.onchange = function () { setTradeTf(tf.value); modeHelp(); scheduleAuto(); };
+    // Risk per trade lives in the portfolio setting (pfRisk); this picker is its visible control.
+    var risk = $("riskSel"), P = window.EVIDENCE_TREND && window.EVIDENCE_TREND.portfolio;
+    Array.prototype.forEach.call(risk.options, function (o) {
+      var x = P && P[o.value];
+      if (x) o.textContent = o.value + "% · ทดสอบ Trend 4H: ปีละ ~" + fmt(x.cagr, 0) + "% · ลงลึกสุด ~" + fmt(x.maxDD, 0) + "%";
+    });
+    risk.value = String(trendRiskPct());
+    if (!risk.value) risk.value = "0.25";
+    risk.onchange = function () { $("pfRisk").value = risk.value; $("pfRisk").dispatchEvent(new Event("input")); modeHelp(); };
     lev.onchange = function () { try { localStorage.setItem("alertLeverage", lev.value); } catch (e) {} };
     if (window.NativeHttp && window.NativeHttp.setScanMinutes) window.NativeHttp.setScanMinutes(TF[tf.value].ms / 60000);
   }
@@ -682,8 +691,8 @@
           " และตลาด crypto/เศรษฐกิจสหรัฐที่กระทบราคา (CPI, FOMC, ETF, hack, delist, liquidation ใหญ่) ถ้าไม่พบให้บอกว่าไม่พบ ห้ามเดาข่าว",
         "สัญญาณทดลองจากระบบ (" + g.stratName + " แท่ง " + TF[g.tf].name + " ยังไม่พิสูจน์ว่าทำกำไร):",
         "- เหรียญ " + r.symbol + " ฝั่ง " + (g.dir > 0 ? "LONG" : "SHORT") + " เข้า " + price(g.entry) + " SL " + price(g.stop) + " (" + fmt(g.stopPct, 2) + "%)",
-        "- TP1/TP2/TP3 " + g.tps.map(price).join(" / ") + " ถือไม่เกิน " + g.hold + " ชม.",
-        "- แนวโน้ม EMA50/200 แท่งเดียวกัน: " + (g.trend > 0 ? "ขาขึ้น" : g.trend < 0 ? "ขาลง" : "ไม่ชัด"),
+        hasTp(g) ? "- TP1/TP2/TP3 " + g.tps.map(price).join(" / ") + " ถือไม่เกิน " + g.hold + " ชม." : "- " + g.exitRule,
+        "- แนวโน้ม " + (hasTp(g) ? "EMA50/200" : "EMA200") + " แท่งเดียวกัน: " + (g.trend > 0 ? "ขาขึ้น" : g.trend < 0 ? "ขาลง" : "ไม่ชัด"),
         "- หลักฐานย้อนหลังของสูตรนี้กับเหรียญนี้: " + evidenceFor(r.symbol, g.tf).text,
         "- Leverage เพดาน x" + g.lev + ", ราคา Liquidate ประมาณ " + price(g.liq) + " (ไม่มีตาราง bracket จริง)",
         "ห้ามให้ตัวเลขความน่าจะเป็นหรือ % โอกาสชนะของไม้นี้ ห้ามแต่งสถิติ ถ้าข้อมูลไม่พอให้บอกว่าไม่พอ",
@@ -798,6 +807,9 @@
     // Same rules and costs as the research: fee 0.07%/side, no extra slippage, funding 0.01%/8h,
     // risk = min(0.25%, 5% margin x 10x x stop fraction) per trade, compounding.
     function run(startMs, label) {
+      if (isTrend(curTf())) return runTrend(startMs, label);
+      $("ppTitle").textContent = "BTC · Squeeze v2 · 10x";
+      $("ppResearch").textContent = "งานวิจัยปี 2025: 61 ไม้ · win 32.8% · +0.38R · PF 1.50 · Max DD 2.52% · ต้องมี 30 ไม้ก่อนสรุป";
       var opt = Object.assign({}, Swing.DEFAULTS, { fee: 0.0007, slippage: 0, fomcDates: fomcDates() });
       status("กำลังดึงแท่ง 1 ชม. ของ BTCUSDT…");
       var fx = 33;
@@ -813,6 +825,121 @@
         render(trades, bars, startMs, label);
         status("อัปเดต " + thai(Date.now()) + " น. · ใช้แท่งที่ปิดแล้วถึง " + thai(bars[bars.length - 1].close_time + 1) + " น.");
       }).catch(function (e) { status(e.message || String(e), true); });
+    }
+
+    // Balance curve in baht, one point per closed trade.
+    function drawCurve(curve, capital, profit) {
+      var el = $("ppChart");
+      el.classList.toggle("hidden", curve.length < 3);
+      if (chart) { chart.remove(); chart = null; }
+      if (curve.length >= 3) {
+        chart = LightweightCharts.createChart(el, baseOptions(el));
+        var line = chart.addAreaSeries({ lineColor: profit >= 0 ? "#0ecb81" : "#f6465d", topColor: profit >= 0 ? "rgba(14,203,129,.3)" : "rgba(246,70,93,.3)",
+          bottomColor: "rgba(0,0,0,0)", lineWidth: 2, priceFormat: { type: "price", precision: 0, minMove: 1 } });
+        var seen = {}, data = [];
+        curve.forEach(function (pt) { if (seen[pt.time]) data[data.length - 1].value = pt.value; else { seen[pt.time] = 1; data.push(pt); } });
+        line.setData(data);
+        line.createPriceLine({ price: capital, color: "#848e9c", lineStyle: 2, lineWidth: 1, axisLabelVisible: true, title: "ทุน" });
+        chart.timeScale().fitContent();
+      }
+    }
+
+    // Trend 4H paper: web/trend.js on every selected coin, with 1,500 earlier bars so the rule's state matches the alerts.
+    // Only trades that entered after the start count. Risk per trade from the setting, compounding, P&L booked at exit
+    // (as in research/pro).
+    function runTrend(startMs, label) {
+      var coins = selectedCoins(), riskPct = trendRiskPct(), step = TF[TREND.tf].ms, fx = 33, list = [], errors = [];
+      $("ppTitle").textContent = "Trend 4H · " + coins.length + " เหรียญ · เสี่ยง " + riskPct + "%/ไม้";
+      var A = window.EVIDENCE_TREND && window.EVIDENCE_TREND.all, P = window.EVIDENCE_TREND && window.EVIDENCE_TREND.portfolio;
+      $("ppResearch").textContent = A ? "ทดสอบ walk-forward " + trendPeriod() + " (12 เหรียญ): " + A.n + " ไม้ · ชนะ " + A.win + "% · เฉลี่ย " + fmt(A.avgR, 2, true) + "R · PF " + A.pf +
+        (P && P[String(riskPct)] ? " · เสี่ยง " + riskPct + "%: ลงลึกสุด " + P[String(riskPct)].maxDD + "%" : "") + " · ต้องมี 30 ไม้ก่อนสรุป" : "";
+      if (!coins.length) { status("เลือกเหรียญในแท็บสัญญาณก่อน", true); return Promise.resolve(); }
+      status("กำลังดึงแท่ง 4 ชม. ของ " + coins.length + " เหรียญ…");
+      return Promise.all([futuresApi("/fapi/v1/time"), fetchFx().catch(function () { return { rate: 33 }; })]).then(function (res) {
+        fx = res[1].rate;
+        var end = Math.floor(res[0].serverTime / step) * step, from = Math.floor(startMs / step) * step - 1500 * step, queue = coins.slice(), done = 0;
+        function worker() {
+          var sym = queue.shift();
+          if (!sym) return Promise.resolve();
+          return fetchCandles(sym, from, end, function () {}, TREND.tf, true).then(function (bars) {
+            var out = Trend.run(bars, { live: true });
+            list.push({ symbol: sym, close: bars[bars.length - 1].close, trades: out.trades.filter(function (t) { return t.entry_time >= startMs; }),
+              pos: out.pos && out.pos.entry_time >= startMs ? out.pos : null });
+          }).catch(function (e) { errors.push(sym.replace("USDT", "") + ": " + e.message); }).then(function () {
+            done++; status("ดึงแล้ว " + done + "/" + coins.length + " เหรียญ…");
+            return worker();
+          });
+        }
+        return Promise.all([worker(), worker(), worker()]).then(function () { return end; });
+      }).then(function (end) {
+        if (!list.length) throw new Error("ดึงข้อมูลไม่ได้ทุกเหรียญ: " + errors.join(" · "));
+        lastFx = fx;
+        renderTrend(list, startMs, label, riskPct);
+        status("อัปเดต " + thai(Date.now()) + " น. · แท่ง 4 ชม. ที่ปิดแล้วถึง " + thai(end) + " น." + (errors.length ? " · ข้าม " + errors.join(" · ") : ""));
+      }).catch(function (e) { status(e.message || String(e), true); });
+    }
+
+    function renderTrend(list, startMs, label, riskPct) {
+      var closed = [], open = [];
+      list.forEach(function (x) {
+        x.trades.forEach(function (t) { closed.push(Object.assign({ symbol: x.symbol }, t)); });
+        if (x.pos) open.push(Object.assign({ symbol: x.symbol, now: x.close }, x.pos));
+      });
+      closed.sort(function (a, b) { return a.exit_time - b.exit_time; });
+      var risk = riskPct / 100, capital = readNumber("pfCapital", 10000), money = capital, peak = capital, dd = 0, wins = 0, big = 0, sumR = 0, gp = 0, gl = 0;
+      var curve = [{ time: Math.floor(startMs / 1000) + THAI_OFFSET_S, value: capital }];
+      var rows = closed.map(function (t) {
+        var baht = money * risk * t.r;
+        money += baht; peak = Math.max(peak, money); dd = Math.max(dd, 1 - money / peak);
+        if (t.r > 0) { wins++; gp += t.r; } else gl -= t.r;
+        if (t.r >= 3) big++;
+        sumR += t.r;
+        curve.push({ time: Math.floor(t.exit_time / 1000) + THAI_OFFSET_S, value: money });
+        return { t: t, baht: baht };
+      });
+      var n = closed.length, days = (Date.now() - startMs) / 86400000, profit = money - capital, pf = gl > 0 ? gp / gl : (gp > 0 ? Infinity : 0);
+      var openB = open.reduce(function (a, t) { return a + money * risk * t.dir * (t.now - t.entry) / t.risk; }, 0);
+      var A = window.EVIDENCE_TREND && window.EVIDENCE_TREND.all;
+      $("ppHero").innerHTML = [
+        [label, fmt(days, 0) + " วัน", "เริ่ม " + thai(startMs).slice(0, 8)],
+        ["ปิดแล้ว", n + " ไม้", n < 30 ? "ยังน้อยกว่า 30 ไม้ สรุปไม่ได้" : "พอเริ่มประเมินได้"],
+        ["Win rate", n ? fmt(wins / n * 100, 1) + "%" : "—", "ได้ ≥3R " + (n ? fmt(big / n * 100, 1) : "—") + "%"],
+        ["R เฉลี่ย · PF", n ? fmt(sumR / n, 2, true) + "R · " + fmt(pf, 2) : "—", A ? "ทดสอบ: " + fmt(A.avgR, 2, true) + "R · " + A.pf : ""],
+        ["กำไรพอร์ต", '<span class="' + tone(profit) + '">' + fmt(profit / capital * 100, 2, true) + "%</span>", "เสี่ยง " + riskPct + "%/ไม้ ทบต้น"],
+        ["Max DD", fmt(dd * 100, 2) + "%", "ไม้ที่ยังถือ " + open.length]
+      ].map(function (c) { return '<div class="stat"><small>' + c[0] + "</small><b>" + c[1] + "</b><small>" + c[2] + "</small></div>"; }).join("");
+      var cls, headline, advice;
+      if (!n) {
+        cls = "wait"; headline = "ยังไม่มีไม้ที่ปิด"; advice = "สูตรนี้เข้าไม่บ่อยและถือหลายวัน แอปจะจดให้เองเมื่อมีไม้";
+      } else if (n < 30) {
+        cls = "wait"; headline = (profit >= 0 ? "กำไร " : "ขาดทุน ") + fmt(Math.abs(profit), 0) + " บาท";
+        advice = "ยังเร็วไปที่จะสรุป มีแค่ " + n + " ไม้ ต้องรอให้ครบ 30 ไม้ก่อน (อีก " + (30 - n) + " ไม้) ระหว่างนี้ยังไม่ควรใช้เงินจริง";
+      } else if (profit > 0 && pf > 1) {
+        cls = "good"; headline = "กำไร " + fmt(profit, 0) + " บาท ✅";
+        advice = "ครบ " + n + " ไม้แล้ว และยังได้กำไร ถ้าจะใช้เงินจริง เริ่มน้อยๆ เสี่ยงไม่เกินที่ตั้งไว้ และตามสัญญาณทุกไม้ (ข้ามบางไม้ = พลาดไม้ใหญ่)";
+      } else {
+        cls = "bad"; headline = "ขาดทุน " + fmt(Math.abs(profit), 0) + " บาท ❌";
+        advice = "ครบ " + n + " ไม้แต่ยังขาดทุน: ตลาดช่วงนี้ไม่มีเทรนด์ สูตรตามเทรนด์ขาดทุนเป็นช่วงๆ ได้ อย่าเพิ่มความเสี่ยง และอย่าใช้เงินจริงจนกว่า Paper จะกลับมาบวก";
+      }
+      $("ppSimple").innerHTML = '<div class="verdict ' + cls + '"><small>' + esc(label) + " · ใช้ทุนสมมติ " + fmt(capital, 0) + " บาท</small>" +
+        '<div class="big ' + (n ? tone(profit) : "") + '">' + headline + "</div>" +
+        "<div>ตอนนี้จะมีเงิน <b>" + fmt(money, 0) + " บาท</b>" + (n ? " (" + fmt((money / capital - 1) * 100, 1, true) + "%)" : "") + "</div>" +
+        (n ? "<div>เทรด " + n + " ไม้ · ชนะ " + wins + " · แพ้ " + (n - wins) + "</div>" : "") +
+        (open.length ? "<div>ไม้ที่ยังถือ " + open.length + ' ไม้ · ยังไม่ปิด <b class="' + tone(openB) + '">' + fmt(openB, 0, true) + " ฿</b></div>" : "") +
+        "<p>" + esc(advice) + "</p>" +
+        '<p class="muted" style="font-size:12px">สูตรตามเทรนด์แพ้บ่อยกว่าชนะเป็นเรื่องปกติ (ทดสอบชนะราว 1 ใน 3) กำไรมาจากไม้ใหญ่ไม่กี่ไม้ที่วิ่งหลายวัน ให้ดูยอดเงินรวม ไม่ใช่จำนวนครั้งที่ชนะ</p></div>';
+      drawCurve(curve, capital, profit);
+      var why = { exit: "ออกตามสูตร", stop: "โดน SL", stop_gap: "โดน SL (ราคากระโดด)" };
+      var side = function (d) { return d > 0 ? "Long" : "Short"; };
+      $("ppTrades").innerHTML = open.map(function (t) {
+        var r = t.dir * (t.now - t.entry) / t.risk;
+        return '<div class="trade"><div><b>' + t.symbol.replace("USDT", "") + " " + side(t.dir) + "</b> · ถืออยู่<br><small>เข้า " + thai(t.entry_time).slice(0, 8) + " ที่ " + price(t.entry) +
+          " · SL " + price(t.stop) + '</small></div><div class="' + tone(r) + '" style="font-weight:600">' + fmt(r, 2, true) + "R</div></div>";
+      }).join("") + rows.slice(-40).reverse().map(function (x) {
+        return '<div class="trade"><div><b>' + x.t.symbol.replace("USDT", "") + " " + side(x.t.dir) + "</b><br><small>" + thai(x.t.entry_time).slice(0, 8) + " → " + thai(x.t.exit_time).slice(0, 8) +
+          " · " + (why[x.t.reason] || x.t.reason) + " · " + fmt(x.t.r, 2, true) + 'R</small></div><div class="' + tone(x.baht) + '" style="font-weight:600">' +
+          (x.baht >= 0 ? "ได้ +" : "เสีย ") + fmt(Math.abs(x.baht), 0) + " ฿</div></div>";
+      }).join("") || '<p class="muted">ยังไม่มีไม้ตั้งแต่วันเริ่ม</p>';
     }
 
     function render(trades, bars, startMs, label) {
@@ -863,19 +990,7 @@
         (n ? "<div>เทรด " + n + " ไม้ · ชนะ " + wins + " · แพ้ " + losses + "</div>" : "") +
         "<p>" + esc(advice) + "</p>" +
         '<p class="muted" style="font-size:12px">สูตรนี้แพ้บ่อยเป็นเรื่องปกติ (ชนะราว 1 ใน 3) แต่ไม้ที่ชนะได้มากกว่าไม้ที่แพ้หลายเท่า ให้ดูยอดเงินรวม ไม่ใช่จำนวนครั้งที่ชนะ</p></div>';
-      var el = $("ppChart");
-      el.classList.toggle("hidden", rows.length < 2);
-      if (chart) { chart.remove(); chart = null; }
-      if (rows.length >= 2) {
-        chart = LightweightCharts.createChart(el, baseOptions(el));
-        var line = chart.addAreaSeries({ lineColor: profit >= 0 ? "#0ecb81" : "#f6465d", topColor: profit >= 0 ? "rgba(14,203,129,.3)" : "rgba(246,70,93,.3)",
-          bottomColor: "rgba(0,0,0,0)", lineWidth: 2, priceFormat: { type: "price", precision: 0, minMove: 1 } });
-        var seen = {}, data = [];
-        curve.forEach(function (pt) { if (seen[pt.time]) data[data.length - 1].value = pt.value; else { seen[pt.time] = 1; data.push(pt); } });
-        line.setData(data);
-        line.createPriceLine({ price: capital, color: "#848e9c", lineStyle: 2, lineWidth: 1, axisLabelVisible: true, title: "ทุน" });
-        chart.timeScale().fitContent();
-      }
+      drawCurve(curve, capital, profit);
       var sideTh = function (side) { return side === "long" ? "ซื้อ (Long)" : "ขาย (Short)"; };
       var why = { stop: "โดนตัดขาดทุน", stop_gap: "โดนตัดขาดทุน", target: "ถึงเป้ากำไร", target_gap: "ถึงเป้ากำไร", time: "ครบ 48 ชม. ปิดเอง" };
       var openHtml = "";
@@ -915,8 +1030,15 @@
 
   // ---- Futures: ONE BEST COMBO (Momentum + Squeeze, 1H) long/short with leverage-aware sizing ----
   var FUT = { fee: 0.0005, slippage: 0.0002, mmr: 0.005, mmrSafe: 0.01, enterWithinMin: 15, marginShare: 0.25 };
-  // The Android scanner and the visible scanner share persisted M5/M15/H1 settings.
-  var TF = { "1h": { ms: 3600000, days: 100, name: "1 ชม." }, "15m": { ms: 900000, days: 30, name: "15 นาที" }, "5m": { ms: 300000, days: 14, name: "5 นาที" } };
+  // The Android scanner and the visible scanner share persisted H4/H1/M15/M5 settings.
+  // H4 runs Trend 4H (250 days = 1,500 bars, the window research/pro replays); the others run Squeeze v2.
+  var TF = { "4h": { ms: 14400000, days: 250, name: "4 ชม." }, "1h": { ms: 3600000, days: 100, name: "1 ชม." },
+    "15m": { ms: 900000, days: 30, name: "15 นาที" }, "5m": { ms: 300000, days: 14, name: "5 นาที" } };
+  // Trend 4H (web/trend.js): the main strategy since v4.4. Risk per trade comes from the portfolio setting, at most 1%.
+  var TREND = { tf: "4h", id: "donchian4h", name: "Trend 4H · Donchian 20/10 · SL 3 ATR · EMA200", maxRiskPct: 1 };
+  function isTrend(tf) { return tf === TREND.tf; }
+  function hasTp(g) { return !!(g.tps && g.tps.length); }
+  function trendRiskPct() { return Math.max(0.1, Math.min(TREND.maxRiskPct, readNumber("pfRisk", 0.25))); }
   // One place that changes the signal timeframe, so the visible scanner and the Android alarm never disagree.
   function setTradeTf(v) {
     if (!TF[v]) return;
@@ -925,10 +1047,16 @@
     if (window.NativeHttp && window.NativeHttp.setScanMinutes) window.NativeHttp.setScanMinutes(TF[v].ms / 60000);
   }
   function curTf() {
-    var t = "15m";
-    try { t = localStorage.getItem("tradeTf") || "15m"; } catch (e) { /* ignore */ }
-    return TF[t] ? t : "15m";
+    var t = "", dbg = "";
+    try { dbg = window.NativeHttp && window.NativeHttp.debugTradeTf ? window.NativeHttp.debugTradeTf() : ""; } catch (e) { /* release build */ }
+    if (TF[dbg]) return dbg;
+    try { t = localStorage.getItem("tradeTf") || ""; } catch (e) { /* ignore */ }
+    return TF[t] ? t : TREND.tf;
   }
+  // v4.4 moves every install to Trend 4H once; the user can switch back to the trial timeframes afterwards.
+  try {
+    if (!localStorage.getItem("trendDefault")) { localStorage.setItem("trendDefault", "1"); localStorage.setItem("tradeTf", TREND.tf); }
+  } catch (e) { /* storage is optional */ }
 
   var lastFutures = [];
 
@@ -946,7 +1074,7 @@
       var f = money() / (g.balanceUsdt * fx), qty = g.qty * f, notional = qty * g.entry;
       var cost = notional * 2 * (FUT.fee + FUT.slippage);
       return { qty: qty, notional: notional, marginB: notional / g.lev * fx, lossB: g.riskUsdt * f * fx,
-        winB: (qty * Math.abs(g.tps[2] - g.entry) - cost) * fx, avbl: money() / fx };
+        winB: hasTp(g) ? (qty * Math.abs(g.tps[2] - g.entry) - cost) * fx : NaN, avbl: money() / fx };
     }
     function qtyTxt(q) { return q >= 1 ? fmt(q, 3) : q.toPrecision(3); }
     function stepsFor(r, g, z) {
@@ -958,10 +1086,13 @@
         { t: "lev", text: "แตะตัวเลข Leverage → ตั้งเป็น <b>" + g.lev + "x</b> → กด Confirm" },
         { t: "type", text: "แตะแท็บ <b>Open</b> แล้วเลือกชนิดคำสั่ง <b>Market</b>" },
         { t: "size", text: "ลากสไลเดอร์ไปที่ <b>" + pctTxt + "</b> หรือพิมพ์ Size <b>" + qtyTxt(z.qty) + " " + coin + "</b><br>= ลงเงิน (Margin) ประมาณ <b>" + fmt(z.marginB, 0) + " บาท</b>" },
-        { t: "tpsl", text: "ติ๊ก <b>TP/SL</b> แล้วใส่ Take Profit <b class=\"up\">" + price(g.tps[2]) + "</b> และ Stop Loss <b class=\"down\">" + price(g.stop) + "</b>" },
+        { t: "tpsl", text: hasTp(g) ? "ติ๊ก <b>TP/SL</b> แล้วใส่ Take Profit <b class=\"up\">" + price(g.tps[2]) + "</b> และ Stop Loss <b class=\"down\">" + price(g.stop) + "</b>"
+          : "ติ๊ก <b>TP/SL</b> เว้น Take Profit ว่าง ใส่เฉพาะ Stop Loss <b class=\"down\">" + price(g.stop) + "</b> (สูตรนี้ไม่มีเป้ากำไรตายตัว)" },
         { t: "buy", text: "กด <b class=\"" + (long ? "up" : "down") + "\">" + (long ? "Buy/Long" : "Sell/Short") + "</b> ถ้ามีหน้ายืนยัน กด <b>Confirm</b>" },
-        { t: "done", text: "เสร็จแล้ว! ถ้าโดน SL เสียประมาณ <b class=\"down\">" + fmt(z.lossB, 0) + " ฿</b> · ถ้าถึง TP ได้ประมาณ <b class=\"up\">" + fmt(z.winB, 0) +
+        hasTp(g) ? { t: "done", text: "เสร็จแล้ว! ถ้าโดน SL เสียประมาณ <b class=\"down\">" + fmt(z.lossB, 0) + " ฿</b> · ถ้าถึง TP ได้ประมาณ <b class=\"up\">" + fmt(z.winB, 0) +
           " ฿</b><br>ถ้าครบ " + fmt(g.hold, g.hold < 10 ? 1 : 0) + " ชม. ยังไม่ชน ให้ไปที่ Positions กด Close" }
+          : { t: "done", text: "เสร็จแล้ว! ถ้าโดน SL เสียประมาณ <b class=\"down\">" + fmt(z.lossB, 0) + " ฿</b> · ไม่มีเป้ากำไรตายตัว ไม้ที่ชนะมักวิ่งหลายวัน" +
+          "<br>ถือไว้จนแอปเด้ง <b>ปิดไม้</b> แล้วไปที่ Positions กด Close · ห้ามเลื่อน SL" }
       ];
     }
     function screen(r, g, z) {
@@ -981,7 +1112,7 @@
           '<div class="tx-sl' + on("size") + '" data-k="size"><span class="ln"></span><span class="fill" style="width:' + slid + '%"></span>' + ticks + '<span class="kb" style="left:' + slid + '%"></span></div>' +
           (g ? '<div class="tx-pct">' + (past("size") ? fmt(pct, pct < 10 ? 1 : 0) + "%" : "&nbsp;") + "</div>" : "") +
           '<div class="tx-ck' + on("tpsl") + '" data-k="tpsl"><i>' + (past("tpsl") ? "✓" : "") + "</i>TP/SL</div>" +
-          (past("tpsl") ? '<div class="tx-fld sm"><small>Take Profit</small><span class="up">' + price(g.tps[2]) + '</span></div><div class="tx-fld sm"><small>Stop Loss</small><span class="down">' + price(g.stop) + "</span></div>" : "") +
+          (past("tpsl") ? '<div class="tx-fld sm"><small>Take Profit</small><span class="up">' + (hasTp(g) ? price(g.tps[2]) : "") + '</span></div><div class="tx-fld sm"><small>Stop Loss</small><span class="down">' + price(g.stop) + "</span></div>" : "") +
           '<div class="tx-btn buy' + (long ? on("buy") : " dim") + '"' + (long ? ' data-k="buy"' : "") + ">Buy/Long</div>" +
           '<div class="tx-btn sell' + (long ? " dim" : on("buy")) + '"' + (long ? "" : ' data-k="buy"') + ">Sell/Short</div>" +
         '</div><div class="tx-book" id="txBook"><div class="bk-h"><span>Price</span><span>Amount</span></div><div id="txAsks"></div><div class="bk-mid" id="txPrice">' +
@@ -990,37 +1121,59 @@
         '<div class="tx-nav"><span>Home</span><span>Markets</span><span>Trade</span><span class="on' + on("nav") + '" data-k="nav">Futures</span><span>Assets</span></div>' +
         "</div>";
     }
-    var steps = [];
-    function draw() {
-      var list = signals(), r = list[pick] || null, g = r && r.signal, z = g ? sized(g) : null;
-      steps = g ? stepsFor(r, g, z) : [];
-      var tf = curTf(), head = '<div class="sm-tf">' + ["1h", "15m", "5m"].map(function (k) {
-        return '<button type="button" data-tf="' + k + '" class="' + (k === tf ? "on" : "") + '">' + TF[k].name + (k === "1h" ? " (สูตรเดิม)" : " (ทดลอง)") + "</button>";
-      }).join("") + "</div>";
-      // Research evidence (2026, data the rule never saw) for the selected coins on this timeframe; never in-sample numbers.
+    // Squeeze evidence (2026, data the rule never saw) for the selected coins on this timeframe; never in-sample numbers.
+    function squeezeHead(tf) {
       var E = window.EVIDENCE, n = 0, sumR = 0, tp = 0, used = [];
       selectedCoins().forEach(function (c) {
         var o = E && E.rows && E.rows[c + "|" + tf] && E.rows[c + "|" + tf].oos;
         if (o && o.n) { n += o.n; sumR += o.n * o.avgR; tp += o.n * o.tp5 / 100; used.push(c.replace("USDT", "")); }
       });
       var baht = sumR * money() * LOCK.riskPct / 100;
-      head += '<div class="sm-exp">โหมดทดลอง · Paper เท่านั้น · สัญญาณไม่ใช่คำสั่งซื้อขาย</div>' +
+      return '<div class="sm-exp">โหมดทดลอง · Paper เท่านั้น · สัญญาณไม่ใช่คำสั่งซื้อขาย</div>' +
         '<div class="sm-bt ' + (n >= 30 ? (sumR > 0 ? "good" : "bad") : "") + '">' + (n >= 30
           ? "หลักฐาน " + E.periods.oos + " (" + used.join(", ") + " · " + TF[tf].name + "): " + n + " ไม้ · ถึง TP 5R " + fmt(tp / n * 100, 0) + "% · เฉลี่ย " +
             fmt(sumR / n, 2, true) + "R/ไม้ = <b>" + (baht >= 0 ? "ได้ +" : "เสีย ") + fmt(baht, 0) + " ฿</b> ถ้าเสี่ยง 0.25%/ไม้" +
             (sumR <= 0 ? "<br><small>ผลย้อนหลังขาดทุน: อย่าใช้เงินจริงกับกราฟนี้</small>" : "")
           : "ยังไม่มีข้อมูลยืนยันสำหรับเหรียญ/กราฟที่เลือก") + "</div>";
+    }
+    // Trend 4H: exits and held positions first, then the walk-forward evidence for the selected coins in baht at the
+    // user's risk per trade (simple sum over the test years, not compounded) and the 12-coin portfolio figures.
+    function trendHead() {
+      var T = window.EVIDENCE_TREND, n = 0, sumR = 0, wins = 0, big = 0, used = [], risk = trendRiskPct();
+      selectedCoins().forEach(function (c) {
+        var o = T && T.rows && T.rows[c];
+        if (o && o.n) { n += o.n; sumR += o.n * o.avgR; wins += o.n * o.win / 100; big += o.n * o.big3 / 100; used.push(c.replace("USDT", "")); }
+      });
+      var baht = sumR * money() * risk / 100, port = T && T.portfolio && T.portfolio[String(risk)];
+      return '<div class="sm-exp">สูตรหลัก Trend 4H · ลอง Paper ก่อนใช้เงินจริง · สัญญาณไม่ใช่คำสั่งซื้อขาย</div>' + trendBoard(results) +
+        '<div class="sm-bt ' + (n >= 30 ? (sumR > 0 ? "good" : "bad") : "") + '">' + (n >= 30
+          ? "ทดสอบ walk-forward " + trendPeriod() + " (" + used.join(", ") + "): " + n + " ไม้ · ชนะ " + fmt(wins / n * 100, 0) + "% · ได้ ≥3R " + fmt(big / n * 100, 0) +
+            "% · เฉลี่ย " + fmt(sumR / n, 2, true) + "R/ไม้ = <b>" + (baht >= 0 ? "ได้ +" : "เสีย ") + fmt(baht, 0) + " ฿</b> ถ้าเสี่ยง " + risk + "%/ไม้ (รวมทั้งช่วง ไม่ทบต้น)" +
+            (port ? "<br><small>พอร์ต 12 เหรียญ เสี่ยง " + risk + "%/ไม้: เฉลี่ยปีละ " + fmt(port.cagr, 1, true) + "% · ลงลึกสุด " + fmt(port.maxDD, 1) + "% · เดือนที่บวก " +
+              port.posMonths + "% · ผลจริงมักแย่กว่าทดสอบ</small>" : "") +
+            (sumR <= 0 ? "<br><small>ผลย้อนหลังขาดทุน: อย่าใช้เงินจริง</small>" : "")
+          : "ยังไม่มีข้อมูลยืนยันสำหรับเหรียญที่เลือก") + "</div>";
+    }
+    var steps = [];
+    function draw() {
+      var list = signals(), r = list[pick] || null, g = r && r.signal, z = g ? sized(g) : null;
+      steps = g ? stepsFor(r, g, z) : [];
+      var tf = curTf(), head = '<div class="sm-tf">' + ["4h", "1h", "15m", "5m"].map(function (k) {
+        return '<button type="button" data-tf="' + k + '" class="' + (k === tf ? "on" : "") + '">' + TF[k].name + (k === "4h" ? " Trend" : "") + "</button>";
+      }).join("") + "</div>";
+      head += isTrend(tf) ? trendHead() : squeezeHead(tf);
       if (list.length) {
         head += '<div class="sm-pick">' + list.map(function (x, i) {
           var d = x.signal.dir > 0;
           return '<button type="button" class="' + (i === pick ? "on " : "") + (d ? "l" : "s") + '" data-pick="' + i + '">' + x.symbol.replace("USDT", "") + " " + (d ? "LONG" : "SHORT") + "</button>";
         }).join("") + "</div>" +
-          '<div class="sm-sum">ลงเงิน <b>' + fmt(z.marginB, 0) + ' ฿</b> · โดน SL เสีย <b class="down">' + fmt(z.lossB, 0) + ' ฿</b> · ถึง TP ได้ <b class="up">' + fmt(z.winB, 0) + " ฿</b>" +
+          '<div class="sm-sum">ลงเงิน <b>' + fmt(z.marginB, 0) + ' ฿</b> · โดน SL เสีย <b class="down">' + fmt(z.lossB, 0) + ' ฿</b> · ' +
+          (hasTp(g) ? 'ถึง TP ได้ <b class="up">' + fmt(z.winB, 0) + " ฿</b>" : "ไม่มี TP ตายตัว ออกเมื่อแอปเตือน") +
           "<br><small>สัญญาณ " + TF[tf].name + " · หมดอายุ " + thai(g.expires).slice(9) + " น." +
           (r.ai ? " · AI เช็กข่าว: " + esc(r.ai.verdict) : "") + "</small>" +
           (function (ev) { return '<div class="ev ' + (ev.ok && ev.avgR > 0 ? "good" : "bad") + '">' + esc(ev.text) + "</div>"; })(evidenceFor(r.symbol, tf)) + "</div>";
       } else {
-        head += '<div class="sm-wait"><b>' + (busyNow ? "กำลังเช็ก " + selectedCoins().length + " เหรียญ…" : "ยังไม่มีสัญญาณทดลอง") + "</b><small>" +
+        head += '<div class="sm-wait"><b>' + (busyNow ? "กำลังเช็ก " + selectedCoins().length + " เหรียญ…" : isTrend(tf) ? "ยังไม่มีสัญญาณเข้าใหม่" : "ยังไม่มีสัญญาณทดลอง") + "</b><small>" +
           (busyNow ? "ประมาณ 30 วินาที" : "แอปจะเด้งแจ้งเตือนเมื่อมีสัญญาณ · เช็กรอบถัดไป " + thai(Math.floor(Date.now() / TF[tf].ms) * TF[tf].ms + TF[tf].ms).slice(9) + " น.") + "</small></div>";
       }
       $("smMain").innerHTML = head + screen(r, g, z) + '<p class="sm-note" style="text-align:center">ภาพจำลองหน้า Binance Futures (ไม่ใช่แอปจริง) · ราคาจริงจาก Binance</p>';
@@ -1053,8 +1206,7 @@
       if (last) {
         $("coSave").onclick = function () {
           var z = sized(g);
-          Portfolio.open({ symbol: r.symbol, dir: g.dir, entry: g.entry, stop: g.stop, target: g.tps[2], tps: g.tps, qty: z.qty, fx: fx,
-            risk: z.lossB, fee: FUT.fee + FUT.slippage, lev: g.lev, hold_hours: g.hold });
+          Portfolio.open(Object.assign(recordOf(r, g, fx), { qty: z.qty, risk: z.lossB }));
           $("coSave").textContent = "บันทึกแล้ว ✓"; $("coSave").disabled = true;
         };
       } else $("coNext").onclick = function () { go(step + 1); };
@@ -1146,7 +1298,7 @@
           // Only a fully closed candle that ends exactly at the latest boundary may produce a signal.
           if (!last || last.close_time + 1 !== end) throw new Error("แท่งล่าสุดไม่สด (ไม่ใช่แท่งที่เพิ่งปิด)");
           if (!rule || rule.status !== "TRADING") throw new Error("ไม่มีสัญญา Perpetual ที่เปิดเทรด");
-          results.push(futuresCard(s, bars, fxInfo.rate, lev, tf, rule));
+          results.push(isTrend(tf) ? trendCard(s, bars, fxInfo.rate, lev, rule) : futuresCard(s, bars, fxInfo.rate, lev, tf, rule));
         }).catch(function (e) { errors.push(s.replace("USDT", "") + ": " + e.message); }).then(function () {
           done++; scanStatus("สแกนแล้ว " + done + "/" + coins.length + " เหรียญ…");
           return worker();
@@ -1187,6 +1339,7 @@
 
   // Research evidence for the live rule (research/evidence, real USD-M bars). null-safe: no row -> no claim.
   function evidenceFor(symbol, tf) {
+    if (isTrend(tf)) return trendEvidenceFor(symbol);
     var E = window.EVIDENCE, row = E && E.rows && E.rows[symbol + "|" + tf], o = row && row.oos;
     var head = "ข้อมูลยืนยัน " + (E ? E.periods.oos : "") + ": ";
     if (!o || !(o.n >= 30)) return { ok: false, n: o ? o.n : 0, text: "ยังไม่มีข้อมูลยืนยัน" + (o ? " (ช่วงทดสอบมีแค่ " + o.n + " ไม้)" : "") };
@@ -1195,8 +1348,51 @@
         "%) · เฉลี่ย " + (o.avgR >= 0 ? "+" : "") + o.avgR + "R/ไม้" + (o.avgR <= 0 ? " (ขาดทุน)" : "") + " · ไม่ใช่โอกาสชนะของไม้นี้" };
   }
 
+  // Trend 4H evidence (research/pro, walk-forward years, with the app's leverage filter); n < 30 -> no claim.
+  function trendPeriod() {
+    var y = (window.EVIDENCE_TREND && window.EVIDENCE_TREND.years_chosen) || [];
+    return y.length ? y[0] + (y.length > 1 ? "–" + y[y.length - 1] : "") + (y[y.length - 1] === 2026 ? " (ถึง ก.ย.)" : "") : "";
+  }
+  function trendEvidenceFor(symbol) {
+    var T = window.EVIDENCE_TREND, o = T && T.rows && T.rows[symbol];
+    if (!o || !(o.n >= 30)) return { ok: false, n: o ? o.n : 0, text: "ยังไม่มีข้อมูลยืนยัน" + (o ? " (ช่วงทดสอบมีแค่ " + o.n + " ไม้)" : "") };
+    return { ok: true, n: o.n, win: o.win, avgR: o.avgR, pf: o.pf,
+      text: "ทดสอบ walk-forward " + trendPeriod() + ": " + o.n + " ไม้ · ปิดกำไร " + o.win + "% (CI " + o.winCI[0] + "–" + o.winCI[1] +
+        "%) · ได้ ≥3R " + o.big3 + "% · เฉลี่ย " + (o.avgR >= 0 ? "+" : "") + o.avgR + "R/ไม้" + (o.avgR <= 0 ? " (ขาดทุน)" : "") + " · ไม่ใช่โอกาสชนะของไม้นี้" };
+  }
+
   function newsFilterLabel() {
     return "ตัวกรองข่าว: งดเฉพาะวัน FOMC จากรายการที่ใส่เอง (ปี 2026 ยังไม่ยืนยัน) · CPI/NFP ไม่มีฟีดข่าว จึงไม่ได้กรอง";
+  }
+
+  // Order size from the stop distance: risk % of the balance; leverage is a cap chosen by the user (5/10/20/50x), never
+  // a target, lowered until a conservative liquidation estimate stays 1.5x the stop distance away; margin at most
+  // LOCK.marginShare of the balance. The reference entry is the close on the exchange's price grid and the stop is
+  // rounded away from it, so the planned risk is never smaller than the rule says.
+  function sizeOrder(close, dir, dist, fx, lev, rule, riskPct) {
+    var plan = Portfolio.plan(), tick = rule.tick, cost = 2 * (FUT.fee + FUT.slippage);
+    var entry = toGrid(close, tick), stop = toGrid(entry - dir * dist, tick, dir > 0 ? "floor" : "ceil");
+    dist = Math.abs(entry - stop);
+    var balance = plan.balance / fx, riskUsdt = balance * riskPct / 100, stopFrac = dist / entry;
+    var qty = riskUsdt / (dist + cost * entry), notional;
+    var levLiq = Math.max(1, Math.floor(1 / (1.5 * stopFrac + FUT.mmrSafe))), rec = Math.min(levLiq, lev), sizeLimited = false;
+    if (qty * entry / rec > LOCK.marginShare * balance) {
+      sizeLimited = true;
+      qty = LOCK.marginShare * balance * rec / entry;
+    }
+    qty = toGrid(qty, rule.step, "floor");
+    notional = qty * entry; riskUsdt = qty * (dist + cost * entry);
+    // No bracket table without an API key, so liquidation uses a pessimistic maintenance margin and is only an estimate.
+    var liq = dir > 0 ? entry * (1 - 1 / rec + FUT.mmrSafe) : entry * (1 + 1 / rec - FUT.mmrSafe);
+    return { dir: dir, entry: entry, stop: stop, dist: dist, qty: qty, notional: notional, margin: notional / rec, liq: liq, riskUsdt: riskUsdt,
+      lev: rec, levCapUser: lev, levLiq: levLiq, sliderPct: notional / rec * (1 + FUT.fee * rec) / balance * 100, balanceUsdt: balance, fx: fx,
+      dp: decimalsOf(tick), sizeLimited: sizeLimited, stopPct: stopFrac * 100 };
+  }
+  function checkOrder(g, rule) {
+    if (g.lev < 5) rejectSignal(g, "SL กว้างเกินไปสำหรับ Leverage ขั้นต่ำ 5x");
+    else if (g.dir > 0 ? g.liq >= g.stop : g.liq <= g.stop) rejectSignal(g, "Liquidation (ประมาณ) อาจมาก่อน SL");
+    else if (!(g.qty > 0) || g.qty < (rule.minQty || 0)) rejectSignal(g, "ขนาดไม้ต่ำกว่า minQty ของ Binance (" + (rule.minQty || "?") + ")");
+    else if (g.notional < (rule.minNotional || 0)) rejectSignal(g, "มูลค่าไม้ " + fmt(g.notional, 1) + " USDT ต่ำกว่าขั้นต่ำ Binance " + rule.minNotional + " USDT");
   }
 
   function futuresCard(symbol, bars, fx, lev, tf, rule) {
@@ -1210,37 +1406,50 @@
     var sig = Swing.signal(tech, bars, ind, n - 1, opt);
     if (!sig || !(sig.dist / last.close >= 0.0015)) return out;
     rule = rule || {};
-    var plan = Portfolio.plan(), dir = sig.dir, tick = rule.tick, cost = 2 * (FUT.fee + FUT.slippage);
-    // Reference entry is the close of the signal candle on the exchange's price grid; the stop is rounded
-    // away from the entry so the planned risk is never smaller than the rule says.
-    var entry = toGrid(last.close, tick), stop = toGrid(entry - dir * sig.dist, tick, dir > 0 ? "floor" : "ceil"), dist = Math.abs(entry - stop);
+    var plan = Portfolio.plan(), dir = sig.dir;
     var riskPct = locked() ? Math.min(LOCK.riskPct, plan.riskPct || LOCK.riskPct) : plan.riskPct;
-    var balance = plan.balance / fx, riskUsdt = balance * riskPct / 100, stopFrac = dist / entry;
-    var qty = riskUsdt / (dist + cost * entry), notional;
-    // Leverage is a cap chosen by the user (5/10/20/50x), never a target. Lower it until a conservative
-    // liquidation estimate stays 1.5x the stop distance away.
-    var levLiq = Math.max(1, Math.floor(1 / (1.5 * stopFrac + FUT.mmrSafe))), rec = Math.min(levLiq, lev), sizeLimited = false;
-    if (qty * entry / rec > LOCK.marginShare * balance) {
-      sizeLimited = true;
-      qty = LOCK.marginShare * balance * rec / entry;
-    }
-    qty = toGrid(qty, rule.step, "floor");
-    notional = qty * entry; riskUsdt = qty * (dist + cost * entry);
-    // No bracket table without an API key, so liquidation uses a pessimistic maintenance margin and is only an estimate.
-    var liq = dir > 0 ? entry * (1 - 1 / rec + FUT.mmrSafe) : entry * (1 + 1 / rec - FUT.mmrSafe);
+    var g = sizeOrder(last.close, dir, sig.dist, fx, lev, rule, riskPct), dist = g.dist;
     var volRatio = ind.v20[n - 1] > 0 ? last.volume / ind.v20[n - 1] : NaN;
-    out.signal = { dir: dir, entry: entry, stop: stop, tps: [1, 2, 5].map(function (r) { return toGrid(entry + dir * r * dist, tick); }),
-      qty: qty, notional: notional, margin: notional / rec, liq: liq, riskUsdt: riskUsdt, lev: rec, levCapUser: lev, levLiq: levLiq,
-      sliderPct: notional / rec * (1 + FUT.fee * rec) / balance * 100, balanceUsdt: balance, fx: fx, dp: decimalsOf(tick),
-      sizeLimited: sizeLimited, expires: last.close_time + 1 + Math.min(FUT.enterWithinMin * 60000, tfMs), stopPct: stopFrac * 100,
+    Object.assign(g, { tps: [1, 2, 5].map(function (r) { return toGrid(g.entry + dir * r * dist, rule.tick); }),
+      expires: last.close_time + 1 + Math.min(FUT.enterWithinMin * 60000, tfMs),
       candle: last.close_time + 1, trend: out.trend, hist: hist, stratName: spec.name, hold: spec.hold * tfMs / 3600000, tf: tf || "1h", stopAtr: spec.stopAtr || 2.5,
       why: "แท่ง " + TF[tf].name + " ปิดแล้ว: โมเมนตัม 2 แท่ง" + (dir > 0 ? "ขึ้น" : "ลง") + " หลังบีบตัว (squeeze) ใน 3 แท่ง · Volume " + fmt(volRatio, 1) +
-        "x ค่าเฉลี่ย 20 แท่ง (เกณฑ์ ≥1.8x) · SL " + (spec.stopAtr || 1.8) + " ATR" };
-    var g = out.signal;
-    if (rec < 5) rejectSignal(g, "SL กว้างเกินไปสำหรับ Leverage ขั้นต่ำ 5x");
-    else if (dir > 0 ? liq >= stop : liq <= stop) rejectSignal(g, "Liquidation (ประมาณ) อาจมาก่อน SL");
-    else if (!(qty > 0) || qty < (rule.minQty || 0)) rejectSignal(g, "ขนาดไม้ต่ำกว่า minQty ของ Binance (" + (rule.minQty || "?") + ")");
-    else if (notional < (rule.minNotional || 0)) rejectSignal(g, "มูลค่าไม้ " + fmt(notional, 1) + " USDT ต่ำกว่าขั้นต่ำ Binance " + rule.minNotional + " USDT");
+        "x ค่าเฉลี่ย 20 แท่ง (เกณฑ์ ≥1.8x) · SL " + (spec.stopAtr || 1.8) + " ATR" });
+    out.signal = g;
+    checkOrder(g, rule);
+    return out;
+  }
+
+  // Trend 4H on the last closed 4h bar (web/trend.js replays the coin's 1,500 bars, so the app knows which positions the
+  // rule holds). signal = ENTRY at the next open; exit = the rule closes its open position at the next open;
+  // position = what the rule holds now, with its stop and the close that would end it.
+  function trendCard(symbol, bars, fx, lev, rule) {
+    rule = rule || {};
+    var res = Trend.run(bars, { live: true }), n = bars.length, last = bars[n - 1], L = res.last, tfMs = TF[TREND.tf].ms;
+    if (!res.ready) throw new Error("แท่ง 4 ชม. ไม่พอ (" + n + " แท่ง)");
+    var out = { symbol: symbol, close: last.close, trend: last.close > L.ema ? 1 : last.close < L.ema ? -1 : 0, signal: null, exit: null, position: null };
+    var candle = last.close_time + 1, dp = decimalsOf(rule.tick);
+    if (res.pos) {
+      var p = res.pos;
+      out.position = { dir: p.dir, entry: p.entry, stop: p.stop, risk: p.risk, entry_time: p.entry_time, dp: dp,
+        exitLevel: p.dir > 0 ? L.next.exitLong : L.next.exitShort, r: p.dir * (last.close - p.entry) / p.risk };
+      if (res.pend && res.pend.exit) {
+        out.exit = Object.assign({}, out.position, { candle: candle, expires: candle + tfMs, close: last.close,
+          level: p.dir > 0 ? L.tested.exitLong : L.tested.exitShort });
+      }
+    }
+    if (res.pend && res.pend.dir) {
+      var dir = res.pend.dir, plan = Portfolio.plan(), riskPct = Math.min(TREND.maxRiskPct, plan.riskPct || LOCK.riskPct);
+      var g = sizeOrder(last.close, dir, L.stopDist, fx, lev, rule, riskPct);
+      Object.assign(g, { kind: "entry", tps: [], expires: candle + Math.min(FUT.enterWithinMin * 60000, tfMs), candle: candle, trend: out.trend,
+        stratName: TREND.name, hold: 0, tf: TREND.tf, stopAtr: 3,
+        exitRule: "ไม่มี TP ตายตัว: ปิดเมื่อแท่ง 4 ชม. ปิด" + (dir > 0 ? "ต่ำกว่าจุดต่ำสุด" : "สูงกว่าจุดสูงสุด") + " 10 แท่ง (ตอนนี้ " +
+          price(dir > 0 ? L.next.exitLong : L.next.exitShort) + " ขยับตามราคา) · แอปจะเด้งเตือนให้ปิด",
+        why: "แท่ง 4 ชม. ปิด " + price(last.close) + (dir > 0 ? " ทะลุจุดสูงสุด" : " หลุดจุดต่ำสุด") + " 20 แท่ง (" + price(dir > 0 ? L.tested.upper : L.tested.lower) +
+          ") · " + (dir > 0 ? "เหนือ" : "ใต้") + " EMA200 (" + price(L.ema) + ") · SL 3 ATR = " + fmt(g.stopPct, 2) + "%" });
+      out.signal = g;
+      checkOrder(g, rule);
+    }
     return out;
   }
 
@@ -1258,7 +1467,7 @@
       '<div class="sl">' + '<span class="ln"></span><span class="fill" style="width:' + pct + '%"></span>' + ticks + '<span class="kb" style="left:' + pct + '%"></span></div>' +
       '<div style="text-align:center;margin:-4px 0 8px;color:#f0b90b;font-weight:700">ลากไปที่ ' + pctTxt + "</div>" +
       '<div class="ck"><i>✓</i><span>TP/SL</span><span class="n" style="position:static;margin-left:auto">5</span></div>' +
-      '<div class="fld"><small>Take Profit</small><span class="val" style="color:#2ebd85">' + price(g.tps[2]) + "</span></div>" +
+      '<div class="fld"><small>Take Profit</small><span class="val" style="color:#2ebd85">' + (hasTp(g) ? price(g.tps[2]) : "เว้นว่าง") + "</span></div>" +
       '<div class="fld"><small>Stop Loss</small><span class="val" style="color:#f6465d">' + price(g.stop) + '</span></div>' +
       '<div class="row2" style="margin-top:4px"><div class="btn2 buy ' + (long ? "hl" : "dim") + '">Buy/Long' + (long ? '<span class="n">6</span>' : "") + "</div>" +
       '<div class="btn2 sell ' + (long ? "dim" : "hl") + '">Sell/Short' + (long ? "" : '<span class="n">6</span>') + "</div></div></div>" +
@@ -1267,9 +1476,10 @@
       '<li><b class="k">2</b><span>แตะตัวเลข Leverage แล้วตั้งเป็น <b>' + g.lev + 'x</b> กดยืนยัน</span></li>' +
       '<li><b class="k">3</b><span>ประเภทคำสั่งเลือก <b>Market</b> (อยู่แท็บ <b>Open</b>)</span></li>' +
       '<li><b class="k">4</b><span>พิมพ์ขนาด <b>' + g.qty + " " + coin + "</b> หรือลากสไลเดอร์ไปที่ <b>" + pctTxt + '</b></span></li>' +
-      '<li><b class="k">5</b><span>ติ๊ก <b>TP/SL</b> ใส่ Take Profit <b>' + price(g.tps[2]) + "</b> และ Stop Loss <b>" + price(g.stop) + '</b></span></li>' +
+      '<li><b class="k">5</b><span>ติ๊ก <b>TP/SL</b> ' + (hasTp(g) ? "ใส่ Take Profit <b>" + price(g.tps[2]) + "</b> และ " : "เว้น Take Profit ว่าง ใส่เฉพาะ ") + "Stop Loss <b>" + price(g.stop) + '</b></span></li>' +
       '<li><b class="k">6</b><span>กด <b>' + (long ? "Buy/Long (สีเขียว)" : "Sell/Short (สีแดง)") + "</b> แล้วกลับมากด \"เข้าแล้ว · บันทึกลงพอร์ต\"</span></li>" +
-      '<li><b class="k">⏱</b><span>ถ้าครบ <b>' + g.hold + ' ชม.</b> แล้วยังไม่ชน TP/SL ให้ไปที่ Positions กด <b>Close → Market</b></span></li></ul>' +
+      (hasTp(g) ? '<li><b class="k">⏱</b><span>ถ้าครบ <b>' + g.hold + ' ชม.</b> แล้วยังไม่ชน TP/SL ให้ไปที่ Positions กด <b>Close → Market</b></span></li></ul>'
+        : '<li><b class="k">⏱</b><span>ถือไว้จนแอปเด้ง <b>ปิดไม้</b> แล้วไปที่ Positions กด <b>Close → Market</b> (ห้ามเลื่อน SL)</span></li></ul>') +
       '<small class="muted">ภาพนี้เป็นตัวช่วยตั้งค่า ไม่ใช่แอป Binance จริง ตำแหน่งปุ่มในแอปจริงอาจต่างเล็กน้อย ต้องอยู่ในแท็บ <b>Futures</b> (แถบล่างของ Binance) ไม่ใช่ Spot</small>';
   }
 
@@ -1284,12 +1494,39 @@
       "<li>กดปุ่มโหมด Margin เลือก <b>Isolated</b> และกดปุ่ม Leverage ตั้งเป็น <b>" + g.lev + "x</b></li>" +
       "<li>ประเภทคำสั่งเลือก <b>Market</b> แล้ว<b>ลากสไลเดอร์ไปที่ " + fmt(Math.max(g.sliderPct, 0.1), g.sliderPct < 10 ? 1 : 0) + "%</b> หรือพิมพ์จำนวน <b>" + g.qty + " " + coin +
         "</b> (≈ " + fmt(g.notional, 0) + " USDT · Margin ≈ " + fmt(g.margin, 1) + " USDT) — ถ้าเงินใน Futures wallet ไม่เท่ากับทุนในแอป ให้ใช้วิธีพิมพ์จำนวน</li>" +
-      "<li>ติ๊ก <b>TP/SL</b>: Take Profit <b>" + price(g.tps[2]) + "</b> (TP3 = 5R ตามสูตร) · Stop Loss <b>" + price(g.stop) + "</b> · Trigger เลือก <b>Mark Price</b></li>" +
+      (hasTp(g) ? "<li>ติ๊ก <b>TP/SL</b>: Take Profit <b>" + price(g.tps[2]) + "</b> (TP3 = 5R ตามสูตร) · Stop Loss <b>" + price(g.stop) + "</b> · Trigger เลือก <b>Mark Price</b></li>"
+        : "<li>ติ๊ก <b>TP/SL</b>: เว้น Take Profit ว่าง · Stop Loss <b>" + price(g.stop) + "</b> · Trigger เลือก <b>Mark Price</b></li>") +
       "<li>กด <b>" + (long ? "Buy/Long (สีเขียว)" : "Sell/Short (สีแดง)") + "</b> แล้วตรวจในแท็บ Positions ว่า TP/SL ขึ้นครบ</li>" +
       "<li>กลับมาแอปนี้ กด <b>เข้าแล้ว · บันทึกลงพอร์ต</b></li>" +
-      "<li>ถ้าครบ <b>" + g.hold + " ชม.</b> แล้วยังไม่ชน TP/SL ให้ปิดเองด้วย Market (ภายใน " + thai(g.expires + (g.hold - 1) * 3600000).slice(0, 14) + " น.)</li></ol>" +
+      (hasTp(g) ? "<li>ถ้าครบ <b>" + g.hold + " ชม.</b> แล้วยังไม่ชน TP/SL ให้ปิดเองด้วย Market (ภายใน " + thai(g.expires + (g.hold - 1) * 3600000).slice(0, 14) + " น.)</li></ol>"
+        : "<li>" + esc(g.exitRule) + " เมื่อแอปเด้ง <b>ปิดไม้</b> ให้ปิดด้วย Market</li></ol>") +
       (lowNotional ? '<small class="down">มูลค่าไม้ต่ำ อาจต่ำกว่าขั้นต่ำของ Binance สำหรับ ' + r.symbol + ' ถ้าเปิดไม่ได้แปลว่าทุนยังน้อยเกินสำหรับความเสี่ยง 0.25% อย่าเพิ่มขนาดไม้เอง</small><br>' : "") +
-      '<small class="muted">TP1/TP2 ในการ์ดเป็นระดับอ้างอิง งานวิจัยทดสอบเฉพาะ TP 5R + ออกเมื่อครบเวลา ชื่อปุ่มใน Binance อาจต่างเล็กน้อยตามเวอร์ชันแอป</small></details></div>';
+      '<small class="muted">' + (hasTp(g) ? "TP1/TP2 ในการ์ดเป็นระดับอ้างอิง งานวิจัยทดสอบเฉพาะ TP 5R + ออกเมื่อครบเวลา " : "") + "ชื่อปุ่มใน Binance อาจต่างเล็กน้อยตามเวอร์ชันแอป</small></details></div>";
+  }
+
+  // What "entered, save it" stores in the portfolio; Trend 4H trades have no target and no time limit.
+  function recordOf(r, g, fx) {
+    return hasTp(g) ? { symbol: r.symbol, dir: g.dir, entry: g.entry, stop: g.stop, target: g.tps[2], tps: g.tps, qty: g.qty, fx: fx, risk: g.riskUsdt * fx,
+      fee: FUT.fee + FUT.slippage, lev: g.lev, hold_hours: g.hold }
+      : { symbol: r.symbol, dir: g.dir, entry: g.entry, stop: g.stop, qty: g.qty, fx: fx, risk: g.riskUsdt * fx, fee: FUT.fee + FUT.slippage, lev: g.lev,
+        exit_rule: "ออกเมื่อแอปเด้งปิดไม้ (แท่ง 4 ชม. ปิดหลุด 10 แท่ง)" };
+  }
+
+  // Trend 4H: exits to act on now, then the positions the rule holds. The rule's positions exist whether or not the user
+  // entered them, so every line says what to do only if the user holds it.
+  function trendBoard(results) {
+    var exits = results.filter(function (r) { return r.exit; }), held = results.filter(function (r) { return r.position && !r.exit; });
+    var side = function (d) { return d > 0 ? '<span class="up">LONG</span>' : '<span class="down">SHORT</span>'; };
+    return exits.map(function (r) {
+      var x = r.exit;
+      return '<div class="banner stop" style="margin:8px 0 0">ปิดไม้ ' + r.symbol.replace("USDT", "") + " " + (x.dir > 0 ? "LONG" : "SHORT") + " ตอนนี้ด้วย Market" +
+        '<br><small style="font-weight:400">แท่ง 4 ชม. ปิด ' + price(x.close) + (x.dir > 0 ? " ต่ำกว่าจุดต่ำสุด" : " สูงกว่าจุดสูงสุด") + " 10 แท่ง (" + price(x.level) + ") · สูตรเข้าเมื่อ " +
+        thai(x.entry_time) + " ที่ " + price(x.entry) + " · ตอนนี้ " + fmt(x.r, 2, true) + "R · ถ้าไม่ได้ถือไม้นี้ ไม่ต้องทำอะไร</small></div>";
+    }).join("") + (held.length ? '<div class="sm-bt" style="font-size:13px"><b>ไม้ที่สูตรถืออยู่</b> <small>(ถ้าคุณถือ ให้ถือต่อ ห้ามเลื่อน SL)</small>' + held.map(function (r) {
+      var x = r.position;
+      return "<div>" + r.symbol.replace("USDT", "") + " " + side(x.dir) + " เข้า " + price(x.entry) + " (" + thai(x.entry_time).slice(0, 8) + ") · " +
+        '<span class="' + tone(x.r) + '">' + fmt(x.r, 2, true) + "R</span> · SL " + price(x.stop) + " · ออกถ้าปิด" + (x.dir > 0 ? "ต่ำกว่า " : "สูงกว่า ") + price(x.exitLevel) + "</div>";
+    }).join("") + "</div>" : "");
   }
 
   function renderFutures(results, fxInfo, lev, end) {
@@ -1307,7 +1544,7 @@
         return '<div class="coin"><div class="coin-head"><span><b>' + r.symbol + '</b> <small class="tag">Perp</small></span>' + pill + "</div>" +
           '<div class="banner stop" style="margin:8px 0 0;font-size:13px">ไม่แจ้งเตือนไม้นี้: ' + esc(g.reject) + "</div></div>";
       }
-      var detail = "เหตุผล: " + esc(g.why) + "<br>TP1 = 1R · TP2 = 2R · TP3 = 5R · ถือไม่เกิน " + fmt(g.hold, g.hold < 10 ? 1 : 0) + " ชม.<br>" +
+      var detail = "เหตุผล: " + esc(g.why) + "<br>" + (hasTp(g) ? "TP1 = 1R · TP2 = 2R · TP3 = 5R · ถือไม่เกิน " + fmt(g.hold, g.hold < 10 ? 1 : 0) + " ชม." : esc(g.exitRule)) + "<br>" +
         "ขนาด " + g.qty + " " + name + " (≈ " + fmt(g.notional, 0) + " USDT) · Margin ≈ " + fmt(g.margin, 1) + " USDT · Leverage ≤" + g.lev + "x (เพดานที่เลือก " + g.levCapUser + "x)" +
         "<br>Liquidation ประมาณ " + price(g.liq) + " (สมมติ maintenance margin 1% · ไม่มีตาราง bracket จริง จึงไม่ใช่ตัวเลขที่ปลอดภัยแน่นอน)" +
         (g.mark ? "<br>Mark price ตอนสแกน " + price(g.mark) : "") +
@@ -1316,16 +1553,17 @@
         ' <small class="tag" style="color:var(--yel)">ทดลอง</small></span>' + pill + "</div>" +
         '<div class="ev ' + (ev.ok && ev.avgR > 0 ? "good" : "bad") + '">' + esc(ev.text) + "</div>" +
         '<div class="levels"><div><small>เข้าอ้างอิง</small><b>' + price(g.entry) + '</b></div><div><small>SL</small><b class="down">' + price(g.stop) +
-        '</b></div><div><small>TP1 · TP2 · TP3</small><b class="up" style="font-size:13px">' + g.tps.map(price).join("<br>") + "</b></div></div>" +
+        (hasTp(g) ? '</b></div><div><small>TP1 · TP2 · TP3</small><b class="up" style="font-size:13px">' + g.tps.map(price).join("<br>") + "</b></div></div>"
+          : '</b></div><div><small>TP</small><b style="font-size:13px">ไม่มี · ออกเมื่อแอปเตือน</b></div></div>') +
         '<div class="slider-tip">ลากสไลเดอร์ไปที่ <b style="font-size:20px">' + fmt(Math.max(g.sliderPct, 0.1), g.sliderPct < 10 ? 1 : 0) +
           "%</b> · โดน SL เสีย ≈ " + fmt(g.riskUsdt * fx, 0) + " ฿ · เข้าก่อน " + thai(g.expires).slice(9) + " น.</div>" +
         (g.sizeLimited ? '<div class="banner wait" style="margin:8px 0 0;font-size:13px">ลดขนาดให้ Margin ไม่เกิน ' + (locked() ? "5" : "25") + "% ของทุน</div>" : "") +
         '<div id="ai-' + r.symbol + '"></div>' + binanceHowTo(r, g) +
-        '<div class="btnrow"><button class="mini" data-record="' + esc(JSON.stringify({ symbol: r.symbol, dir: g.dir, entry: g.entry, stop: g.stop, target: g.tps[2], tps: g.tps,
-          qty: g.qty, fx: fx, risk: g.riskUsdt * fx, fee: FUT.fee + FUT.slippage, lev: g.lev, hold_hours: g.hold })) + '">เข้าแล้ว · บันทึก</button>' +
+        '<div class="btnrow"><button class="mini" data-record="' + esc(JSON.stringify(recordOf(r, g, fx))) + '">เข้าแล้ว · บันทึก</button>' +
         '<button class="mini ghost" data-ai="' + r.symbol + '">AI วิเคราะห์</button><button class="mini ghost" data-chart="' + r.symbol + '">กราฟ</button></div>' +
         '<details style="margin-top:8px"><summary>รายละเอียด</summary><small>' + detail + "</small></details></div>";
     }).join("");
+    cards = trendBoard(results) + cards;
     var rows = results.filter(function (r) { return !r.signal; }).map(function (r) {
       var t = r.trend > 0 ? ["up", "ขาขึ้น"] : r.trend < 0 ? ["down", "ขาลง"] : ["", "ไม่ชัด"];
       return '<div class="mkt" data-chart="' + r.symbol + '"><b>' + r.symbol.replace("USDT", "") + '</b><small>/USDT</small><span class="' + t[0] + '">' + price(r.close) +
@@ -1398,29 +1636,39 @@
 
   // Every scan (foreground or background) hands its result to the native alerts as one JSON packet.
   // Contract (checked by tests/payload and SignalAlerts.java): see signalPayload().
-  var TF_LABEL = { "5m": "M5", "15m": "M15", "1h": "H1" };
+  var TF_LABEL = { "5m": "M5", "15m": "M15", "1h": "H1", "4h": "H4" };
   function pxDp(v, dp) {
     if (!isFinite(v)) return "";
     return dp === undefined ? price(v) : v.toLocaleString("en-US", { minimumFractionDigits: dp, maximumFractionDigits: dp });
   }
   function signalPayload(r, tf) {
-    var g = r.signal, ev = evidenceFor(r.symbol, tf), fx = g.fx || 33;
-    return { symbol: r.symbol, side: g.dir > 0 ? "LONG" : "SHORT", tf: TF_LABEL[tf], strategy: "squeeze3_ls",
+    var g = r.signal, ev = evidenceFor(r.symbol, tf), fx = g.fx || 33, tp = hasTp(g);
+    return { kind: "ENTRY", symbol: r.symbol, side: g.dir > 0 ? "LONG" : "SHORT", tf: TF_LABEL[tf], strategy: isTrend(tf) ? TREND.id : "squeeze3_ls",
       candle_close: g.candle, expires: g.expires, hold_hours: g.hold,
-      entry: pxDp(g.entry, g.dp), sl: pxDp(g.stop, g.dp), tp1: pxDp(g.tps[0], g.dp), tp2: pxDp(g.tps[1], g.dp), tp5: pxDp(g.tps[2], g.dp),
+      entry: pxDp(g.entry, g.dp), sl: pxDp(g.stop, g.dp), tp1: tp ? pxDp(g.tps[0], g.dp) : "", tp2: tp ? pxDp(g.tps[1], g.dp) : "",
+      tp5: tp ? pxDp(g.tps[2], g.dp) : "", exit_rule: tp ? "" : g.exitRule,
       qty: String(g.qty), margin_usdt: g.margin.toFixed(2), margin_thb: String(Math.round(g.margin * fx)), risk_thb: String(Math.round(g.riskUsdt * fx)),
       leverage: g.lev, leverage_cap: g.levCapUser, liq_est: pxDp(g.liq, g.dp), mark: g.mark ? pxDp(g.mark, g.dp) : "",
       rationale: g.why, evidence: ev.text, evidence_ok: ev.ok, experimental: true };
+  }
+  // Trend 4H exit: the rule closes its position at the next open. Sent even while new entries are paused.
+  function exitPayload(r, tf) {
+    var x = r.exit;
+    return { kind: "EXIT", symbol: r.symbol, side: x.dir > 0 ? "LONG" : "SHORT", tf: TF_LABEL[tf], strategy: TREND.id, candle_close: x.candle, expires: x.expires,
+      entry: pxDp(x.entry, x.dp), sl: pxDp(x.stop, x.dp), exit_ref: pxDp(x.close, x.dp), exit_level: pxDp(x.level, x.dp), opened: x.entry_time,
+      r_now: (x.r >= 0 ? "+" : "") + x.r.toFixed(2), experimental: true,
+      rationale: "แท่ง 4 ชม. ปิด" + (x.dir > 0 ? "ต่ำกว่าจุดต่ำสุด" : "สูงกว่าจุดสูงสุด") + " 10 แท่ง: สูตรออกที่ราคาเปิดแท่งถัดไป" };
   }
   function reportScan(results, end, error, extra) {
     if (!window.NativeHttp || !window.NativeHttp.scanDone || $("sgMode").value !== "futures") return;
     var plan = Portfolio.plan(), tf = curTf();
     var sigs = (plan.state === "ok" ? results : []).filter(function (r) { return r.signal && !r.signal.below_minimum; });
+    var exits = results.filter(function (r) { return r.exit; });
     window.NativeHttp.scanDone(JSON.stringify({ v: 2, candle: end, interval_minutes: TF[tf].ms / 60000, error: error || "",
       scanned: extra && extra.scanned || 0, failed: extra && extra.failed || [],
       rejected: results.filter(function (r) { return r.signal && r.signal.below_minimum; }).map(function (r) { return r.symbol + ": " + r.signal.reject; }),
       note: plan.state === "ok" ? "" : plan.message, news_filter: newsFilterLabel(),
-      signals: sigs.map(function (r) { return signalPayload(r, tf); }) }));
+      signals: sigs.map(function (r) { return signalPayload(r, tf); }).concat(exits.map(function (r) { return exitPayload(r, tf); })) }));
   }
 
   function rank(r) { return r.signal ? 0 : r.trend_up && r.strategy ? 1 : r.trend_up ? 2 : 3; }
@@ -1468,7 +1716,7 @@
   }
   var nativeAlerts = !!(window.NativeHttp && window.NativeHttp.setAlerts);
   if (nativeAlerts) {
-    $("autoScanLabel").textContent = "เด้งแยกเหรียญเมื่อมีสัญญาณ (M5/M15/H1 · Android อาจหน่วงแจ้งเตือนเมื่อประหยัดแบต)";
+    $("autoScanLabel").textContent = "เด้งแยกเหรียญเมื่อมีสัญญาณเข้า/ปิดไม้ (H4/H1/M15/M5 · Android อาจหน่วงแจ้งเตือนเมื่อประหยัดแบต)";
     try { $("autoScan").checked = window.NativeHttp.alertsEnabled(); } catch (e) { /* ignore */ }
   }
   function batteryCheck() {
@@ -1509,7 +1757,10 @@
         " · ขนาดไม้คิดจาก % เสี่ยงในแท็บพอร์ต ไม่ใช่จาก Leverage"
       : "Spot: สแกนแนวโน้ม 1 ชม. เลือกกลยุทธ์ที่ได้ผลดีสุดใน 90 วันล่าสุดของแต่ละเหรียญ แล้วดูแท่ง 15 นาทีที่เพิ่งปิด";
     if ($("sgMode").value !== "futures") $("sgLev").disabled = $("sgStrat").disabled = true;
-    if (lock && $("sgMode").value === "futures") $("sgHelp").textContent = "สูตร Squeeze v2 เดิมพัฒนาบน H1 · ใช้ M5/M15 เป็นสัญญาณทดลอง ยังไม่ผ่าน Backtest · เลือกเหรียญ/กราฟด้านบน · จำกัดเสี่ยงเป้าหมาย 0.25%/ไม้";
+    if (lock && $("sgMode").value === "futures") $("sgHelp").textContent = "สูตร Squeeze v2 เดิมพัฒนาบน H1 · ใช้ M5/M15 เป็นสัญญาณทดลอง ผลย้อนหลังขาดทุน · เลือกเหรียญ/กราฟด้านบน · จำกัดเสี่ยงเป้าหมาย 0.25%/ไม้";
+    if (isTrend(curTf())) $("sgHelp").textContent = "Trend 4H: Long เมื่อแท่ง 4 ชม. ปิดทะลุจุดสูงสุด 20 แท่งและอยู่เหนือ EMA200 · Short เมื่อปิดหลุดจุดต่ำสุด 20 แท่งและอยู่ใต้ EMA200 · " +
+      "SL 3 ATR ไม่เลื่อน · ไม่มี TP ตายตัว ออกเมื่อแท่ง 4 ชม. ปิดหลุดจุดต่ำสุด/สูงสุด 10 แท่ง (แอปเด้งเตือน) · เสี่ยง " + trendRiskPct() +
+      "%/ไม้ · Leverage = เพดานที่เลือก แต่แอปลดให้เองจน Liquidation ห่างกว่า SL 1.5 เท่า (SL 4H กว้าง 3–8% จึงมักได้ราว 8–15x)";
   }
   ["sgMode", "sgLev", "sgStrat"].forEach(function (id) {
     try { var v = localStorage.getItem(id); if (v !== null) $(id).value = v; } catch (e) { /* ignore */ }

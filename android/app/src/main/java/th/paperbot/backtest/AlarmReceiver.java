@@ -5,7 +5,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
 
-/** Fires just after every 1H candle closes; also re-arms the alarm after a reboot or an app update. */
+/** Fires just after every signal candle closes (5m/15m/1h/4h); also re-arms the alarm after a reboot or an app update. */
 public class AlarmReceiver extends BroadcastReceiver {
     static final String ACTION_SCAN = "th.paperbot.backtest.SCAN";
 
