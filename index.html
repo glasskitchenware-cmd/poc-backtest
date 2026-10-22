@@ -54,7 +54,7 @@ a{color:var(--accent)}
   <div class="checks"><label><input type="checkbox" id="btc" checked> BTC/USDT</label><label><input type="checkbox" id="eth" checked> ETH/USDT</label></div>
   <div class="row">
     <div><label for="days">ช่วงข้อมูล</label>
-      <select id="days"><option value="90">90 วัน</option><option value="180">180 วัน</option><option value="365" selected>365 วัน</option><option value="730">730 วัน</option></select></div>
+      <select id="days"><option value="90">90 วัน</option><option value="180">180 วัน</option><option value="365">365 วัน</option><option value="730" selected>730 วัน (แนะนำ)</option></select></div>
     <div><label for="capital">ทุน (บาท)</label><input id="capital" type="number" inputmode="decimal" value="10000" min="100"></div>
   </div>
   <div class="row">
@@ -74,6 +74,19 @@ a{color:var(--accent)}
     <h2>ผลช่วง Holdout <small id="holdoutRange"></small></h2>
     <div class="hero" id="hero"></div>
     <div class="notice"><ul id="warnings" style="margin:0;padding-left:18px"></ul></div>
+  </section>
+
+  <section>
+    <h2>ปรับกลยุทธ์ตามช่วงเวลา (walk-forward)</h2>
+    <p class="muted" style="margin:0 0 10px;font-size:13px">ทุก 30 วัน ระบบเลือกกลยุทธ์ที่ดีที่สุดจาก 90 วันก่อนหน้า (ต้อง ≥ 10 ไม้, กำไรเฉลี่ยต่อไม้เป็นบวก, PF &gt; 1) แล้วใช้เทรด 30 วันถัดไป ถ้าไม่มีแบบไหนผ่านจะถือเงินสด ผลนี้ไม่ได้เห็นอนาคตตอนเลือก</p>
+    <div class="hero" id="wfHero"></div>
+    <table style="margin-top:10px"><thead><tr><th>เริ่ม</th><th>กลยุทธ์ที่เลือก</th><th>ไม้</th><th>กำไร</th></tr></thead><tbody id="wfWindows"></tbody></table>
+  </section>
+
+  <section>
+    <h2>เทียบ 7 กลยุทธ์</h2>
+    <p class="muted" style="margin:0 0 10px;font-size:13px" id="researchVerdict"></p>
+    <div style="overflow-x:auto"><table><thead><tr><th>กลยุทธ์</th><th>Dev win</th><th>Dev PF</th><th>Val ไม้</th><th>Val win</th><th>Val PF</th></tr></thead><tbody id="variants"></tbody></table></div>
   </section>
 
   <section>
@@ -221,7 +234,16 @@ a{color:var(--accent)}
     var lookback = cfg.poc_lookback_bars, bins = cfg.poc_bins, tol = cfg.poc_tolerance_atr;
     var n = rows.length, i;
     var close = rows.map(function (r) { return r.close; });
-    var ema50 = ewm(close, 2 / 51, 50);
+    var ema50 = ewm(close, 2 / 51, 50), ema20 = ewm(close, 2 / 21, 20);
+    var delta = close.map(function (c, k) { return k ? c - close[k - 1] : NaN; });
+    var up = ewm(delta.map(function (d) { return isNaN(d) ? NaN : Math.max(d, 0); }), 1 / 14, 14);
+    var down = ewm(delta.map(function (d) { return isNaN(d) ? NaN : -Math.min(d, 0); }), 1 / 14, 14);
+    var rsi = up.map(function (u, k) {
+      var d = down[k];
+      if (isNaN(u) || isNaN(d)) return NaN;
+      if (d === 0) return u > 0 ? 100 : 50;
+      return 100 - 100 / (1 + u / d);
+    });
     var tr = rows.map(function (r, k) {
       if (!k) return r.high - r.low;
       var pc = rows[k - 1].close;
@@ -246,7 +268,7 @@ a{color:var(--accent)}
       var entry = trendOk && !isNaN(poc) && !isNaN(atr[i]) && atr[i] > 0 && touches && r.close > poc && (pin || engulf);
       var exit = ready && (r.close < ema50[i] || r.close < poc - 0.5 * atr[i]);
       out[i] = { time: r.time, close_time: r.close_time, open: r.open, high: r.high, low: r.low,
-        close: r.close, volume: r.volume, ema50: ema50[i], atr: atr[i], poc: poc,
+        close: r.close, volume: r.volume, ema20: ema20[i], ema50: ema50[i], rsi: rsi[i], atr: atr[i], poc: poc,
         trend_confirmed: trendOk, pattern: pin ? "bullish_pin" : engulf ? "bullish_engulfing" : "",
         entry: entry, exit: exit };
     }
@@ -465,7 +487,100 @@ a{color:var(--accent)}
       news_backtest: "not_simulated", warnings: warnings };
   }
 
-  return { BAR_MS: BAR_MS, WARMUP_BARS: WARMUP_BARS, DEFAULTS: DEFAULTS, config: config, ewm: ewm,
+  // ---- bot/research.py ----
+  var VARIANTS = [
+    ["poc_base", "POC rejection · เป้า 1.5R (กติกาเดิม)", "poc", 1.5, false, true],
+    ["poc_high_wr", "POC rejection · เป้าใกล้ 0.8R", "poc", 0.8, false, true],
+    ["poc_calm", "POC rejection · กรองความผันผวน", "poc", 1.5, true, true],
+    ["ema20_pullback", "ย่อ EMA20 · เป้า 1R", "pullback", 1.0, true, true],
+    ["pullback_or_poc", "POC หรือย่อ EMA20 · เป้า 1.2R", "either", 1.2, true, true],
+    ["poc_hold", "POC · ถือจนชน stop/เป้า · 1R", "poc", 1.0, true, false],
+    ["pullback_hold", "ย่อ EMA20 · ถือจนชน stop/เป้า · 1R", "pullback", 1.0, true, false]
+  ];
+  var VOL_LOOKBACK = 2880, VOL_RATIO = 2.5, MIN_VALIDATION_TRADES = 30;
+  var WF_STEP = 2880, WF_LOOKBACK = 8640, WF_MIN_TRADES = 10;
+
+  // pandas Series.shift(1).rolling(w, min_periods=w/2).median(), NaN skipped.
+  function priorRollingMedian(values, w) {
+    var out = new Array(values.length), win = [];
+    function insert(v) { var lo = 0, hi = win.length; while (lo < hi) { var m = (lo + hi) >> 1; if (win[m] < v) lo = m + 1; else hi = m; } win.splice(lo, 0, v); }
+    function remove(v) { var lo = 0, hi = win.length; while (lo < hi) { var m = (lo + hi) >> 1; if (win[m] < v) lo = m + 1; else hi = m; } win.splice(lo, 1); }
+    for (var i = 0; i < values.length; i++) {
+      if (i >= 1 && !isNaN(values[i - 1])) insert(values[i - 1]);
+      var leaving = i - 1 - w;
+      if (leaving >= 0 && !isNaN(values[leaving])) remove(values[leaving]);
+      var n = win.length;
+      out[i] = n >= w / 2 ? (n % 2 ? win[(n - 1) / 2] : (win[n / 2 - 1] + win[n / 2]) / 2) : NaN;
+    }
+    return out;
+  }
+
+  function variantRows(base, rule, calm, signalExit) {
+    var typical = calm ? priorRollingMedian(base.map(function (r) { return r.atr; }), VOL_LOOKBACK) : null;
+    return base.map(function (r, i) {
+      var pullback = r.trend_confirmed && !isNaN(r.ema20) && !isNaN(r.atr) && r.atr > 0 && r.low <= r.ema20 &&
+        r.close > r.ema20 && r.close > r.open && r.rsi >= 40 && r.rsi <= 65;
+      var entry = rule === "poc" ? r.entry : rule === "pullback" ? pullback : (r.entry || pullback);
+      if (calm) entry = entry && r.atr <= VOL_RATIO * typical[i];
+      var row = Object.assign({}, r);
+      row.entry = !!entry;
+      if (!signalExit) row.exit = false;
+      return row;
+    });
+  }
+
+  function research(evaluated, rules) {
+    var cfg = evaluated.config, n = evaluated.bars, available = n - WARMUP_BARS;
+    var a = WARMUP_BARS + Math.floor(0.6 * available), b = WARMUP_BARS + Math.floor(0.8 * available);
+    var variants = VARIANTS.map(function (v) {
+      var prepared = {};
+      cfg.symbols.forEach(function (s) { prepared[s] = variantRows(evaluated.prepared[s], v[2], v[4], v[5]); });
+      var vcfg = Object.assign({}, cfg, { take_profit_r: v[3] });
+      return { name: v[0], description: v[1], prepared: prepared, config: vcfg,
+        development: runWindow(prepared, WARMUP_BARS, a, vcfg, rules).metrics,
+        validation: runWindow(prepared, a, b, vcfg, rules).metrics };
+    });
+    var chosen = null;
+    variants.forEach(function (v) {
+      var ok = v.validation.trade_count >= MIN_VALIDATION_TRADES && (v.validation.expectancy || 0) > 0 && (v.development.expectancy || 0) > 0;
+      if (ok && (!chosen || v.validation.expectancy > chosen.validation.expectancy)) chosen = v;
+    });
+    return { variants: variants, chosen: chosen ? chosen.name : null,
+      chosen_holdout: chosen ? runWindow(chosen.prepared, b, n, chosen.config, rules) : null,
+      walk_forward: walkForward(variants, n, rules) };
+  }
+
+  function walkForward(variants, n, rules) {
+    var start = WARMUP_BARS + WF_LOOKBACK;
+    if (start >= n) return null;
+    var windows = [], trades = [], curve = [], factor = 1, initial = null;
+    for (var begin = start; begin < n; begin += WF_STEP) {
+      var end = Math.min(begin + WF_STEP, n), best = null, bestScore = null;
+      variants.forEach(function (v) {
+        var m = runWindow(v.prepared, begin - WF_LOOKBACK, begin, v.config, rules).metrics;
+        if (m.trade_count < WF_MIN_TRADES || (m.expectancy || 0) <= 0 || (m.profit_factor || 0) <= 1) return;
+        var score = m.expectancy / m.starting_equity;
+        if (bestScore === null || score > bestScore) { best = v; bestScore = score; }
+      });
+      var first = variants[0], times = first.prepared[first.config.symbols[0]];
+      if (!best) {
+        initial = initial || first.config.initial_thb / first.config.usdt_thb;
+        curve.push({ time: times[begin].time, equity: initial * factor });
+        windows.push({ start: times[begin].time, end: times[end - 1].time + BAR_MS, variant: null, trade_count: 0, return_pct: 0 });
+        continue;
+      }
+      var result = runWindow(best.prepared, begin, end, best.config, rules), m = result.metrics, scale = factor;
+      initial = m.starting_equity;
+      result.curve.forEach(function (p) { curve.push({ time: p.time, equity: p.equity * scale }); });
+      result.trades.forEach(function (t) { trades.push(Object.assign({}, t, { variant: best.name, pnl: t.pnl * scale, fees: t.fees * scale })); });
+      factor *= m.ending_equity / m.starting_equity;
+      windows.push({ start: result.start, end: result.end, variant: best.name, trade_count: m.trade_count, return_pct: m.return_pct });
+    }
+    return { step_days: WF_STEP / 96, lookback_days: WF_LOOKBACK / 96, windows: windows,
+      metrics: metrics(curve, trades, initial), trades: trades, curve: curve };
+  }
+
+  return { BAR_MS: BAR_MS, VARIANTS: VARIANTS, research: research, priorRollingMedian: priorRollingMedian, WARMUP_BARS: WARMUP_BARS, DEFAULTS: DEFAULTS, config: config, ewm: ewm,
     volumeProfilePoc: volumeProfilePoc, addIndicators: addIndicators, floorToStep: floorToStep,
     Portfolio: Portfolio, metrics: metrics, runWindow: runWindow, evaluate: evaluate };
 });
@@ -645,7 +760,8 @@ a{color:var(--accent)}
       var cfg = Engine.config({ symbols: symbols, usdt_thb: fxInfo.rate, initial_thb: readNumber("capital", 10000),
         fee: readNumber("fee", 0.1) / 100, slippage: readNumber("slip", 0.05) / 100, risk_fraction: readNumber("risk", 0.25) / 100 });
       var t0 = Date.now(), result = Engine.evaluate(data, cfg, rules);
-      last = { result: result, fx: fxInfo, symbols: symbols, symbol: symbols[0] };
+      var research = Engine.research(result, rules);
+      last = { result: result, research: research, fx: fxInfo, symbols: symbols, symbol: symbols[0] };
       render();
       status("เสร็จใน " + ((Date.now() - t0) / 1000).toFixed(1) + " วินาที · " + result.bars.toLocaleString() + " แท่ง/คู่ · USDT/THB " +
         fxInfo.rate.toFixed(2) + " (" + fxInfo.source + ", คงที่ตลอดการทดสอบ)");
@@ -684,6 +800,8 @@ a{color:var(--accent)}
         "</td><td>" + fmt(mm.max_drawdown_pct, 2) + "%</td></tr>";
     }).join("");
 
+    renderResearch(fx);
+
     $("trades").innerHTML = h.trades.slice(-30).reverse().map(function (t) {
       return '<div class="trade"><div><b>' + t.symbol.replace("USDT", "") + "</b> " + thai(t.entry_time) + " → " + thai(t.exit_time) +
         '<br><small>' + (REASONS[t.reason] || esc(t.reason)) + " · เข้า " + fmt(t.entry_price, 2) + " ออก " + fmt(t.exit_price, 2) +
@@ -698,6 +816,39 @@ a{color:var(--accent)}
     });
     drawCandles();
     drawEquity();
+  }
+
+  var VARIANT_NAMES = {};
+  Engine.VARIANTS.forEach(function (v) { VARIANT_NAMES[v[0]] = v[1]; });
+
+  function renderResearch(fx) {
+    var rs = last.research, wf = rs.walk_forward;
+    if (wf) {
+      var m = wf.metrics, ci = m.win_rate_ci95_pct;
+      $("wfHero").innerHTML = [
+        ["Win rate", fmt(m.win_rate_pct, 1) + "%", m.trade_count ? "95%: " + fmt(ci[0], 1) + "–" + fmt(ci[1], 1) + "%" : "ยังไม่มีไม้"],
+        ["ปิดสถานะ", fmt(m.trade_count, 0) + " ไม้", m.trade_count < 30 ? "น้อยกว่า 30 ไม้ ยังสรุปไม่ได้" : wf.windows.length + " รอบ × 30 วัน"],
+        ["กำไรสุทธิ", '<span class="' + tone(m.return_pct) + '">' + fmt(m.return_pct, 2, true) + "%</span>", fmt(m.net_profit * fx, 0, true) + " บาท"],
+        ["PF · Max DD", fmt(m.profit_factor, 2) + " · " + fmt(m.max_drawdown_pct, 1) + "%", "PF > 1 = กำไรมากกว่าขาดทุน"]
+      ].map(function (c) { return '<div class="stat"><small>' + c[0] + "</small><b>" + c[1] + "</b><small>" + c[2] + "</small></div>"; }).join("");
+      $("wfWindows").innerHTML = wf.windows.map(function (w) {
+        return "<tr><td>" + thai(w.start).slice(0, 8) + "</td><td>" + (w.variant ? esc(VARIANT_NAMES[w.variant] || w.variant) : '<span class="muted">ถือเงินสด</span>') +
+          "</td><td>" + w.trade_count + '</td><td class="' + tone(w.return_pct) + '">' + fmt(w.return_pct, 2, true) + "%</td></tr>";
+      }).join("");
+    } else {
+      $("wfHero").innerHTML = '<p class="muted">ต้องใช้ข้อมูลมากกว่า 100 วัน เลือก 365 หรือ 730 วัน</p>';
+      $("wfWindows").innerHTML = "";
+    }
+    var h = rs.chosen_holdout && rs.chosen_holdout.metrics;
+    $("researchVerdict").innerHTML = !rs.chosen
+      ? "ไม่มีกลยุทธ์ไหนผ่านเกณฑ์ (กำไรเฉลี่ยต่อไม้เป็นบวกทั้ง Dev และ Valid และ Valid ≥ 30 ไม้) — ยังไม่ควรใช้เงินจริง"
+      : "เลือกจาก Valid: <b>" + esc(VARIANT_NAMES[rs.chosen]) + "</b> → ทดสอบ Holdout ครั้งเดียว: " + fmt(h.trade_count, 0) + " ไม้ · win " +
+        fmt(h.win_rate_pct, 1) + '% · <span class="' + tone(h.return_pct) + '">' + fmt(h.return_pct, 2, true) + "%</span> · PF " + fmt(h.profit_factor, 2);
+    $("variants").innerHTML = rs.variants.map(function (v) {
+      var d = v.development, a = v.validation;
+      return "<tr><td>" + esc(VARIANT_NAMES[v.name]) + (v.name === rs.chosen ? " ✓" : "") + "</td><td>" + fmt(d.win_rate_pct, 1) + "%</td><td>" +
+        fmt(d.profit_factor, 2) + "</td><td>" + a.trade_count + "</td><td>" + fmt(a.win_rate_pct, 1) + "%</td><td>" + fmt(a.profit_factor, 2) + "</td></tr>";
+    }).join("");
   }
 
   function sec(ms) { return Math.floor(ms / 1000) + THAI_OFFSET_S; }
