@@ -54,6 +54,12 @@ button:disabled{opacity:.5}
 .flash{outline:3px solid var(--warn);outline-offset:3px;border-radius:10px;transition:outline-color .3s}
 .how{background:var(--deep);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-top:8px;font-size:13.5px}
 .how ol{margin:0;padding-left:20px}.how li{margin:4px 0}
+#guideBar{position:fixed;left:0;right:0;bottom:0;z-index:20;margin:0;border-radius:16px 16px 0 0;display:flex;flex-direction:column;align-items:flex-start;gap:2px;
+  padding:12px max(16px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));
+  background:var(--upText);color:#06221b;text-align:left;box-shadow:0 -6px 20px rgba(0,0,0,.35)}
+#guideBar.hidden{display:none}#guideBar span{font-size:12px;font-weight:500}#guideBar b{font-size:16px}#guideBar .go{align-self:flex-end;margin-top:-20px;font-weight:700;font-size:14px}
+body.has-guide main{padding-bottom:110px}
+.guide-step{cursor:pointer}
 .inline{display:flex;gap:8px;align-items:center;margin-top:8px}.inline input{flex:1;min-width:0}
 #status.err{color:var(--down)}
 .hero{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
@@ -110,6 +116,7 @@ a{color:var(--accent)}
   <label class="checks" style="margin-top:10px;align-items:flex-start"><input type="checkbox" id="sgLock" checked> <span><b>ใช้สูตรที่ผมเลือก</b>: BTCUSDT · Squeeze v2 · 10x Isolated · เสี่ยง 0.25%/ไม้ · กรอง FOMC</span></label>
   <details style="margin-top:6px"><summary class="muted" style="font-size:13px">วันประกาศผล FOMC (แก้ได้)</summary>
     <textarea id="sgFomc" rows="4" style="width:100%;background:var(--deep);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:8px;font:12px ui-monospace,monospace"></textarea>
+    <button class="mini" id="sgFomcOk" type="button">ตรวจแล้ว ✓</button>
     <p class="muted" style="font-size:12px;margin:4px 0 0">2024–2025 มาจากไฟล์วิจัยของคุณ · ปี 2026 ผมใส่จากความจำ ยังไม่ได้ตรวจ โปรดเทียบกับ federalreserve.gov/monetarypolicy/fomccalendars.htm · งดเข้าไม้ถ้าแท่งสัญญาณอยู่ในวันนั้น หรือห่างไม่เกิน 24 ชม.</p>
   </details>
   <p class="muted" style="margin:8px 0 0;font-size:13px" id="sgHelp"></p>
@@ -296,6 +303,7 @@ a{color:var(--accent)}
   ผลย้อนหลังไม่ใช่ผลเงินจริงและไม่รับประกันอนาคต · ไม่ได้จำลองตัวกรองข่าว · กราฟโดย <a href="https://www.tradingview.com/lightweight-charts/">TradingView Lightweight Charts™</a> (Apache-2.0)
 </footer>
 </main>
+<button id="guideBar" class="hidden" type="button"><span id="guideBarStep"></span><b id="guideBarTitle"></b><span class="go">แตะเพื่อไป ▶</span></button>
 <script>
 /*!
  * @license
@@ -2365,8 +2373,8 @@ a{color:var(--accent)}
         tab: "signalTab", target: "sgMode", done: function () { return $("sgMode").value === "futures" && $("sgLock").checked; } },
       { id: "capital", title: "ใส่เงินทุนที่จะใช้เทรด", how: "แท็บพอร์ต → ช่อง \"ทุนเริ่มต้น (บาท)\" ใส่เงินที่เสียได้ทั้งหมดโดยไม่เดือดร้อน",
         tab: "portTab", target: "pfCapital", done: function () { return !!flags().capital; } },
-      { id: "fomc", title: "ตรวจวันประกาศ FOMC ปี 2026", how: "เปิด federalreserve.gov/monetarypolicy/fomccalendars.htm เทียบกับรายการในแอป ผิดตรงไหนแก้ได้เลย แล้วกด \"ตรวจแล้ว\"",
-        tab: "signalTab", target: "sgFomc", done: function () { return !!flags().fomc; }, confirm: "ตรวจแล้ว" },
+      { id: "fomc", title: "ตรวจวันประกาศ FOMC ปี 2026", how: "เปิด federalreserve.gov/monetarypolicy/fomccalendars.htm เทียบกับรายการวันในแอป ผิดตรงไหนแก้ได้เลย แล้วกดปุ่ม \"ตรวจแล้ว ✓\" ใต้รายการ",
+        tab: "signalTab", target: "sgFomc", done: function () { return !!flags().fomc; }, confirm: "ตรวจแล้ว ✓" },
       { id: "test2026", title: "ดูผลปี 2026 ว่าสูตรยังได้กำไรไหม", how: "แท็บพอร์ต → ปุ่ม \"ดูผลปี 2026 (ข้อมูลใหม่)\" ถ้า R เฉลี่ยเป็นบวกและ PF มากกว่า 1 = ยังดี แคปส่งให้ผู้ช่วยดูได้",
         tab: "portTab", target: "pp2026", done: function () { return !!flags().test2026; } },
       { id: "paper", title: "เริ่ม Paper Trading", how: "แท็บพอร์ต → ปุ่ม \"เริ่ม Paper วันนี้\" แอปจะจดผลให้เองนับจากวันนี้",
@@ -2403,15 +2411,30 @@ a{color:var(--accent)}
           esc(s.title) + "</b>" + (next ? ' <span class="pill go">ทำขั้นนี้ต่อ</span>' : "") + "<small class=\"muted\">" + esc(s.how) + '</small><button class="mini' + (next ? "" : " ghost") +
           '" data-go="' + s.id + '">พาไป</button>' + (s.confirm && !done ? ' <button class="mini ghost" data-confirm="' + s.id + '">' + s.confirm + "</button>" : "") + "</div></div>";
       }).join("");
-      Array.prototype.forEach.call(document.querySelectorAll("[data-go]"), function (b) {
-        b.onclick = function () { go(STEPS.filter(function (s) { return s.id === b.getAttribute("data-go"); })[0]); };
+      Array.prototype.forEach.call(document.querySelectorAll(".guide-step"), function (row, k) {
+        row.onclick = function (ev) { if (!ev.target.hasAttribute("data-confirm")) go(STEPS[k]); };
       });
       Array.prototype.forEach.call(document.querySelectorAll("[data-confirm]"), function (b) {
         b.onclick = function () { mark(b.getAttribute("data-confirm")); };
       });
+      renderBar(required, doneCount);
       return doneCount === required.length;
     }
+
+    // Sticky "next step" bar on every tab until the required steps are done.
+    function renderBar(required, doneCount) {
+      var next = STEPS.filter(function (s) { return !s.optional && !s.info && !s.done(); })[0], bar = $("guideBar");
+      bar.classList.toggle("hidden", !next);
+      document.body.classList.toggle("has-guide", !!next);
+      if (!next) return;
+      $("guideBarStep").textContent = "ขั้นต่อไป " + (doneCount + 1) + "/" + required.length + (next.confirm ? " · เสร็จแล้วกด \"" + next.confirm + "\"" : next.id === "capital" ? " · พิมพ์ทุนแล้วแตะที่อื่น" : "");
+      $("guideBarTitle").textContent = next.title;
+      bar.onclick = function () { go(next); };
+    }
+    setInterval(function () { if (!document.hidden) render(); }, 1500);
     $("pfCapital").addEventListener("change", function () { mark("capital"); });
+    $("pfCapital").addEventListener("blur", function () { mark("capital"); });
+    $("sgFomcOk").addEventListener("click", function () { mark("fomc"); $("sgFomcOk").textContent = "ตรวจแล้ว ✓ (บันทึกแล้ว)"; });
     $("pp2026").addEventListener("click", function () { mark("test2026"); });
     ["sgMode", "sgLock", "autoScan", "aiKey"].forEach(function (id) { $(id).addEventListener("change", render); });
     $("ppStart").addEventListener("click", function () { setTimeout(render, 50); });
