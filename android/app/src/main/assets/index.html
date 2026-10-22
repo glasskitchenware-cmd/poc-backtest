@@ -65,6 +65,20 @@ body.has-guide main{padding-bottom:110px}
 .mmrow{margin:10px 0}.mmrow .lbl{display:flex;justify-content:space-between;font-size:14px;gap:8px}.mmrow .track{height:14px;background:var(--deep);border-radius:99px;overflow:hidden;margin-top:4px}
 .mmrow .track i{display:block;height:100%;border-radius:99px}.mmrow.app .lbl b{color:var(--upText)}
 .slider-tip{background:#2a2515;border:1px solid #6b5830;border-radius:12px;padding:10px 12px;margin-top:8px;font-size:15px}
+.bx{background:#181a20;border:1px solid #2b3139;border-radius:14px;padding:12px;margin-top:10px;color:#eaecef;font-size:14px}
+.bx .hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}.bx .sym{font-size:18px;font-weight:700}
+.bx .row2{display:flex;gap:8px;margin-bottom:8px}.bx .chip{flex:1;background:#2b3139;border-radius:8px;padding:8px;text-align:center;position:relative;font-weight:600}
+.bx .tabs2{display:flex;background:#2b3139;border-radius:8px;margin-bottom:8px}.bx .tabs2 div{flex:1;text-align:center;padding:7px;border-radius:8px;color:#848e9c}.bx .tabs2 .on{background:#474d57;color:#eaecef}
+.bx .fld{background:#2b3139;border-radius:8px;padding:10px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;position:relative}
+.bx .fld small{color:#848e9c}.bx .val{font-weight:700;font-variant-numeric:tabular-nums}
+.bx .sl{position:relative;height:22px;margin:4px 6px 10px}.bx .sl .ln{position:absolute;left:0;right:0;top:10px;height:2px;background:#474d57}
+.bx .sl .fill{position:absolute;left:0;top:10px;height:2px;background:#f0b90b}.bx .sl .kb{position:absolute;top:3px;width:16px;height:16px;margin-left:-8px;transform:rotate(45deg);background:#f0b90b;border:2px solid #181a20}
+.bx .sl .tick{position:absolute;top:6px;width:10px;height:10px;margin-left:-5px;transform:rotate(45deg);border:2px solid #474d57;background:#181a20}
+.bx .ck{display:flex;align-items:center;gap:8px;margin:4px 0 8px}.bx .ck i{width:16px;height:16px;border-radius:4px;background:#f0b90b;display:inline-flex;align-items:center;justify-content:center;color:#181a20;font-style:normal;font-size:12px;font-weight:700}
+.bx .btn2{flex:1;border-radius:8px;padding:12px;text-align:center;font-weight:700;position:relative}.bx .buy{background:#2ebd85;color:#fff}.bx .sell{background:#f6465d;color:#fff}.bx .dim{opacity:.25}
+.bx .n{position:absolute;top:-8px;right:-6px;width:22px;height:22px;border-radius:50%;background:#f0b90b;color:#181a20;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #181a20}
+.bx .hl{outline:2px solid #f0b90b;outline-offset:1px}
+.bx-steps{margin:10px 0 0;padding-left:0;list-style:none;font-size:14px}.bx-steps li{display:flex;gap:8px;margin:6px 0}.bx-steps b.k{flex:none;width:22px;height:22px;border-radius:50%;background:#f0b90b;color:#181a20;font-size:12px;display:flex;align-items:center;justify-content:center}
 .inline{display:flex;gap:8px;align-items:center;margin-top:8px}.inline input{flex:1;min-width:0}
 #status.err{color:var(--down)}
 .hero{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
@@ -2050,12 +2064,42 @@ a{color:var(--accent)}
     return out;
   }
 
+  // A look-alike of the Binance Futures order panel with every field filled in and numbered.
+  function orderPanel(r, g) {
+    var coin = r.symbol.replace("USDT", ""), long = g.dir > 0, pct = Math.max(0.1, Math.min(100, g.sliderPct));
+    var pctTxt = fmt(pct, pct < 10 ? 1 : 0) + "%";
+    var ticks = [0, 25, 50, 75, 100].map(function (x) { return '<span class="tick" style="left:' + x + '%"></span>'; }).join("");
+    return '<div class="bx">' +
+      '<div class="hd"><span class="sym">' + r.symbol + ' <small style="color:#848e9c;font-weight:400">Perp</small></span><small style="color:#848e9c">Futures · USDⓈ-M</small></div>' +
+      '<div class="row2"><div class="chip hl">Isolated<span class="n">1</span></div><div class="chip hl">' + g.lev + 'x<span class="n">2</span></div></div>' +
+      '<div class="tabs2"><div class="on">Open</div><div>Close</div></div>' +
+      '<div class="fld hl"><span>Market</span><small>▾</small><span class="n">3</span></div>' +
+      '<div class="fld hl"><small>Size</small><span class="val">' + g.qty + " " + coin + '</span><span class="n">4</span></div>' +
+      '<div class="sl">' + '<span class="ln"></span><span class="fill" style="width:' + pct + '%"></span>' + ticks + '<span class="kb" style="left:' + pct + '%"></span></div>' +
+      '<div style="text-align:center;margin:-4px 0 8px;color:#f0b90b;font-weight:700">ลากไปที่ ' + pctTxt + "</div>" +
+      '<div class="ck"><i>✓</i><span>TP/SL</span><span class="n" style="position:static;margin-left:auto">5</span></div>' +
+      '<div class="fld"><small>Take Profit</small><span class="val" style="color:#2ebd85">' + price(g.tps[2]) + "</span></div>" +
+      '<div class="fld"><small>Stop Loss</small><span class="val" style="color:#f6465d">' + price(g.stop) + '</span></div>' +
+      '<div class="row2" style="margin-top:4px"><div class="btn2 buy ' + (long ? "hl" : "dim") + '">Buy/Long' + (long ? '<span class="n">6</span>' : "") + "</div>" +
+      '<div class="btn2 sell ' + (long ? "dim" : "hl") + '">Sell/Short' + (long ? "" : '<span class="n">6</span>') + "</div></div></div>" +
+      '<ul class="bx-steps">' +
+      '<li><b class="k">1</b><span>แตะ <b>Cross</b> แล้วเปลี่ยนเป็น <b>Isolated</b></span></li>' +
+      '<li><b class="k">2</b><span>แตะตัวเลข Leverage แล้วตั้งเป็น <b>' + g.lev + 'x</b> กดยืนยัน</span></li>' +
+      '<li><b class="k">3</b><span>ประเภทคำสั่งเลือก <b>Market</b> (อยู่แท็บ <b>Open</b>)</span></li>' +
+      '<li><b class="k">4</b><span>พิมพ์ขนาด <b>' + g.qty + " " + coin + "</b> หรือลากสไลเดอร์ไปที่ <b>" + pctTxt + '</b></span></li>' +
+      '<li><b class="k">5</b><span>ติ๊ก <b>TP/SL</b> ใส่ Take Profit <b>' + price(g.tps[2]) + "</b> และ Stop Loss <b>" + price(g.stop) + '</b></span></li>' +
+      '<li><b class="k">6</b><span>กด <b>' + (long ? "Buy/Long (สีเขียว)" : "Sell/Short (สีแดง)") + "</b> แล้วกลับมากด \"เข้าแล้ว · บันทึกลงพอร์ต\"</span></li>" +
+      '<li><b class="k">⏱</b><span>ถ้าครบ <b>' + g.hold + ' ชม.</b> แล้วยังไม่ชน TP/SL ให้ไปที่ Positions กด <b>Close → Market</b></span></li></ul>' +
+      '<small class="muted">ภาพนี้เป็นตัวช่วยตั้งค่า ไม่ใช่แอป Binance จริง ตำแหน่งปุ่มในแอปจริงอาจต่างเล็กน้อย ต้องอยู่ในแท็บ <b>Futures</b> (แถบล่างของ Binance) ไม่ใช่ Spot</small>';
+  }
+
   // Step-by-step for the Binance app, filled in with this signal's numbers.
   function binanceHowTo(r, g) {
     var coin = r.symbol.replace("USDT", ""), long = g.dir > 0;
     var lowNotional = g.notional < 100;
-    return '<button class="mini ghost" data-how="' + r.symbol + '">วิธีเปิดไม้ใน Binance</button><div class="how hidden" id="how-' + r.symbol + '">' +
-      '<b>ช่วง Paper Trading ยังไม่ต้องทำ</b> แอปจดผลให้เอง ใช้ขั้นตอนนี้เมื่อพร้อมใช้เงินจริง<ol>' +
+    return '<button class="mini" data-how="' + r.symbol + '">ดูหน้าตั้งค่าใน Binance (ทำตามภาพ)</button><div class="how hidden" id="how-' + r.symbol + '">' +
+      '<b>ช่วง Paper Trading ยังไม่ต้องทำ</b> แอปจดผลให้เอง ใช้หน้านี้เมื่อพร้อมใช้เงินจริง' + orderPanel(r, g) +
+      '<details style="margin-top:8px"><summary class="muted" style="font-size:13px">ขั้นตอนแบบข้อความ</summary><ol>' +
       "<li>เปิดแอป Binance → แท็บ <b>Futures</b> → <b>USDⓈ-M</b> → เลือก <b>" + r.symbol + " Perpetual</b></li>" +
       "<li>กดปุ่มโหมด Margin เลือก <b>Isolated</b> และกดปุ่ม Leverage ตั้งเป็น <b>" + g.lev + "x</b></li>" +
       "<li>ประเภทคำสั่งเลือก <b>Market</b> แล้ว<b>ลากสไลเดอร์ไปที่ " + fmt(Math.max(g.sliderPct, 0.1), g.sliderPct < 10 ? 1 : 0) + "%</b> หรือพิมพ์จำนวน <b>" + g.qty + " " + coin +
@@ -2065,7 +2109,7 @@ a{color:var(--accent)}
       "<li>กลับมาแอปนี้ กด <b>เข้าแล้ว · บันทึกลงพอร์ต</b></li>" +
       "<li>ถ้าครบ <b>" + g.hold + " ชม.</b> แล้วยังไม่ชน TP/SL ให้ปิดเองด้วย Market (ภายใน " + thai(g.expires + (g.hold - 1) * 3600000).slice(0, 14) + " น.)</li></ol>" +
       (lowNotional ? '<small class="down">มูลค่าไม้ต่ำกว่าประมาณ 100 USDT อาจต่ำกว่าขั้นต่ำของ Binance สำหรับ BTCUSDT ถ้าเปิดไม่ได้แปลว่าทุนยังน้อยเกินสำหรับความเสี่ยง 0.25% อย่าเพิ่มขนาดไม้เอง</small><br>' : "") +
-      '<small class="muted">TP1/TP2 ในการ์ดเป็นระดับอ้างอิง งานวิจัยทดสอบเฉพาะ TP 5R + ออกเมื่อครบเวลา ชื่อปุ่มใน Binance อาจต่างเล็กน้อยตามเวอร์ชันแอป</small></div>';
+      '<small class="muted">TP1/TP2 ในการ์ดเป็นระดับอ้างอิง งานวิจัยทดสอบเฉพาะ TP 5R + ออกเมื่อครบเวลา ชื่อปุ่มใน Binance อาจต่างเล็กน้อยตามเวอร์ชันแอป</small></details></div>';
   }
 
   function renderFutures(results, fxInfo, lev, end) {
