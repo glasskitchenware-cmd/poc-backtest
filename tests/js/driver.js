@@ -48,6 +48,6 @@
     document.title = "RESULT " + JSON.stringify({ packets: __T.packets.length, posts: __T.posts.length, scanMinutes: __T.scanMinutes,
       spot: __T.requests.filter(function (r) { return r.indexOf("SPOT") === 0; }), status: (document.getElementById("scanStatus") || {}).textContent || "",
       scanCards: text("scanCards"), smMain: text("smMain"), coach: text("coach"), paper: text("ppSimple") + " | " + text("ppHero") + " | " + text("ppTrades"),
-      paperStatus: text("ppStatus"), paperTitle: text("ppTitle"), help: text("sgHelp") });
+      paperStatus: text("ppStatus"), paperTitle: text("ppTitle"), help: text("sgHelp"), chart: !!document.querySelector("#smChart canvas") });
   }, cfg.waitMs || 12000);
 })();

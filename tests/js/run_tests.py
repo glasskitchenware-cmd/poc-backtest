@@ -197,8 +197,18 @@ def main():
     r = run(page, "h4_coach", {"storage": h4, "capital": 1_000_000, "trendForce": {"BTCUSDT": "LONG", "SOLUSDT": "HOLD_LONG"}, "clickTf": "4h", "waitMs": 15000,
                                "justClosed": 14_400_000}, bg=False)
     shown = r["smMain"] + r["coach"]
-    check("ไม่มี TP ตายตัว" in r["smMain"] and "BTC LONG" in r["smMain"] and "ไม้ที่สูตรถืออยู่" in r["smMain"], "main screen: Trend entry without TP, held SOL listed")
+    check("BTC LONG" in r["smMain"] and "สูตรถืออยู่ 1 ไม้" in r["smMain"] and "SOL" in r["smMain"], "main screen: Trend entry, held SOL listed")
+    for must in ["เปิด LONG (Buy) BTC", "ใส่เงิน (Margin)", "Isolated", "โดนแล้วเสีย", 'ไม่ตั้ง · ออกเมื่อแอปเด้ง "ปิดไม้"', "เข้าก่อน"]:
+        check(must in r["smMain"], "order box says: " + must)
+    check(r["chart"] and "สัญญาณเข้า LONG" in r["smMain"] and "เข้า " in r["smMain"] and "SL " in r["smMain"], "4h chart drawn with entry and SL for the signal")
     check("NaN" not in shown and "undefined" not in shown, "main screen has no NaN/undefined for a signal without TP")
+
+    r = run(page, "h4_small", {"storage": h4, "capital": 37, "trendForce": {"ETHUSDT": "SHORT", "SOLUSDT": "HOLD_SHORT"}, "clickTf": "4h", "waitMs": 15000,
+                               "justClosed": 14_400_000}, bg=False)
+    check("ทุน 37 ฿ ยังเทรดตามสูตรไม่ได้" in r["smMain"] and "ทุนขั้นต่ำที่เสี่ยง 0.25%/ไม้" in r["smMain"], "37 THB: says the capital is too small and how much each coin needs")
+    check("ETH SHORT" in r["smMain"] and "ไม่แนะนำให้เข้า" in r["smMain"] and "ต้องมีทุนอย่างน้อย" in r["smMain"], "37 THB: the refused ETH signal is shown with the reason")
+    check(r["packet"]["signals"] == [] and any("ต้องมีทุนอย่างน้อย" in x for x in r["packet"]["rejected"]), "37 THB: nothing notified, rejection names the capital needed")
+    check(r["chart"] and "NaN" not in r["smMain"] and "undefined" not in r["smMain"], "37 THB: chart drawn, no NaN/undefined")
     check("Trend 4H" in r["help"] and "SL 3 ATR" in r["help"], "settings explain the Trend 4H rule")
 
     r = run(page, "paper_trend", {"storage": h4, "capital": 100_000, "clickId": "pp2026", "waitMs": 20000}, bg=False)
