@@ -8,64 +8,67 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <style>
-:root{color-scheme:dark;--bg:#0b1220;--panel:#121e2d;--deep:#0f1927;--line:#26374c;--ink:#edf4fd;--muted:#a8b8cb;--up:#26a69a;--upText:#56d6b4;--down:#ff8a8a;--warn:#f0c46a;--accent:#86a9ff}
+:root{color-scheme:dark;--bg:#0b0e11;--panel:#181a20;--deep:#2b3139;--line:#2b3139;--ink:#eaecef;--muted:#848e9c;--up:#0ecb81;--upText:#0ecb81;--down:#f6465d;--warn:#f0b90b;--accent:#f0b90b;--yel:#f0b90b}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-text-size-adjust:100%}
-main{max-width:640px;margin:auto;padding:14px 14px 40px}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 "IBM Plex Sans","Binance Plex",Roboto,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-text-size-adjust:100%}
+main{max-width:640px;margin:auto;padding:10px 12px calc(84px + env(safe-area-inset-bottom,0px))}
 h1{font-size:20px;margin:4px 0 2px}h2{font-size:16px;margin:0 0 10px}
-.eyebrow{color:var(--upText);font-size:11px;letter-spacing:.06em}
+.eyebrow{color:var(--muted);font-size:11px;letter-spacing:.02em}
 .muted,small{color:var(--muted)}small{font-size:12px}
-section{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;margin:12px 0}
+section{background:var(--panel);border:0;border-radius:12px;padding:14px;margin:10px 0}
 label{display:block;font-size:13px;color:var(--muted);margin:8px 0 4px}
-input,select{width:100%;background:var(--deep);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px;font:inherit}
+input,select{width:100%;background:var(--deep);color:var(--ink);border:1px solid transparent;border-radius:8px;padding:10px;font:inherit}input:focus,select:focus{outline:0;border-color:var(--yel)}input[type=checkbox],input[type=radio],input[type=range]{accent-color:var(--yel)}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .checks{display:flex;gap:16px;margin-top:4px}.checks label{display:flex;gap:6px;align-items:center;color:var(--ink);margin:0}.checks input{width:auto}
-button{width:100%;margin-top:14px;padding:13px;border:0;border-radius:12px;background:var(--upText);color:#06221b;font:600 16px system-ui,sans-serif}
+button{width:100%;margin-top:14px;padding:13px;border:0;border-radius:8px;background:var(--yel);color:#181a20;font:600 16px inherit;font-family:inherit}
 button:disabled{opacity:.5}
-.tabs{display:flex;gap:6px;margin-bottom:8px}.tabs button{width:auto;margin:0;padding:6px 14px;font-size:13px;background:var(--deep);color:var(--ink);border:1px solid var(--line)}.tabs button.on{background:var(--upText);color:#06221b}
+.tabs{display:flex;gap:18px;margin-bottom:8px;border-bottom:1px solid var(--line);overflow-x:auto}.tabs button{width:auto;margin:0;padding:8px 0;font-size:14px;background:none;color:var(--muted);border:0;border-radius:0;border-bottom:2px solid transparent;white-space:nowrap}.tabs button.on{color:var(--ink);border-bottom-color:var(--yel)}
+#mainTabs{position:fixed;left:0;right:0;bottom:0;z-index:30;margin:0;gap:0;justify-content:space-around;background:#181a20;border-top:1px solid var(--line);padding:4px 4px env(safe-area-inset-bottom,0px);overflow:visible}
+#mainTabs button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0 6px;font-size:11px;border:0;color:var(--muted)}#mainTabs button svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}#mainTabs button.on{color:var(--ink);border:0}#mainTabs button.on svg{stroke:var(--yel)}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:2px 0 6px}.topbar .brand{display:flex;align-items:center;gap:8px;font-weight:700;font-size:18px}.topbar .brand i{width:26px;height:26px;border-radius:50%;background:var(--yel);color:#181a20;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:13px;font-weight:800}
 #status,.status-line{font-size:13px;color:var(--muted);margin-top:10px;white-space:pre-wrap}
 .status-line.err{color:var(--down)}
-.coin{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;margin:10px 0}
-.coin.go{border-color:var(--upText)}
+.coin{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;margin:10px 0}
+.coin.go{border-color:var(--yel)}
 .coin-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
 .coin-head b{font-size:18px}
 .pill{font-size:12px;padding:3px 10px;border-radius:99px;border:1px solid var(--line);white-space:nowrap}
-.pill.go{background:var(--upText);color:#06221b;border-color:var(--upText)}
-.pill.wait{color:var(--warn);border-color:#6b5830}
+.pill.go{background:rgba(14,203,129,.15);color:var(--up);border-color:transparent}.pill.short{background:rgba(246,70,93,.15);color:var(--down)}
+.pill.wait{color:var(--yel);background:rgba(240,185,11,.12);border-color:transparent}
 .pill.no{color:var(--muted)}
 .levels{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:10px 0}
-.levels div{background:var(--deep);border-radius:10px;padding:8px}
+.levels div{background:var(--deep);border-radius:8px;padding:8px}
 .levels b{display:block;font-size:15px;font-variant-numeric:tabular-nums}
 .banner{border-radius:14px;padding:14px;margin:12px 0;font-weight:600}
-.banner.go{background:#123a31;border:1px solid var(--upText)}
+.banner.go{background:rgba(14,203,129,.12);border:1px solid var(--up)}
 .banner.wait{background:var(--panel);border:1px solid var(--line)}
-.banner.stop{background:#3a1717;border:1px solid #7a3434;color:#ffd2d2}
+.banner.stop{background:rgba(246,70,93,.12);border:1px solid var(--down);color:#ffd2d8}
 .bar{height:10px;background:var(--deep);border-radius:99px;overflow:hidden;margin:8px 0}
-.bar i{display:block;height:100%;background:var(--upText)}
+.bar i{display:block;height:100%;background:var(--yel)}
 .mini{width:auto;margin:6px 0 0;padding:8px 12px;font-size:14px}
 .mini.ghost{background:var(--deep);color:var(--ink);border:1px solid var(--line)}
-.ai{background:var(--deep);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-top:8px;font-size:13.5px;white-space:pre-wrap}
+.ai{background:#1e2329;border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-top:8px;font-size:13.5px;white-space:pre-wrap}
 .ai a{word-break:break-all}
 .guide-step{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--line)}
 .guide-step .dot{flex:none;width:26px;height:26px;border-radius:50%;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600}
-.guide-step.done .dot{background:var(--upText);border-color:var(--upText);color:#06221b}
-.guide-step.next{background:rgba(86,214,180,.08);border-radius:10px;padding:10px 8px}
+.guide-step.done .dot{background:var(--yel);border-color:var(--yel);color:#181a20}
+.guide-step.next{background:rgba(240,185,11,.08);border-radius:8px;padding:10px 8px}
 .guide-step .body{flex:1;min-width:0;font-size:14px;overflow-wrap:anywhere}.guide-step .body small{display:block}
-.flash{outline:3px solid var(--warn);outline-offset:3px;border-radius:10px;transition:outline-color .3s}
-.how{background:var(--deep);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-top:8px;font-size:13.5px}
+.flash{outline:3px solid var(--yel);outline-offset:3px;border-radius:10px;transition:outline-color .3s}
+.how{background:#1e2329;border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-top:8px;font-size:13.5px}
 .how ol{margin:0;padding-left:20px}.how li{margin:4px 0}
-#guideBar{position:fixed;left:0;right:0;bottom:0;z-index:20;margin:0;border-radius:16px 16px 0 0;display:flex;flex-direction:column;align-items:flex-start;gap:2px;
-  padding:12px max(16px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));
-  background:var(--upText);color:#06221b;text-align:left;box-shadow:0 -6px 20px rgba(0,0,0,.35)}
+#guideBar{position:fixed;left:8px;right:8px;bottom:calc(62px + env(safe-area-inset-bottom,0px));z-index:20;margin:0;border-radius:12px;display:flex;flex-direction:column;align-items:flex-start;gap:2px;
+  padding:10px 14px;
+  background:var(--yel);color:#181a20;text-align:left;box-shadow:0 -6px 20px rgba(0,0,0,.45)}
 #guideBar.hidden{display:none}#guideBar span{font-size:12px;font-weight:500}#guideBar b{font-size:16px}#guideBar .go{align-self:flex-end;margin-top:-20px;font-weight:700;font-size:14px}
-body.has-guide main{padding-bottom:110px}
+body.has-guide main{padding-bottom:calc(150px + env(safe-area-inset-bottom,0px))}
 .guide-step{cursor:pointer}
-.verdict{border-radius:16px;padding:16px;text-align:center}.verdict.good{background:#123a31;border:1px solid var(--upText)}.verdict.bad{background:#3a1717;border:1px solid #7a3434}.verdict.wait{background:var(--deep);border:1px solid var(--line)}
+.verdict{border-radius:16px;padding:16px;text-align:center}.verdict.good{background:rgba(14,203,129,.12);border:1px solid var(--up)}.verdict.bad{background:rgba(246,70,93,.12);border:1px solid var(--down)}.verdict.wait{background:var(--deep);border:1px solid var(--line)}
 .verdict .big{font-size:30px;font-weight:700;margin:4px 0;font-variant-numeric:tabular-nums}.verdict p{margin:6px 0 0;font-size:14px}
 .mmrow{margin:10px 0}.mmrow .lbl{display:flex;justify-content:space-between;font-size:14px;gap:8px}.mmrow .track{height:14px;background:var(--deep);border-radius:99px;overflow:hidden;margin-top:4px}
-.mmrow .track i{display:block;height:100%;border-radius:99px}.mmrow.app .lbl b{color:var(--upText)}
-.slider-tip{background:#2a2515;border:1px solid #6b5830;border-radius:12px;padding:10px 12px;margin-top:8px;font-size:15px}
-.bx{background:#181a20;border:1px solid #2b3139;border-radius:14px;padding:12px;margin-top:10px;color:#eaecef;font-size:14px}
+.mmrow .track i{display:block;height:100%;border-radius:99px}.mmrow.app .lbl b{color:var(--up)}
+.slider-tip{background:rgba(240,185,11,.1);border:1px solid rgba(240,185,11,.4);border-radius:12px;padding:10px 12px;margin-top:8px;font-size:15px}
+.bx{background:#0b0e11;border:1px solid #2b3139;border-radius:14px;padding:12px;margin-top:10px;color:#eaecef;font-size:14px}
 .bx .hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}.bx .sym{font-size:18px;font-weight:700}
 .bx .row2{display:flex;gap:8px;margin-bottom:8px}.bx .chip{flex:1;background:#2b3139;border-radius:8px;padding:8px;text-align:center;position:relative;font-weight:600}
 .bx .tabs2{display:flex;background:#2b3139;border-radius:8px;margin-bottom:8px}.bx .tabs2 div{flex:1;text-align:center;padding:7px;border-radius:8px;color:#848e9c}.bx .tabs2 .on{background:#474d57;color:#eaecef}
@@ -82,9 +85,9 @@ body.has-guide main{padding-bottom:110px}
 .inline{display:flex;gap:8px;align-items:center;margin-top:8px}.inline input{flex:1;min-width:0}
 #status.err{color:var(--down)}
 .hero{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-.stat{background:var(--deep);border-radius:12px;padding:10px 12px}.stat b{display:block;font-size:22px;font-variant-numeric:tabular-nums}.stat small{display:block}
+.stat{background:var(--deep);border-radius:8px;padding:10px 12px}.stat b{display:block;font-size:22px;font-variant-numeric:tabular-nums}.stat small{display:block}
 .big b{font-size:30px}
-.notice{border:1px solid #6b5830;background:#2a2515;border-radius:12px;padding:10px 12px;font-size:13px;margin:10px 0 0}
+.notice{border:1px solid rgba(240,185,11,.35);background:rgba(240,185,11,.08);border-radius:12px;padding:10px 12px;font-size:13px;margin:10px 0 0}
 .notice li{margin:4px 0}
 .up{color:var(--upText)}.down{color:var(--down)}
 table{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums}
@@ -100,11 +103,9 @@ a{color:var(--accent)}
 </head>
 <body>
 <main>
-<div class="eyebrow">BINANCE SPOT/FUTURES · แอปไม่ส่งคำสั่งซื้อขายให้ · ผลอดีตไม่รับประกันอนาคต</div>
-<h1>POC Signal</h1>
-<p class="muted" style="margin:0">สแกนเหรียญหลักจาก Binance หาเหรียญขาขึ้นที่มีจุดเข้า พร้อม backtest</p>
-
-<div class="tabs" id="mainTabs" style="margin-top:12px;flex-wrap:wrap"><button data-tab="guideTab">เริ่มต้น</button><button data-tab="signalTab" class="on">สัญญาณ</button><button data-tab="chartTab">กราฟ</button><button data-tab="portTab">พอร์ต</button><button data-tab="backtestTab">Backtest</button></div>
+<div class="topbar"><div class="brand"><i>P</i>POC Signal</div><small>Futures · Paper</small></div>
+<div class="eyebrow">แอปไม่ส่งคำสั่งซื้อขายให้ · ผลอดีตไม่รับประกันอนาคต</div>
+<nav class="tabs" id="mainTabs"><button data-tab="guideTab"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>หน้าแรก</button><button data-tab="signalTab" class="on"><svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>สัญญาณ</button><button data-tab="chartTab"><svg viewBox="0 0 24 24"><path d="M7 4v16M17 4v16"/><rect x="4.5" y="8" width="5" height="8" rx="1"/><rect x="14.5" y="6" width="5" height="9" rx="1"/></svg>กราฟ</button><button data-tab="portTab"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="14" rx="2"/><path d="M3 10h18M16 15h2"/><path d="M7 6V4h10v2"/></svg>พอร์ต</button><button data-tab="backtestTab"><svg viewBox="0 0 24 24"><path d="M4 20V4M4 20h16"/><rect x="7" y="12" width="3" height="5"/><rect x="12" y="8" width="3" height="9"/><rect x="17" y="5" width="3" height="12"/></svg>Backtest</button></nav>
 
 <div id="guideTab" class="hidden">
 <section>
@@ -1541,9 +1542,9 @@ a{color:var(--accent)}
 
   function baseOptions(el) {
     return { width: el.clientWidth, height: el.clientHeight,
-      layout: { background: { type: "solid", color: "#121e2d" }, textColor: "#a8b8cb", fontSize: 11 },
-      grid: { vertLines: { color: "#1b2a3c" }, horzLines: { color: "#1b2a3c" } },
-      rightPriceScale: { borderColor: "#26374c" }, timeScale: { borderColor: "#26374c", timeVisible: true, secondsVisible: false },
+      layout: { background: { type: "solid", color: "#181a20" }, textColor: "#848e9c", fontSize: 11 },
+      grid: { vertLines: { color: "#202630" }, horzLines: { color: "#202630" } },
+      rightPriceScale: { borderColor: "#2b3139" }, timeScale: { borderColor: "#2b3139", timeVisible: true, secondsVisible: false },
       crosshair: { mode: 0 } };
   }
 
@@ -1551,8 +1552,8 @@ a{color:var(--accent)}
     var el = $("chart"), s = last.symbol, rows = last.result.prepared[s];
     if (candleChart) candleChart.remove();
     candleChart = LightweightCharts.createChart(el, baseOptions(el));
-    var candles = candleChart.addCandlestickSeries({ upColor: "#26a69a", downColor: "#ef5350", borderVisible: false,
-      wickUpColor: "#26a69a", wickDownColor: "#ef5350" });
+    var candles = candleChart.addCandlestickSeries({ upColor: "#0ecb81", downColor: "#f6465d", borderVisible: false,
+      wickUpColor: "#0ecb81", wickDownColor: "#f6465d" });
     candles.setData(rows.map(function (r) { return { time: sec(r.time), open: r.open, high: r.high, low: r.low, close: r.close }; }));
     var line = function (key, color) {
       var series = candleChart.addLineSeries({ color: color, lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
@@ -1564,9 +1565,9 @@ a{color:var(--accent)}
     Object.keys(last.result.splits).forEach(function (k) {
       last.result.splits[k].trades.forEach(function (t) {
         if (t.symbol !== s) return;
-        markers.push({ time: sec(Math.floor(t.entry_time / Engine.BAR_MS) * Engine.BAR_MS), position: "belowBar", color: "#56d6b4", shape: "arrowUp" });
+        markers.push({ time: sec(Math.floor(t.entry_time / Engine.BAR_MS) * Engine.BAR_MS), position: "belowBar", color: "#0ecb81", shape: "arrowUp" });
         markers.push({ time: sec(Math.floor(t.exit_time / Engine.BAR_MS) * Engine.BAR_MS), position: "aboveBar",
-          color: t.pnl > 0 ? "#56d6b4" : "#ff8a8a", shape: "arrowDown" });
+          color: t.pnl > 0 ? "#0ecb81" : "#f6465d", shape: "arrowDown" });
       });
     });
     markers.sort(function (a, b) { return a.time - b.time; });
@@ -1586,7 +1587,7 @@ a{color:var(--accent)}
       series.setData(data);
     };
     plot(last.result.benchmark.curve, "#86a9ff");
-    plot(last.result.splits.holdout.curve, "#56d6b4");
+    plot(last.result.splits.holdout.curve, "#0ecb81");
     equityChart.timeScale().fitContent();
   }
 
@@ -1657,7 +1658,7 @@ a{color:var(--accent)}
         ["ลาก 10% ทุกไม้ · ไม่ตั้ง Stop (โดน Liquidate)", 0.10, ""]
       ];
       $("mmCompare").innerHTML = ways.map(function (w) {
-        var left = Math.max(0, Math.pow(1 - Math.min(w[1], 1), n)), color = left > 0.9 ? "#56d6b4" : left > 0.7 ? "#f0c46a" : "#ff8a8a";
+        var left = Math.max(0, Math.pow(1 - Math.min(w[1], 1), n)), color = left > 0.9 ? "#0ecb81" : left > 0.7 ? "#f0b90b" : "#f6465d";
         return '<div class="mmrow ' + w[2] + '"><div class="lbl"><span>' + esc(w[0]) + "</span><b>เหลือ " + fmt(cap * left, 0) + " ฿ (" + fmt((left - 1) * 100, 0) + "%)</b></div>" +
           '<div class="track"><i style="width:' + (left * 100).toFixed(1) + "%;background:" + color + '"></i></div></div>';
       }).join("");
@@ -1959,12 +1960,12 @@ a{color:var(--accent)}
       if (chart) { chart.remove(); chart = null; }
       if (rows.length >= 2) {
         chart = LightweightCharts.createChart(el, baseOptions(el));
-        var line = chart.addAreaSeries({ lineColor: profit >= 0 ? "#56d6b4" : "#ff8a8a", topColor: profit >= 0 ? "rgba(86,214,180,.35)" : "rgba(255,138,138,.3)",
+        var line = chart.addAreaSeries({ lineColor: profit >= 0 ? "#0ecb81" : "#f6465d", topColor: profit >= 0 ? "rgba(14,203,129,.3)" : "rgba(246,70,93,.3)",
           bottomColor: "rgba(0,0,0,0)", lineWidth: 2, priceFormat: { type: "price", precision: 0, minMove: 1 } });
         var seen = {}, data = [];
         curve.forEach(function (pt) { if (seen[pt.time]) data[data.length - 1].value = pt.value; else { seen[pt.time] = 1; data.push(pt); } });
         line.setData(data);
-        line.createPriceLine({ price: capital, color: "#a8b8cb", lineStyle: 2, lineWidth: 1, axisLabelVisible: true, title: "ทุน" });
+        line.createPriceLine({ price: capital, color: "#848e9c", lineStyle: 2, lineWidth: 1, axisLabelVisible: true, title: "ทุน" });
         chart.timeScale().fitContent();
       }
       var sideTh = function (side) { return side === "long" ? "ซื้อ (Long)" : "ขาย (Short)"; };
@@ -2120,7 +2121,7 @@ a{color:var(--accent)}
       : '<div class="banner wait">ตอนนี้ไม่มีสัญญาณ — รอแท่ง 1 ชม. ถัดไปปิด แล้วสแกนใหม่</div>';
     $("scanCards").innerHTML = results.map(function (r) {
       var name = r.symbol.replace("USDT", ""), g = r.signal, h = r.hist, body = "", pill;
-      if (g) pill = '<span class="pill go">' + (g.dir > 0 ? "LONG" : "SHORT") + "</span>";
+      if (g) pill = '<span class="pill ' + (g.dir > 0 ? "go" : "short") + '">' + (g.dir > 0 ? "LONG" : "SHORT") + "</span>";
       else pill = '<span class="pill no">' + (r.trend > 0 ? "ขาขึ้น · รอ" : r.trend < 0 ? "ขาลง · รอ" : "ไม่ชัด · รอ") + "</span>";
       if (g) {
         body = '<div class="levels"><div><small>เข้า (Market)</small><b>' + price(g.entry) + '</b></div><div><small>SL (' + fmt(g.stopPct, 2) + '%)</small><b class="down">' + price(g.stop) +
@@ -2343,7 +2344,7 @@ a{color:var(--accent)}
       var el = $("cvChart"), re = $("cvRsi");
       chart = LightweightCharts.createChart(el, baseOptions(el));
       rsiChart = LightweightCharts.createChart(re, Object.assign(baseOptions(re), { timeScale: { visible: false } }));
-      series.candle = chart.addCandlestickSeries({ upColor: "#26a69a", downColor: "#ef5350", borderVisible: false, wickUpColor: "#26a69a", wickDownColor: "#ef5350" });
+      series.candle = chart.addCandlestickSeries({ upColor: "#0ecb81", downColor: "#f6465d", borderVisible: false, wickUpColor: "#0ecb81", wickDownColor: "#f6465d" });
       series.volume = chart.addHistogramSeries({ priceScaleId: "vol", priceFormat: { type: "volume" }, lastValueVisible: false, priceLineVisible: false });
       chart.priceScale("vol").applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
       var line = function (c, w, style) { return chart.addLineSeries({ color: c, lineWidth: w || 1, lineStyle: style || 0, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false }); };
@@ -2351,8 +2352,8 @@ a{color:var(--accent)}
       series.bbU = line("#5c6bc0", 1, 2); series.bbM = line("#5c6bc0", 1, 1); series.bbL = line("#5c6bc0", 1, 2);
       series.sup = line("#4dd0e1", 2); series.res = line("#ff8a65", 2);
       series.rsi = rsiChart.addLineSeries({ color: "#86a9ff", lineWidth: 1, priceLineVisible: false });
-      series.rsi.createPriceLine({ price: 70, color: "#ff8a8a", lineStyle: 2, lineWidth: 1, axisLabelVisible: false });
-      series.rsi.createPriceLine({ price: 30, color: "#56d6b4", lineStyle: 2, lineWidth: 1, axisLabelVisible: false });
+      series.rsi.createPriceLine({ price: 70, color: "#f6465d", lineStyle: 2, lineWidth: 1, axisLabelVisible: false });
+      series.rsi.createPriceLine({ price: 30, color: "#0ecb81", lineStyle: 2, lineWidth: 1, axisLabelVisible: false });
       chart.timeScale().subscribeVisibleLogicalRangeChange(function (r) { if (r) rsiChart.timeScale().setVisibleLogicalRange(r); });
     }
 
@@ -2407,7 +2408,7 @@ a{color:var(--accent)}
       lastDraw = Date.now();
       var closes = bars.map(function (b) { return b.close; });
       series.candle.setData(bars.map(function (b) { return { time: t(b.time), open: b.open, high: b.high, low: b.low, close: b.close }; }));
-      series.volume.setData(bars.map(function (b) { return { time: t(b.time), value: b.volume, color: b.close >= b.open ? "rgba(38,166,154,.35)" : "rgba(239,83,80,.35)" }; }));
+      series.volume.setData(bars.map(function (b) { return { time: t(b.time), value: b.volume, color: b.close >= b.open ? "rgba(14,203,129,.35)" : "rgba(246,70,93,.35)" }; }));
       var e20 = emaArr(closes, 20), e50 = emaArr(closes, 50), e200 = emaArr(closes, 200), rsi = rsiArr(closes, 14), bb = bbArr(closes, 20);
       var put = function (s, arr, on) {
         s.setData(on ? bars.map(function (b, i) { return { time: t(b.time), value: arr[i] }; }).filter(function (p) { return isFinite(p.value); }) : []);
@@ -2433,8 +2434,8 @@ a{color:var(--accent)}
         priceLines.push(series.candle.createPriceLine({ price: price, color: color, lineWidth: 1, lineStyle: style === undefined ? 2 : style, axisLabelVisible: true, title: title }));
       };
       if ($("cvFib").checked && range > 0) {
-        Object.keys(fib).forEach(function (r) { pl(fib[r], r === "0.618" || r === "0.5" ? "#f0c46a" : "#6b7c93", "Fib " + r); });
-        pl(ext[1.272], "#56d6b4", "Ext 1.272"); pl(ext[1.618], "#56d6b4", "Ext 1.618");
+        Object.keys(fib).forEach(function (r) { pl(fib[r], r === "0.618" || r === "0.5" ? "#f0b90b" : "#6b7c93", "Fib " + r); });
+        pl(ext[1.272], "#0ecb81", "Ext 1.272"); pl(ext[1.618], "#0ecb81", "Ext 1.618");
       }
 
       // Trendlines through the last two confirmed pivots (5 bars each side).
@@ -2564,7 +2565,7 @@ a{color:var(--accent)}
         var done = s.done(), next = !done && !nextFound && !s.optional;
         if (next) nextFound = true;
         return '<div class="guide-step' + (done ? " done" : "") + (next ? " next" : "") + '"><div class="dot">' + (done ? "✓" : k + 1) + '</div><div class="body"><b>' +
-          esc(s.title) + "</b>" + (next ? ' <span class="pill go">ทำขั้นนี้ต่อ</span>' : "") + "<small class=\"muted\">" + esc(s.how) + '</small><button class="mini' + (next ? "" : " ghost") +
+          esc(s.title) + "</b>" + (next ? ' <span class="pill wait">ทำขั้นนี้ต่อ</span>' : "") + "<small class=\"muted\">" + esc(s.how) + '</small><button class="mini' + (next ? "" : " ghost") +
           '" data-go="' + s.id + '">พาไป</button>' + (s.confirm && !done ? ' <button class="mini ghost" data-confirm="' + s.id + '">' + s.confirm + "</button>" : "") + "</div></div>";
       }).join("");
       Array.prototype.forEach.call(document.querySelectorAll(".guide-step"), function (row, k) {
