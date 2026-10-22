@@ -1,0 +1,76 @@
+CRYPTO FUTURES — MTF 10,000 COMBO BACKTEST V3
+วันที่: 22 ตุลาคม 2569
+สถานะ: IMPLEMENTED + ENGINE SELF-TEST PASSED; REAL 3-YEAR BACKTEST NOT RUN IN THIS CHAT
+
+1. ข้อเท็จจริง ณ ปัจจุบัน
+- ได้พัฒนาเครื่องยนต์ Backtest รวม 10,000 การตั้งค่าจริง และทดสอบความถูกต้องของวงรอบ 10,000 รายการด้วยข้อมูลจำลองเพื่อ QA แล้ว
+- ยังไม่ได้รัน 10,000 รายการบนราคา BTC/ETH M5/M15 จริง เนื่องจากสภาพแวดล้อมนี้ไม่สามารถโหลด Monthly ZIP ของ Binance Vision เข้ามาได้
+- ไม่มีผลอันดับ 1, ค่า Profit Factor, Win rate, หรือกำไร M5/M15 จากข้อมูลจริงให้กล่าวอ้างได้
+- ผลเก่า H1 ของสูตร Momentum + Squeeze ไม่ใช่ผล M5/M15 และห้ามอ้างว่าเป็นผล 3 ปี
+- ห้ามนำผล QA จากข้อมูลจำลองไปใช้เป็นผลประกอบการเทรด
+
+2. ช่วงข้อมูลที่โปรแกรมโหลดและตรวจ
+- Exchange: Binance USD-M perpetual BTCUSDT, ETHUSDT
+- Trading TF: 5m, 15m (15m รวมจาก 5m โดยรักษาลำดับเวลา)
+- MTF confirmations: closed H1 and closed H4 only
+- Dates: 2023-10-01 ถึง 2026-09-30 UTC
+- 36 ZIP ต่อคู่ รวม 72 ZIP; ตรวจ SHA256 เมื่อเข้าถึง CHECKSUM ได้, ความครบและ OHLC invariants
+- 2023-10 ถึง 2024-12 ใช้พัฒนา, 2025 ใช้ Validation, 2026-01 ถึง 2026-09 เป็น Final Historical Check
+- 2025 เคยถูกดูในงานวิจัยเก่า จึงไม่ได้เป็น clean never-seen holdout; ห้ามเรียก 3 ปีทั้งหมดว่า OOS
+
+3. สูตรคูณการทดสอบ
+25 สายเทคนิค x 5 ตัวกรอง x 4 ATR Stop x 5 ระยะถือ x 2 คู่ x 2 TF = 10,000 การตั้งค่า
+25 กลุ่มรวม Price Action BOS, Liquidity Sweep, CHoCH, Retest, engulfing, pin bar, inside bar,
+Fibonacci 0.382/0.5/0.618, Elliott Wave 3 PROXY, QM PROXY, Double Top/Bottom,
+Triangle, Flag, H&S PROXY, FVG, OB PROXY, VWAP, Bollinger Squeeze, Momentum, Impulse,
+Signed Taker-Flow proxy, Squeeze+Momentum และ Sweep+Flow
+ตัวกรอง: none, EMA H1, EMA H4, EMA H1+H4, EMA H1+H4+taker-flow
+SL ATR: 0.8,1.2,1.8,2.5
+ถือสูงสุด: 8,16,32,64,96 bars
+TP ทุกคอมโบ = 5 เท่าของระยะจาก entry ถึง SL
+
+4. สมมติฐาน
+- เข้าแท่งถัดไปหลังปิดสัญญาณ, กันข้อมูลจากแท่ง H1/H4 ที่ยังไม่ปิด
+- หาก high/low เดียวกันแตะ Stop และ TP ให้ Stop มาก่อน
+- หนึ่งออเดอร์ต่อคู่/TF ในแต่ละชุด ไม่เปิดซ้อน
+- Friction รวมค่าธรรมเนียม, spread, slippage จำลอง = 0.14% ไปกลับของมูลค่าสัญญา
+- Funding สมมติเป็นต้นทุน 0.01% ของ notional ต่อ 8h ปรับสัดส่วนตามระยะถือ
+- Stress-test ต้นทุนทั้งสองส่วน x2 สำหรับตัวที่คัดอันดับ 1
+- ขนาดความเสี่ยงตาม Stop ที่ตั้งไว้ = 0.25% equity ต่อไม้; ไม่ได้ simulate liquidation/maintenance/mark price ของ 10x หรือ 50x
+- Taker Buy Volume ใน Binance Kline ใช้ประมาณ executed order-flow direction; ไม่ใช่ L2 order book, ไม่ใช่ CVD ระดับ tick
+- ไม่มีฐานข่าวแบบ timestamped FOMC/CPI/NFP และไม่มี Open Interest ครบ 3 ปี จึงไม่เอามาอ้างว่าทดสอบแล้ว
+
+5. การเลือกอันดับ 1
+- คัดเฉพาะคอมโบที่ข้อมูลพัฒนาและ validation อย่างน้อย 60 trades ต่อช่วง
+- Expectancy >0R และ PF >1.15 ทั้งสองช่วง; validation drawdown <15%
+- จัดอันดับจาก geometric expectancy × sqrt(minimum trade count) ÷ drawdown penalty โดยใช้เฉพาะช่วงพัฒนาและ validation
+- เลือกเพียงอันดับ 1 จาก 10,000 โดยไม่ดูข้อมูลปี 2026 ก่อน
+- เปิดดูช่วงปี 2026 เฉพาะตัวที่เลือก; ต้องมี >=100 independent nonoverlapping trades, TP 5R >=70% จริง, PF>1.2, avg net R>0 และ stress avg R>0 จึงจะถือว่าผ่านเกณฑ์เป้าหมาย
+- หากไม่ผ่าน ให้รายงาน NOT VALIDATED ไม่เปลี่ยน RR เป็นเลขที่ต่ำกว่าเพื่อให้ผ่าน
+- Winner จากการทดสอบก็ยังไม่เท่ากับผล forward/live และไม่ใช่การรับประกันกำไร
+
+6. ใช้งานบนคอม (Claude Code / Codex / Antigravity / Python)
+แตก ZIP และเปิด Terminal ในโฟลเดอร์
+  python -m pip install -r requirements_crypto_mtf.txt
+  python CRYPTO_MTF_10000_M5_M15_V3.py --selftest
+  python CRYPTO_MTF_10000_M5_M15_V3.py
+หรือดับเบิลคลิก RUN_CRYPTO_MTF_10000_WINDOWS.bat หาก Python ติดตั้งแล้ว
+โปรแกรมจะดาวน์โหลดข้อมูล Binance บนคอมที่มีอินเทอร์เน็ต, เก็บ Cache แล้วรันชุดทดสอบ โดยไม่ส่งคำสั่งซื้อขาย
+
+7. ผลลัพธ์เมื่อรันข้อมูลจริงครบ
+- CRYPTO_MTF_10000_RESULTS/ALL_10000_BACKTEST_RESULTS.csv
+- CRYPTO_MTF_10000_RESULTS/BEST_ONE_CANDIDATE.json (หากผ่านเกณฑ์คัดเลือก)
+- CRYPTO_MTF_10000_RESULTS/FINAL_RESEARCH_REPORT.json
+ผลลัพธ์ประกอบด้วย TP5 hit% จริง แยกจาก profitable-close win%, รายได้สุทธิ, PF, DD,
+จำนวน Long/Short และผลเพิ่มต้นทุน x2 ของตัวที่คัด
+
+8. ความเสี่ยง/สิ่งที่ต้องเพิ่มก่อนเทรดเงินจริง
+- Liquidation 10x/50x ต้องใช้ Mark Price, funding events, maintenance margin tier, risk caps
+- จำลอง Spread/Slippage ตามช่วงเวลาจริง, latency, slippage on stops และข้อมูล tick ภายใน 5m
+- news calendar สำคัญแบบ timestamped, BTC/ETH exchange regime splits และ walk-forward/reality check
+- ทดสอบ Paper Trading ต่อ ก่อนใช้ทุนจริง
+
+Market data archive: https://github.com/binance/binance-public-data
+Dataset source pattern: https://data.binance.vision/data/futures/um/monthly/klines/BTCUSDT/5m/BTCUSDT-5m-2025-01.zip
+
+STATUS: NOT VALIDATED. Actual M5/M15 rank #1 unavailable until full real-price run completes.

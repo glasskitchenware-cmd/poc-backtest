@@ -1,0 +1,26 @@
+name: Research backtest (MTF 10,000)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  mtf10000:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    defaults:
+      run:
+        working-directory: research/mtf10000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install -r requirements_crypto_mtf.txt
+      - run: python CRYPTO_MTF_10000_M5_M15_V3.py --selftest
+      - run: python CRYPTO_MTF_10000_M5_M15_V3.py
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mtf10000-results
+          path: research/mtf10000/CRYPTO_MTF_10000_RESULTS
+          if-no-files-found: warn
