@@ -77,5 +77,7 @@ jobs:
           cp tests/e2e/mock.log tests/e2e/out/ 2>/dev/null || true
           ls -la tests/e2e/out || true
           gh release delete e2e-evidence --yes --cleanup-tag || true
+          # GitHub rejects empty assets; an empty crash log means "no crash" and is noted in e2e.log.
+          find tests/e2e/out -type f -size 0 -print -delete
           gh release create e2e-evidence tests/e2e/out/* --target "$GITHUB_SHA" --prerelease \
             --title "Android E2E evidence" --notes "Emulator run ${{ github.run_id }} on ${{ github.sha }}. Screenshots and log of tests/e2e/run_e2e.sh." || true
