@@ -1,0 +1,27 @@
+name: Five-year BTC ETH futures behavior research
+on:
+  push:
+    paths:
+      - 'research/behavior5y/**'
+      - '.github/workflows/behavior5y.yml'
+  workflow_dispatch:
+jobs:
+  fiveyear:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install analytical dependencies
+        run: pip install "numpy<3" pandas requests numba
+      - name: Analyze five full years of M5 futures candles
+        run: python research/behavior5y/research.py
+      - name: Save behavior report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: btc-eth-futures-fiveyear-behavior
+          path: research/behavior5y/RESULTS/
+          if-no-files-found: warn
