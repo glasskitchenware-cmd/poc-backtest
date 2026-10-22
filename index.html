@@ -170,20 +170,20 @@ a{color:var(--accent)}
   <label for="aiKey">Gemini API key</label>
   <div class="inline" style="margin-top:0"><input id="aiKey" type="password" autocomplete="off" placeholder="AIza…"><button class="mini" id="aiPaste" type="button" style="margin:0">② วางคีย์</button></div>
   <div class="row">
-    <div><label for="aiModel">Model</label><input id="aiModel" value="gemini-2.5-flash"></div>
+    <div><label for="aiModel">Model</label><input id="aiModel" value="" placeholder="อัตโนมัติ (เว้นว่างได้)"></div>
     <div><label>&nbsp;</label><button class="mini" id="aiTest" style="width:100%;margin:0;padding:10px">ทดสอบคีย์</button></div>
   </div>
   <label class="checks" style="margin-top:10px"><input type="checkbox" id="aiAuto" checked> วิเคราะห์อัตโนมัติเมื่อมีสัญญาณ (ค้นข่าวด้วย Google Search)</label>
   <div id="aiStatus" class="status-line"></div>
 </section>
 <section>
-  <h2>ก่อนกดซื้อทุกครั้ง</h2>
+  <h2>ก่อนเปิดไม้ทุกครั้ง (Futures)</h2>
   <ul style="margin:0;padding-left:18px;font-size:14px">
-    <li>เช็กข่าว <a href="https://www.coindesk.com/">CoinDesk</a> และ <a href="https://decrypt.co/">Decrypt</a>: ถ้ามีข่าวแรง (hack, ล้มละลาย, depeg, ระงับถอน) หรือใกล้ประกาศ CPI/FOMC ให้ข้าม</li>
-    <li>ซื้อภายในเวลาที่การ์ดบอก ถ้าราคาวิ่งเกินราคาเข้ามาก ให้ข้าม ห้ามไล่ราคา</li>
-    <li>ตั้ง stop ทันทีหลังซื้อ ห้ามเลื่อน stop ลง ห้ามถัว และห้ามใช้เลเวอเรจ</li>
-    <li>ถือไม่เกิน 4 ชั่วโมง และปิดก่อน 06:45 น. เวลาไทย</li>
-    <li>สัญญาณมาจากกลยุทธ์ที่ยังไม่พิสูจน์ว่าทำกำไรได้ ฝึกกับเงินจำลองหรือเงินน้อยที่สุดที่ยอมเสียได้ทั้งหมด</li>
+    <li>เช็กข่าว <a href="https://www.coindesk.com/">CoinDesk</a> และ <a href="https://decrypt.co/">Decrypt</a>: ถ้ามีข่าวแรง (hack, ล้มละลาย, depeg, ระงับถอน) ให้ข้าม วันประกาศ FOMC แอปข้ามให้เองแล้ว</li>
+    <li>เข้าภายใน 15 นาทีหลังสัญญาณ ถ้าราคาวิ่งเกินราคาเข้ามาก ให้ข้าม ห้ามไล่ราคา</li>
+    <li>ใช้ Isolated 10x และตั้ง TP/SL พร้อมกับตอนเปิดไม้ ห้ามเลื่อน SL ห้ามถัว ห้ามเพิ่ม Leverage เอง</li>
+    <li>ถ้าครบ 48 ชั่วโมงแล้วยังไม่ชน TP/SL ให้ปิดเอง</li>
+    <li>ช่วงนี้ยังเป็น Paper Trading ถ้าจะใช้เงินจริง ใช้เงินน้อยที่สุดที่ยอมเสียได้ทั้งหมด</li>
   </ul>
 </section>
 </div>
@@ -1751,15 +1751,37 @@ a{color:var(--accent)}
   var AI = (function () {
     var BASE = "https://generativelanguage.googleapis.com/v1beta/models/";
     function key() { return ($("aiKey").value || "").trim(); }
-    function model() { return ($("aiModel").value || "gemini-2.5-flash").trim(); }
+    var FALLBACK = "gemini-flash-latest";
+    function model() { return ($("aiModel").value || FALLBACK).trim(); }
     function status(t, err) { $("aiStatus").textContent = t; $("aiStatus").className = "status-line" + (err ? " err" : ""); }
+
+    // Google retires models; when it answers 404 and names a replacement ("use models/xyz"), switch to it, remember it and retry once.
+    function post(m, retry, body) {
+      return httpPost(BASE + encodeURIComponent(m) + ":generateContent?key=" + encodeURIComponent(key()), JSON.stringify(body)).catch(function (e) {
+        var msg = String(e.message || e), gone = /HTTP 404|no longer available|not found/i.test(msg);
+        if (!retry || !gone) throw friendly(msg);
+        var hint = (msg.match(/models\/([A-Za-z0-9._-]+)/g) || []).map(function (x) { return x.slice(7); }).filter(function (x) { return x !== m; })[0];
+        var next = hint || (m !== FALLBACK ? FALLBACK : null);
+        if (!next) throw friendly(msg);
+        $("aiModel").value = next;
+        try { localStorage.setItem("aiModel", next); } catch (x) { /* ignore */ }
+        return post(next, false, body);
+      });
+    }
+    function friendly(msg) {
+      var j = null; try { j = JSON.parse(msg.slice(msg.indexOf("{"))); } catch (e) { /* not JSON */ }
+      var code = /HTTP (\d+)/.exec(msg), text = j && j.error && j.error.message ? j.error.message : msg;
+      var th = code && code[1] === "400" && /API key/i.test(text) ? "คีย์ไม่ถูกต้อง ลองกด ② วางคีย์ใหม่" :
+        code && code[1] === "403" ? "คีย์นี้ใช้ Gemini ไม่ได้ (ยังไม่เปิดสิทธิ์)" : code && code[1] === "429" ? "ใช้เกินโควตาฟรีแล้ว รอสักพักแล้วลองใหม่" :
+        code && code[1] === "404" ? "หาโมเดลไม่เจอ ลองล้างช่อง Model ให้ว่างแล้วกดทดสอบใหม่" : "";
+      return new Error((th ? th + " · " : "") + (code ? "HTTP " + code[1] + " · " : "") + text.slice(0, 200));
+    }
 
     function ask(prompt, search) {
       if (!key()) return Promise.reject(new Error("ยังไม่ได้ใส่ Gemini API key (ส่วน AI ในแท็บสัญญาณ)"));
       var body = { contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 1200 } };
       if (search) body.tools = [{ google_search: {} }];
-      return httpPost(BASE + encodeURIComponent(model()) + ":generateContent?key=" + encodeURIComponent(key()), JSON.stringify(body))
-        .then(JSON.parse).then(function (res) {
+      return post(model(), true, body).then(JSON.parse).then(function (res) {
           var c = res.candidates && res.candidates[0];
           var text = c && c.content && c.content.parts ? c.content.parts.map(function (x) { return x.text || ""; }).join("") : "";
           if (!text) throw new Error("Gemini ไม่ตอบข้อความ" + (res.promptFeedback ? " (" + JSON.stringify(res.promptFeedback).slice(0, 120) + ")" : ""));
