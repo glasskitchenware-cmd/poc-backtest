@@ -23,7 +23,22 @@ input,select{width:100%;background:var(--deep);color:var(--ink);border:1px solid
 button{width:100%;margin-top:14px;padding:13px;border:0;border-radius:12px;background:var(--upText);color:#06221b;font:600 16px system-ui,sans-serif}
 button:disabled{opacity:.5}
 .tabs{display:flex;gap:6px;margin-bottom:8px}.tabs button{width:auto;margin:0;padding:6px 14px;font-size:13px;background:var(--deep);color:var(--ink);border:1px solid var(--line)}.tabs button.on{background:var(--upText);color:#06221b}
-#status{font-size:13px;color:var(--muted);margin-top:10px;white-space:pre-wrap}
+#status,.status-line{font-size:13px;color:var(--muted);margin-top:10px;white-space:pre-wrap}
+.status-line.err{color:var(--down)}
+.coin{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;margin:10px 0}
+.coin.go{border-color:var(--upText)}
+.coin-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.coin-head b{font-size:18px}
+.pill{font-size:12px;padding:3px 10px;border-radius:99px;border:1px solid var(--line);white-space:nowrap}
+.pill.go{background:var(--upText);color:#06221b;border-color:var(--upText)}
+.pill.wait{color:var(--warn);border-color:#6b5830}
+.pill.no{color:var(--muted)}
+.levels{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:10px 0}
+.levels div{background:var(--deep);border-radius:10px;padding:8px}
+.levels b{display:block;font-size:15px;font-variant-numeric:tabular-nums}
+.banner{border-radius:14px;padding:14px;margin:12px 0;font-weight:600}
+.banner.go{background:#123a31;border:1px solid var(--upText)}
+.banner.wait{background:var(--panel);border:1px solid var(--line)}
 #status.err{color:var(--down)}
 .hero{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .stat{background:var(--deep);border-radius:12px;padding:10px 12px}.stat b{display:block;font-size:22px;font-variant-numeric:tabular-nums}.stat small{display:block}
@@ -45,9 +60,34 @@ a{color:var(--accent)}
 <body>
 <main>
 <div class="eyebrow">BACKTEST ONLY · BINANCE SPOT · ไม่มีคำสั่งเงินจริง</div>
-<h1>POC Rejection 15m + เทรนด์ 1h</h1>
-<p class="muted" style="margin:0">ทดสอบย้อนหลังด้วยข้อมูลจริงจาก Binance บนมือถือ กติกาเดียวกับบอท Python</p>
+<h1>POC Signal</h1>
+<p class="muted" style="margin:0">สแกนเหรียญหลักจาก Binance หาเหรียญขาขึ้นที่มีจุดเข้า พร้อม backtest</p>
 
+<div class="tabs" id="mainTabs" style="margin-top:12px"><button data-tab="signalTab" class="on">สัญญาณ</button><button data-tab="backtestTab">Backtest</button></div>
+
+<div id="signalTab">
+<section>
+  <h2>สัญญาณตอนนี้</h2>
+  <p class="muted" style="margin:0;font-size:13px">สแกน 12 เหรียญ: ดูแนวโน้ม 1 ชม. เลือกกลยุทธ์ที่ได้ผลดีสุดใน 90 วันล่าสุดของแต่ละเหรียญ แล้วดูว่าแท่ง 15 นาทีที่เพิ่งปิดให้สัญญาณเข้าหรือไม่</p>
+  <button id="scan">สแกนหาสัญญาณตอนนี้</button>
+  <label class="checks" style="margin-top:10px"><input type="checkbox" id="autoScan"> สแกนเองทุก 15 นาที (ต้องเปิดหน้านี้ไว้)</label>
+  <div id="scanStatus" class="status-line">ใช้เวลาประมาณ 1 นาที ใช้ทุนจากช่อง "ทุน" ในแท็บ Backtest (ค่าเริ่มต้น 10,000 บาท)</div>
+</section>
+<div id="scanSummary"></div>
+<div id="scanCards"></div>
+<section>
+  <h2>ก่อนกดซื้อทุกครั้ง</h2>
+  <ul style="margin:0;padding-left:18px;font-size:14px">
+    <li>เช็กข่าว <a href="https://www.coindesk.com/">CoinDesk</a> และ <a href="https://decrypt.co/">Decrypt</a>: ถ้ามีข่าวแรง (hack, ล้มละลาย, depeg, ระงับถอน) หรือใกล้ประกาศ CPI/FOMC ให้ข้าม</li>
+    <li>ซื้อภายในเวลาที่การ์ดบอก ถ้าราคาวิ่งเกินราคาเข้ามาก ให้ข้าม ห้ามไล่ราคา</li>
+    <li>ตั้ง stop ทันทีหลังซื้อ ห้ามเลื่อน stop ลง ห้ามถัว และห้ามใช้เลเวอเรจ</li>
+    <li>ถือไม่เกิน 4 ชั่วโมง และปิดก่อน 06:45 น. เวลาไทย</li>
+    <li>สัญญาณมาจากกลยุทธ์ที่ยังไม่พิสูจน์ว่าทำกำไรได้ ฝึกกับเงินจำลองหรือเงินน้อยที่สุดที่ยอมเสียได้ทั้งหมด</li>
+  </ul>
+</section>
+</div>
+
+<div id="backtestTab" class="hidden">
 <section>
   <h2>ตั้งค่า</h2>
   <label>คู่เหรียญ (ทดสอบเป็นพอร์ตเดียวกัน)</label>
@@ -114,6 +154,8 @@ a{color:var(--accent)}
   </section>
 </div>
 
+</div>
+
 <footer>
   ผลย้อนหลังไม่ใช่ผลเงินจริงและไม่รับประกันอนาคต · ไม่ได้จำลองตัวกรองข่าว · กราฟโดย <a href="https://www.tradingview.com/lightweight-charts/">TradingView Lightweight Charts™</a> (Apache-2.0)
 </footer>
@@ -146,7 +188,7 @@ a{color:var(--accent)}
     usdt_thb: null, initial_thb: 10000, symbols: ["BTCUSDT", "ETHUSDT"], interval: "15m",
     fee: 0.001, slippage: 0.0005, risk_fraction: 0.0025, soft_drawdown: 0.08, max_drawdown: 0.10,
     daily_loss: 0.02, max_position_fraction: 0.25, max_total_fraction: 0.5, stop_atr: 2.0,
-    take_profit_r: 1.5, max_holding_minutes: 240, flatten_minutes_before_utc_day_end: 15,
+    take_profit_r: 1.5, max_holding_minutes: 240, max_entry_delay_seconds: 300, flatten_minutes_before_utc_day_end: 15,
     poc_lookback_bars: 96, poc_bins: 48, poc_tolerance_atr: 0.25
   };
 
@@ -532,13 +574,10 @@ a{color:var(--accent)}
   function research(evaluated, rules) {
     var cfg = evaluated.config, n = evaluated.bars, available = n - WARMUP_BARS;
     var a = WARMUP_BARS + Math.floor(0.6 * available), b = WARMUP_BARS + Math.floor(0.8 * available);
-    var variants = VARIANTS.map(function (v) {
-      var prepared = {};
-      cfg.symbols.forEach(function (s) { prepared[s] = variantRows(evaluated.prepared[s], v[2], v[4], v[5]); });
-      var vcfg = Object.assign({}, cfg, { take_profit_r: v[3] });
-      return { name: v[0], description: v[1], prepared: prepared, config: vcfg,
-        development: runWindow(prepared, WARMUP_BARS, a, vcfg, rules).metrics,
-        validation: runWindow(prepared, a, b, vcfg, rules).metrics };
+    var variants = buildVariants(evaluated.prepared, cfg).map(function (v) {
+      v.development = runWindow(v.prepared, WARMUP_BARS, a, v.config, rules).metrics;
+      v.validation = runWindow(v.prepared, a, b, v.config, rules).metrics;
+      return v;
     });
     var chosen = null;
     variants.forEach(function (v) {
@@ -550,18 +589,59 @@ a{color:var(--accent)}
       walk_forward: walkForward(variants, n, rules) };
   }
 
+  // Best variant over the LOOKBACK bars before `begin`, or null when none qualifies.
+  function chooseVariant(variants, begin, rules) {
+    var best = null, bestScore = null, bestMetrics = null;
+    variants.forEach(function (v) {
+      var m = runWindow(v.prepared, begin - WF_LOOKBACK, begin, v.config, rules).metrics;
+      if (m.trade_count < WF_MIN_TRADES || (m.expectancy || 0) <= 0 || (m.profit_factor || 0) <= 1) return;
+      var score = m.expectancy / m.starting_equity;
+      if (bestScore === null || score > bestScore) { best = v; bestScore = score; bestMetrics = m; }
+    });
+    return { best: best, metrics: bestMetrics };
+  }
+
+  function buildVariants(prepared, cfg) {
+    return VARIANTS.map(function (v) {
+      var rows = {};
+      cfg.symbols.forEach(function (s) { rows[s] = variantRows(prepared[s], v[2], v[4], v[5]); });
+      return { name: v[0], description: v[1], prepared: rows, config: Object.assign({}, cfg, { take_profit_r: v[3] }) };
+    });
+  }
+
+  /* Live scan of one coin: choose the strategy from the last 90 days (same rule as
+   * walk-forward), then check whether the latest *closed* candle gives its entry. */
+  function scanSymbol(symbol, rows, rule, cfgValues) {
+    var cfg = config(Object.assign({}, cfgValues, { symbols: [symbol] }));
+    var rules = {}; rules[symbol] = rule;
+    var prepared = {}; prepared[symbol] = addIndicators(rows, cfg);
+    var n = rows.length;
+    if (n < WARMUP_BARS + WF_LOOKBACK) throw new Error(symbol + ": ข้อมูลไม่พอ");
+    var variants = buildVariants(prepared, cfg), pick = chooseVariant(variants, n, rules);
+    var latest = prepared[symbol][n - 1];
+    var out = { symbol: symbol, close: latest.close, close_time: latest.close_time, atr: latest.atr,
+      trend_up: !!latest.trend_confirmed, ema50: latest.ema50, poc: latest.poc, strategy: null, stats: null, signal: null };
+    if (!pick.best) return out;
+    out.strategy = pick.best.name; out.stats = pick.metrics;
+    var row = pick.best.prepared[symbol][n - 1];
+    if (row.entry) {
+      var price = latest.close, stopDistance = cfg.stop_atr * latest.atr, r = pick.best.config.take_profit_r;
+      var equity = cfg.initial_thb / cfg.usdt_thb, lossPerUnit = price * (1 + cfg.fee) - (price - stopDistance) * (1 - cfg.slippage) * (1 - cfg.fee);
+      var qty = Math.min(equity * cfg.risk_fraction / lossPerUnit, equity * cfg.max_position_fraction / price);
+      qty = floorToStep(qty, rule.step_size);
+      out.signal = { entry: price, stop: price - stopDistance, target: price + r * stopDistance, take_profit_r: r,
+        qty: qty, notional: qty * price, risk: qty * lossPerUnit, below_minimum: qty < rule.min_qty || qty * price < rule.min_notional,
+        expires: latest.close_time + 1 + cfg.max_entry_delay_seconds * 1000 };
+    }
+    return out;
+  }
+
   function walkForward(variants, n, rules) {
     var start = WARMUP_BARS + WF_LOOKBACK;
     if (start >= n) return null;
     var windows = [], trades = [], curve = [], factor = 1, initial = null;
     for (var begin = start; begin < n; begin += WF_STEP) {
-      var end = Math.min(begin + WF_STEP, n), best = null, bestScore = null;
-      variants.forEach(function (v) {
-        var m = runWindow(v.prepared, begin - WF_LOOKBACK, begin, v.config, rules).metrics;
-        if (m.trade_count < WF_MIN_TRADES || (m.expectancy || 0) <= 0 || (m.profit_factor || 0) <= 1) return;
-        var score = m.expectancy / m.starting_equity;
-        if (bestScore === null || score > bestScore) { best = v; bestScore = score; }
-      });
+      var end = Math.min(begin + WF_STEP, n), best = chooseVariant(variants, begin, rules).best;
       var first = variants[0], times = first.prepared[first.config.symbols[0]];
       if (!best) {
         initial = initial || first.config.initial_thb / first.config.usdt_thb;
@@ -580,7 +660,7 @@ a{color:var(--accent)}
       metrics: metrics(curve, trades, initial), trades: trades, curve: curve };
   }
 
-  return { BAR_MS: BAR_MS, VARIANTS: VARIANTS, research: research, priorRollingMedian: priorRollingMedian, WARMUP_BARS: WARMUP_BARS, DEFAULTS: DEFAULTS, config: config, ewm: ewm,
+  return { BAR_MS: BAR_MS, VARIANTS: VARIANTS, research: research, scanSymbol: scanSymbol, WF_LOOKBACK: WF_LOOKBACK, priorRollingMedian: priorRollingMedian, WARMUP_BARS: WARMUP_BARS, DEFAULTS: DEFAULTS, config: config, ewm: ewm,
     volumeProfilePoc: volumeProfilePoc, addIndicators: addIndicators, floorToStep: floorToStep,
     Portfolio: Portfolio, metrics: metrics, runWindow: runWindow, evaluate: evaluate };
 });
@@ -908,6 +988,102 @@ a{color:var(--accent)}
     [[candleChart, "chart"], [equityChart, "equity"]].forEach(function (x) {
       if (x[0]) x[0].applyOptions({ width: $(x[1]).clientWidth });
     });
+  });
+
+  // ---- Live signal scan ----
+  var COINS = ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT", "DOGEUSDT", "ADAUSDT", "AVAXUSDT",
+    "LINKUSDT", "DOTUSDT", "TRXUSDT", "LTCUSDT"];
+  var scanning = false, autoTimer = null;
+
+  function price(v) {
+    if (!isFinite(v)) return "—";
+    var d = v >= 1000 ? 2 : v >= 1 ? 4 : 6;
+    return v.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
+  }
+  function scanStatus(text, isError) { var el = $("scanStatus"); el.textContent = text; el.className = "status-line" + (isError ? " err" : ""); }
+
+  function scan() {
+    if (scanning) return;
+    scanning = true; $("scan").disabled = true;
+    var results = [], errors = [], done = 0, fxInfo, end;
+    scanStatus("กำลังดึงเวลา Binance และอัตราแลกเปลี่ยน…");
+    Promise.all([binance("/api/v3/time"), fetchFx()]).then(function (res) {
+      fxInfo = res[1];
+      end = Math.floor(res[0].serverTime / Engine.BAR_MS) * Engine.BAR_MS;
+      var start = end - 101 * 86400000, queue = COINS.slice();
+      function worker() {
+        var s = queue.shift();
+        if (!s) return Promise.resolve();
+        return Promise.all([fetchRules(s), fetchCandles(s, start, end, function () {})]).then(function (r) {
+          results.push(Engine.scanSymbol(s, r[1], r[0], { usdt_thb: fxInfo.rate, initial_thb: readNumber("capital", 10000),
+            fee: readNumber("fee", 0.1) / 100, slippage: readNumber("slip", 0.05) / 100, risk_fraction: readNumber("risk", 0.25) / 100 }));
+        }).catch(function (e) { errors.push(s.replace("USDT", "") + ": " + e.message); }).then(function () {
+          done++; scanStatus("สแกนแล้ว " + done + "/" + COINS.length + " เหรียญ…");
+          return worker();
+        });
+      }
+      return Promise.all([worker(), worker(), worker()]);
+    }).then(function () {
+      renderScan(results, fxInfo, end);
+      scanStatus("สแกนล่าสุด " + thai(Date.now()) + " น. · ใช้แท่งที่ปิดเมื่อ " + thai(end) + " น." + (errors.length ? "\nข้ามบางเหรียญ: " + errors.join(" · ") : ""), !results.length);
+    }).catch(function (e) { scanStatus(e.message || String(e), true); })
+      .then(function () { scanning = false; $("scan").disabled = false; });
+  }
+
+  function rank(r) { return r.signal ? 0 : r.trend_up && r.strategy ? 1 : r.trend_up ? 2 : 3; }
+
+  function renderScan(results, fxInfo, end) {
+    var fx = fxInfo.rate, signals = results.filter(function (r) { return r.signal && !r.signal.below_minimum; });
+    results.sort(function (a, b) { return rank(a) - rank(b) || ((b.stats && b.stats.profit_factor) || 0) - ((a.stats && a.stats.profit_factor) || 0); });
+    $("scanSummary").innerHTML = signals.length
+      ? '<div class="banner go">มีสัญญาณเข้า ' + signals.length + " เหรียญ: " + signals.map(function (r) { return r.symbol.replace("USDT", ""); }).join(", ") + "</div>"
+      : '<div class="banner wait">ตอนนี้ยังไม่มีสัญญาณเข้า — รอ แล้วสแกนใหม่หลังแท่ง 15 นาทีถัดไปปิด</div>';
+    $("scanCards").innerHTML = results.map(function (r) {
+      var name = r.symbol.replace("USDT", ""), pill, body = "";
+      if (r.signal && !r.signal.below_minimum) pill = '<span class="pill go">เข้าได้</span>';
+      else if (r.signal) pill = '<span class="pill wait">สัญญาณ แต่ทุนเล็กเกินขั้นต่ำ</span>';
+      else if (!r.trend_up) pill = '<span class="pill no">ขาลง/ไม่ชัด · ไม่เทรด</span>';
+      else if (!r.strategy) pill = '<span class="pill no">ขาขึ้น แต่ช่วงนี้ไม่มีกลยุทธ์ที่ได้ผล</span>';
+      else pill = '<span class="pill wait">ขาขึ้น · รอจุดเข้า</span>';
+      if (r.signal) {
+        var g = r.signal;
+        body = '<div class="levels"><div><small>ซื้อประมาณ</small><b>' + price(g.entry) + '</b></div><div><small>Stop</small><b class="down">' + price(g.stop) +
+          '</b></div><div><small>เป้า ' + g.take_profit_r + 'R</small><b class="up">' + price(g.target) + "</b></div></div>" +
+          "<small>จำนวน " + g.qty + " " + name + " (≈ " + fmt(g.notional * fx, 0) + " ฿) · ถ้าโดน stop เสีย ≈ " + fmt(g.risk * fx, 0) +
+          " ฿ · ซื้อก่อน " + thai(g.expires).slice(9) + " น.</small>";
+      }
+      var stats = r.stats ? "<br><small>กลยุทธ์: " + esc(VARIANT_NAMES[r.strategy]) + " · 90 วันล่าสุด " + r.stats.trade_count + " ไม้ win " +
+        fmt(r.stats.win_rate_pct, 0) + "% PF " + fmt(r.stats.profit_factor, 2) + "</small>" : "";
+      return '<div class="coin' + (r.signal && !r.signal.below_minimum ? " go" : "") + '"><div class="coin-head"><b>' + name + "</b>" + pill + "</div>" +
+        "<small>ราคา " + price(r.close) + " USDT</small>" + stats + body + "</div>";
+    }).join("");
+    if (signals.length && window.Notification && Notification.permission === "granted") {
+      try { new Notification("POC Signal: " + signals.map(function (r) { return r.symbol.replace("USDT", ""); }).join(", ")); } catch (e) { /* optional */ }
+    }
+  }
+
+  function scheduleAuto() {
+    clearTimeout(autoTimer);
+    if (!$("autoScan").checked) return;
+    var wait = Engine.BAR_MS - (Date.now() % Engine.BAR_MS) + 20000;
+    autoTimer = setTimeout(function () { scan(); scheduleAuto(); }, wait);
+  }
+  $("autoScan").onchange = function () {
+    if ($("autoScan").checked && window.Notification && Notification.permission === "default") {
+      try { Notification.requestPermission(); } catch (e) { /* optional */ }
+    }
+    scheduleAuto();
+  };
+  $("scan").onclick = scan;
+
+  Array.prototype.forEach.call($("mainTabs").children, function (b) {
+    b.onclick = function () {
+      Array.prototype.forEach.call($("mainTabs").children, function (x) {
+        x.classList.toggle("on", x === b);
+        $(x.getAttribute("data-tab")).classList.toggle("hidden", x !== b);
+      });
+      if (last && b.getAttribute("data-tab") === "backtestTab") render();
+    };
   });
 
   loadSettings();
