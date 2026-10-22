@@ -92,6 +92,13 @@ body.has-guide main{padding-bottom:calc(150px + env(safe-area-inset-bottom,0px))
 .pos-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 6px}.pos-grid b{display:block;font-size:13.5px;font-variant-numeric:tabular-nums}.pos-grid div:nth-child(3n){text-align:right}.pos-grid div:nth-child(3n+2){text-align:center}
 .pos-tpsl{margin:10px 0 4px;font-size:13px;color:var(--muted)}.warn{color:var(--yel)}
 .coin .tag{font-size:11px;padding:1px 6px;border-radius:4px;background:var(--deep);color:var(--muted)}.mrow{display:flex;align-items:center;gap:6px;margin-top:4px}.mrow b{font-size:22px;font-variant-numeric:tabular-nums}.mrow .mini{margin:0 0 0 auto}
+summary{cursor:pointer;color:var(--muted);font-size:14px}
+.tips{background:var(--panel);border-radius:12px;padding:12px 14px;margin:10px 0}.tips ul{margin:8px 0 0;padding-left:18px;font-size:14px}
+.keyrow{display:flex;align-items:center;gap:8px;background:var(--deep);border-radius:8px;padding:8px 10px;margin-top:6px;font-size:14px}.keyrow code{flex:1;font-family:ui-monospace,monospace}.keyrow .x{width:auto;margin:0;padding:4px 10px;background:none;color:var(--muted);font-size:16px}.keyrow .st{font-size:12px}
+.btnrow{display:flex;gap:6px;margin-top:8px}.btnrow .mini{flex:1;margin:0;padding:9px 6px}
+.mkthead{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);padding:6px 0}
+.mkt{display:grid;grid-template-columns:auto 1fr auto 56px;align-items:baseline;gap:4px 8px;padding:10px 0;border-top:1px solid var(--line);cursor:pointer}.mkt b{font-size:15px}.mkt span{font-variant-numeric:tabular-nums;font-weight:600}.mkt small:last-child{text-align:right}
+a.mini{background:var(--deep);color:var(--yel);border-radius:8px;font-weight:600}
 .inline{display:flex;gap:8px;align-items:center;margin-top:8px}.inline input{flex:1;min-width:0}
 #status.err{color:var(--down)}
 .hero{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
@@ -114,79 +121,71 @@ a{color:var(--accent)}
 <body>
 <main>
 <div class="topbar"><div class="brand"><i>P</i>POC Signal</div><small>Futures · Paper</small></div>
-<div class="eyebrow">แอปไม่ส่งคำสั่งซื้อขายให้ · ผลอดีตไม่รับประกันอนาคต</div>
 <nav class="tabs" id="mainTabs"><button data-tab="guideTab"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>หน้าแรก</button><button data-tab="signalTab" class="on"><svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>สัญญาณ</button><button data-tab="chartTab"><svg viewBox="0 0 24 24"><path d="M7 4v16M17 4v16"/><rect x="4.5" y="8" width="5" height="8" rx="1"/><rect x="14.5" y="6" width="5" height="9" rx="1"/></svg>กราฟ</button><button data-tab="portTab"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="14" rx="2"/><path d="M3 10h18M16 15h2"/><path d="M7 6V4h10v2"/></svg>พอร์ต</button><button data-tab="backtestTab"><svg viewBox="0 0 24 24"><path d="M4 20V4M4 20h16"/><rect x="7" y="12" width="3" height="5"/><rect x="12" y="8" width="3" height="9"/><rect x="17" y="5" width="3" height="12"/></svg>Backtest</button></nav>
 
 <div id="guideTab" class="hidden">
 <section>
-  <h2>คู่มือทีละขั้น</h2>
-  <p class="muted" style="margin:0;font-size:13px">ทำตามลำดับจากบนลงล่าง กด <b>พาไป</b> แอปจะเปิดหน้าที่ถูกต้องและไฮไลต์ตรงที่ต้องกด ขั้นที่ทำเสร็จจะติ๊กถูกเอง</p>
-  <div id="guideProgress" class="bar" style="margin-top:10px"><i style="width:0%"></i></div>
+  <h2>เริ่มใช้งาน</h2>
+  <div id="guideProgress" class="bar"><i style="width:0%"></i></div>
   <div id="guideSteps"></div>
 </section>
 <section>
-  <h2>ช่วงนี้คือ Paper Trading</h2>
-  <ul style="margin:0;padding-left:18px;font-size:14px">
-    <li>ยังไม่ต้องเปิดไม้ด้วยเงินจริง แอปจดผลให้เองทุกครั้งที่เปิดแท็บพอร์ต</li>
-    <li>รอให้ Paper มีอย่างน้อย 30 ไม้ (ประมาณ 5–6 เดือน) และผลยังเป็นบวก ค่อยคิดเรื่องเงินจริง</li>
-    <li>ถ้ามีสัญญาณ แอปแจ้งเตือน และการ์ดสัญญาณมีปุ่ม "วิธีเปิดไม้ใน Binance" บอกทุกขั้นพร้อมตัวเลข</li>
-  </ul>
+  <h2>ตั้งค่า</h2>
+  <label for="pfCapital">เงินทุน (บาท)</label><input id="pfCapital" type="number" inputmode="decimal" value="10000">
+  <label class="checks" style="margin-top:12px"><input type="checkbox" id="autoScan"> <span id="autoScanLabel">เด้งเมื่อมีสัญญาณเข้าได้ (ต้องเปิดหน้านี้ไว้)</span></label>
+  <div id="batteryBox" class="notice hidden">มือถือยังจำกัดแบตแอปนี้อยู่ แจ้งเตือนอาจไม่เด้ง<br><button class="mini" id="batteryBtn">อนุญาตให้ทำงานเบื้องหลัง</button><br><small>OPPO/realme/Xiaomi: ตั้งค่า → แอป → POC Signal → แบตเตอรี่ → "ไม่จำกัด" และเปิด "เริ่มอัตโนมัติ"</small></div>
+  <details style="margin-top:12px"><summary>วันประกาศ FOMC (วันงดเข้าไม้)</summary>
+    <textarea id="sgFomc" rows="4" style="width:100%;background:var(--deep);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:8px;font:12px ui-monospace,monospace"></textarea>
+    <button class="mini" id="sgFomcOk" type="button">ตรวจแล้ว ✓</button>
+    <p class="muted" style="font-size:12px;margin:4px 0 0">ปี 2026 ยังไม่ได้ตรวจ เทียบกับ federalreserve.gov/monetarypolicy/fomccalendars.htm</p>
+  </details>
+</section>
+<section>
+  <h2>AI (Google Gemini) <small class="muted">ไม่บังคับ</small></h2>
+  <div id="aiKeyList"></div>
+  <div class="row" style="margin-top:8px">
+    <a class="mini" id="aiGetKey" href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener"
+     style="display:block;text-align:center;text-decoration:none;margin:0;padding:10px">① เอาคีย์ ↗</a>
+    <button class="mini" id="aiPaste" type="button" style="width:100%;margin:0">② วางคีย์ (เพิ่มได้หลายอัน)</button>
+  </div>
+  <details style="margin-top:8px"><summary>วิธีเอาคีย์ · ตั้งค่าเพิ่ม</summary>
+    <ol class="how" style="padding-left:30px">
+      <li>กด ① แล้วล็อกอิน Google</li>
+      <li>กด <b>Create API key</b> แล้วกด <b>คัดลอก</b> (ขึ้นต้นด้วย AIza)</li>
+      <li>กลับมากด ② วางคีย์ · ใส่หลายคีย์ได้ ถ้าคีย์แรกโควตาหมด แอปสลับไปคีย์ถัดไปเอง</li>
+    </ol>
+    <input id="aiKey" type="hidden">
+    <label for="aiModel">Model</label><input id="aiModel" value="" placeholder="อัตโนมัติ (เว้นว่างได้)">
+    <label class="checks" style="margin-top:10px"><input type="checkbox" id="aiAuto" checked> วิเคราะห์ข่าวอัตโนมัติเมื่อมีสัญญาณ</label>
+    <p class="muted" style="font-size:12px;margin:6px 0 0">คีย์เก็บในมือถือเครื่องนี้เท่านั้น ห้ามแชร์คีย์ให้ใคร</p>
+  </details>
+  <button class="mini ghost" id="aiTest" style="width:100%;margin-top:8px">ทดสอบคีย์ทั้งหมด</button>
+  <div id="aiStatus" class="status-line"></div>
 </section>
 </div>
 
 <div id="signalTab">
 <section>
-  <h2>สัญญาณตอนนี้</h2>
-  <div class="row">
-    <div><label for="sgMode">ตลาด</label><select id="sgMode"><option value="futures">Futures · Long/Short</option><option value="spot">Spot · ซื้ออย่างเดียว</option></select></div>
-    <div><label for="sgLev">Leverage สูงสุดที่ยอม</label><input id="sgLev" type="number" inputmode="numeric" min="1" max="125" value="20"></div>
+  <button id="scan" style="margin-top:0">สแกนหาสัญญาณตอนนี้</button>
+  <p class="muted" style="margin:8px 0 0;font-size:12px" id="sgHelp"></p>
+  <div id="scanStatus" class="status-line"></div>
+  <div class="hidden">
+    <select id="sgMode"><option value="futures">Futures</option><option value="spot">Spot</option></select>
+    <input id="sgLev" type="number" value="10">
+    <select id="sgStrat"><option value="squeeze3_ls">Squeeze v2</option><option value="squeeze_ls">Squeeze v1</option></select>
+    <input type="checkbox" id="sgLock" checked>
   </div>
-  <label for="sgStrat">สูตรสัญญาณ Futures</label>
-  <select id="sgStrat"><option value="squeeze3_ls">Squeeze v2 · Momentum2 + Squeeze 3 ชม. (งานวิจัย 10,000 แบบ)</option><option value="squeeze_ls">Squeeze v1 · ONE BEST COMBO</option></select>
-  <label class="checks" style="margin-top:10px;align-items:flex-start"><input type="checkbox" id="sgLock" checked> <span><b>ใช้สูตรที่ผมเลือก</b>: ทุกเหรียญ · Squeeze v2 · 10x Isolated · เสี่ยง 0.25%/ไม้ · กรอง FOMC</span></label>
-  <details style="margin-top:6px"><summary class="muted" style="font-size:13px">วันประกาศผล FOMC (แก้ได้)</summary>
-    <textarea id="sgFomc" rows="4" style="width:100%;background:var(--deep);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:8px;font:12px ui-monospace,monospace"></textarea>
-    <button class="mini" id="sgFomcOk" type="button">ตรวจแล้ว ✓</button>
-    <p class="muted" style="font-size:12px;margin:4px 0 0">2024–2025 มาจากไฟล์วิจัยของคุณ · ปี 2026 ผมใส่จากความจำ ยังไม่ได้ตรวจ โปรดเทียบกับ federalreserve.gov/monetarypolicy/fomccalendars.htm · งดเข้าไม้ถ้าแท่งสัญญาณอยู่ในวันนั้น หรือห่างไม่เกิน 24 ชม.</p>
-  </details>
-  <p class="muted" style="margin:8px 0 0;font-size:13px" id="sgHelp"></p>
-  <button id="scan">สแกนหาสัญญาณตอนนี้</button>
-  <label class="checks" style="margin-top:10px"><input type="checkbox" id="autoScan"> <span id="autoScanLabel">เด้งทันทีเมื่อมีสัญญาณเข้าได้ (ต้องเปิดหน้านี้ไว้)</span></label>
-  <div id="batteryBox" class="notice hidden">มือถือยังจำกัดแบตแอปนี้อยู่ แจ้งเตือนอาจช้าหรือไม่เด้ง<br><button class="mini" id="batteryBtn">อนุญาตให้ทำงานเบื้องหลัง</button><br><small>OPPO/realme/Xiaomi: เข้า ตั้งค่า → แอป → POC Signal → แบตเตอรี่ → เลือก "ไม่จำกัด" และเปิด "เริ่มอัตโนมัติ" ด้วย</small></div>
-  <div id="scanStatus" class="status-line">ใช้เวลาประมาณ 1 นาที ใช้ทุนจากช่อง "ทุน" ในแท็บ Backtest (ค่าเริ่มต้น 10,000 บาท)</div>
 </section>
 <div id="scanSummary"></div>
 <div id="scanCards"></div>
-<section>
-  <h2>AI วิเคราะห์ (Google Gemini)</h2>
-  <p class="muted" style="margin:0;font-size:13px">ใส่ API key จาก Google AI Studio (aistudio.google.com → Get API key) คีย์เก็บในมือถือเครื่องนี้เท่านั้น และส่งไปที่ Google โดยตรง ห้ามแชร์คีย์ให้ใคร</p>
-  <a class="mini" id="aiGetKey" href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener"
-     style="display:block;text-align:center;text-decoration:none;margin-top:10px;padding:12px;font-size:15px">① เปิดหน้าเอาคีย์ (Google AI Studio) ↗</a>
-  <ol class="how" style="padding-left:30px;margin-top:8px">
-    <li>ล็อกอินด้วยบัญชี Google</li>
-    <li>กดปุ่ม <b>Create API key</b> (ถ้าถามเรื่องโปรเจกต์ ให้กดสร้างใหม่ได้เลย)</li>
-    <li>กดไอคอน <b>คัดลอก</b> ข้างคีย์ที่ขึ้นต้นด้วย <b>AIza</b></li>
-    <li>กลับมาที่แอปนี้ แล้วกด ② วางคีย์</li>
-  </ol>
-  <label for="aiKey">Gemini API key</label>
-  <div class="inline" style="margin-top:0"><input id="aiKey" type="password" autocomplete="off" placeholder="AIza…"><button class="mini" id="aiPaste" type="button" style="margin:0">② วางคีย์</button></div>
-  <div class="row">
-    <div><label for="aiModel">Model</label><input id="aiModel" value="" placeholder="อัตโนมัติ (เว้นว่างได้)"></div>
-    <div><label>&nbsp;</label><button class="mini" id="aiTest" style="width:100%;margin:0;padding:10px">ทดสอบคีย์</button></div>
-  </div>
-  <label class="checks" style="margin-top:10px"><input type="checkbox" id="aiAuto" checked> วิเคราะห์อัตโนมัติเมื่อมีสัญญาณ (ค้นข่าวด้วย Google Search)</label>
-  <div id="aiStatus" class="status-line"></div>
-</section>
-<section>
-  <h2>ก่อนเปิดไม้ทุกครั้ง (Futures)</h2>
-  <ul style="margin:0;padding-left:18px;font-size:14px">
-    <li>เช็กข่าว <a href="https://www.coindesk.com/">CoinDesk</a> และ <a href="https://decrypt.co/">Decrypt</a>: ถ้ามีข่าวแรง (hack, ล้มละลาย, depeg, ระงับถอน) ให้ข้าม วันประกาศ FOMC แอปข้ามให้เองแล้ว</li>
-    <li>เข้าภายใน 15 นาทีหลังสัญญาณ ถ้าราคาวิ่งเกินราคาเข้ามาก ให้ข้าม ห้ามไล่ราคา</li>
-    <li>ใช้ Isolated 10x และตั้ง TP/SL พร้อมกับตอนเปิดไม้ ห้ามเลื่อน SL ห้ามถัว ห้ามเพิ่ม Leverage เอง</li>
-    <li>ถ้าครบ 48 ชั่วโมงแล้วยังไม่ชน TP/SL ให้ปิดเอง</li>
-    <li>ช่วงนี้ยังเป็น Paper Trading ถ้าจะใช้เงินจริง ใช้เงินน้อยที่สุดที่ยอมเสียได้ทั้งหมด</li>
+<details class="tips"><summary>กฎก่อนเปิดไม้</summary>
+  <ul>
+    <li>เข้าภายใน 15 นาทีหลังสัญญาณ ราคาวิ่งไปไกลแล้วให้ข้าม ห้ามไล่ราคา</li>
+    <li>Isolated 10x ตั้ง TP/SL ตอนเปิดไม้ ห้ามเลื่อน SL ห้ามถัว</li>
+    <li>ครบ 48 ชม. ยังไม่ชน TP/SL ให้ปิดเอง</li>
+    <li>มีข่าวแรง (hack, ล้มละลาย, ระงับถอน) ให้ข้าม</li>
   </ul>
-</section>
+</details>
 </div>
 
 <div id="chartTab" class="hidden">
@@ -210,53 +209,59 @@ a{color:var(--accent)}
   <div id="cvAnalysis"><p class="muted">เลือกเหรียญเพื่อดูการวิเคราะห์</p></div>
   <button class="mini" id="cvAi">ให้ AI วิเคราะห์กราฟนี้ + ข่าว</button>
   <div id="cvAiOut" style="margin-top:8px"></div>
-  <p class="muted" style="font-size:12px;margin:10px 0 0">เส้น Fibonacci และเทรนด์ไลน์ตีอัตโนมัติจากจุดสูง–ต่ำล่าสุด เป็นเครื่องมือช่วยดู ยังไม่ได้ backtest และไม่ใช่คำแนะนำการลงทุน</p>
+  <p class="muted" style="font-size:12px;margin:10px 0 0">Fibo/เทรนด์ไลน์ตีอัตโนมัติ ใช้ช่วยดูเท่านั้น</p>
 </section>
 </div>
 
 <div id="portTab" class="hidden">
 <section>
-  <h2>Paper Trading อัตโนมัติ · สูตรที่เลือก</h2>
-  <p class="muted" style="margin:0;font-size:13px">BTCUSDT · Momentum2 + Squeeze 3 ชม. · Volume ≥ 1.8x · กรอง FOMC · SL 1.8 ATR · TP 5R · ถือ ≤ 48 ชม. · 10x Isolated · เสี่ยง 0.25% (Margin ไม่เกิน 5% ของพอร์ต) · ต้นทุน 0.14% ไป-กลับ + funding 0.01%/8 ชม. · แอปคำนวณจากแท่งที่ปิดจริงหลังวันเริ่ม ไม่ต้องกดอะไร</p>
-  <div class="row" style="margin-top:10px">
+  <h2>Paper Trading <small class="muted">BTC · Squeeze v2 · 10x</small></h2>
+  <div class="row">
     <button class="mini" id="ppStart" style="width:100%;margin:0">เริ่ม Paper วันนี้</button>
-    <button class="mini ghost" id="pp2026" style="width:100%;margin:0">ดูผลปี 2026 (ข้อมูลใหม่)</button>
+    <button class="mini ghost" id="pp2026" style="width:100%;margin:0">ดูผลปี 2026</button>
   </div>
   <div id="ppStatus" class="status-line"></div>
   <div id="ppSimple" style="margin-top:10px"></div>
   <div id="ppChart" class="chart small hidden" style="height:180px;margin-top:8px"></div>
   <div id="ppTrades"></div>
-  <details style="margin-top:10px"><summary class="muted" style="font-size:13px">รายละเอียดสำหรับคนอยากรู้ (ตัวเลขเทคนิค)</summary>
+  <details style="margin-top:10px"><summary>ตัวเลขเทคนิค</summary>
     <div class="hero" id="ppHero" style="margin-top:8px"></div>
-    <p class="muted" style="font-size:12px;margin:8px 0 0">เทียบงานวิจัยปี 2025 (10x): 61 ไม้ · win 32.8% · ถึง TP5R 21.3% · เฉลี่ย +0.38R · PF 1.50 · +5.83% · Max DD 2.52% — ต้องมีอย่างน้อย 30 ไม้ก่อนสรุป</p>
+    <p class="muted" style="font-size:12px;margin:8px 0 0">งานวิจัยปี 2025: 61 ไม้ · win 32.8% · +0.38R · PF 1.50 · Max DD 2.52% · ต้องมี 30 ไม้ก่อนสรุป</p>
   </details>
 </section>
+<div id="pfState"></div>
+<section><h2>ไม้ที่บันทึกไว้ <small class="muted">(เงินจริง)</small></h2><div class="hero" id="pfHero"></div><div id="pfOpen"></div><div id="pfClosed"></div></section>
 <section>
-  <h2>คุมเงินแบบไม่ต้องคำนวณ</h2>
-  <p style="margin:0;font-size:14px">กฎมีข้อเดียว: <b>ลากสไลเดอร์ใน Binance ไปตามตัวเลขที่แอปบอกในการ์ดสัญญาณเท่านั้น</b> แอปคิดให้แล้วว่าถ้าโดน Stop จะเสียแค่ไม้ละ <b id="mmLoss">—</b> ไม่ว่าจะ Leverage เท่าไหร่</p>
-  <h2 style="margin-top:14px">ถ้าแพ้ติดกัน <span id="mmNLabel">10</span> ไม้ เงินจะเหลือเท่าไหร่</h2>
+  <details><summary><b>ทำไมห้ามลาก 10%</b> <small class="muted">ถ้าแพ้ติดกัน เงินเหลือเท่าไหร่</small></summary>
+  <p style="margin:8px 0 0;font-size:14px">ลากสไลเดอร์ใน Binance ตามตัวเลขในการ์ดสัญญาณเท่านั้น โดน Stop เสียแค่ไม้ละ <b id="mmLoss">—</b></p>
+  <h2 style="margin-top:12px">แพ้ติดกัน <span id="mmNLabel">10</span> ไม้</h2>
   <input id="mmN" type="range" min="1" max="20" value="10" style="width:100%">
   <div id="mmCompare"></div>
-  <p class="muted" style="font-size:12px;margin:8px 0 0">สมมติ Stop ห่างจากจุดเข้า 1.2% และค่าธรรมเนียม 0.14% ไป-กลับ · สูตรนี้ชนะประมาณ 1 ใน 3 ไม้ จึงแพ้ติดกัน 5–10 ไม้ได้เป็นเรื่องปกติ · "ไม่ตั้ง Stop" คือโดน Liquidate เสีย Margin ทั้งก้อน</p>
+  <p class="muted" style="font-size:12px;margin:8px 0 0">สูตรนี้ชนะราว 1 ใน 3 ไม้ แพ้ติดกัน 5–10 ไม้เป็นเรื่องปกติ</p>
+  </details>
 </section>
-
-<section>
-  <h2>เงินของฉัน</h2>
-  <div class="row">
-    <div><label for="pfCapital">ทุนเริ่มต้น (บาท)</label><input id="pfCapital" type="number" inputmode="decimal" value="10000"></div>
-    <div><label for="pfRisk">เสี่ยงต่อไม้ (% ของยอด)</label><input id="pfRisk" type="number" inputmode="decimal" step="0.05" value="0.5"></div>
-  </div>
-  <label for="pfTarget">เป้ากำไรต่อเดือน (%)</label><input id="pfTarget" type="number" inputmode="decimal" step="0.5" value="3">
-  <p class="muted" style="font-size:12px;margin:8px 0 0">แนะนำเสี่ยงไม่เกิน 1% ต่อไม้ ข้อมูลเก็บในมือถือเครื่องนี้เท่านั้น ถ้าล้างข้อมูลเบราว์เซอร์จะหาย</p>
-</section>
-<div id="pfState"></div>
-<section><h2>ยอดและความเสี่ยง</h2><div class="hero" id="pfHero"></div></section>
-<section><h2>เป้าเดือนนี้</h2><div id="pfGoal"></div></section>
-<section><h2>ถืออยู่</h2><div id="pfOpen"></div></section>
-<section><h2>ปิดแล้ว</h2><div id="pfClosed"></div></section>
+<div class="hidden"><input id="pfRisk" type="number" value="0.25"><input id="pfTarget" type="number" value="3"><div id="pfGoal"></div></div>
 </div>
 
 <div id="backtestTab" class="hidden">
+<section>
+  <h2>ทดสอบสูตรย้อนหลัง</h2>
+  <label>เหรียญ</label><div class="checks" id="swCoins" style="flex-wrap:wrap;gap:10px;font-size:13px"></div>
+  <div class="row">
+    <div><label for="swTf">กรอบเวลา</label><select id="swTf"><option value="1h" selected>1 ชม. (ใช้กับ Squeeze)</option><option value="4h">4 ชม.</option></select></div>
+    <div><label for="swDays">ช่วงข้อมูล</label><select id="swDays"><option value="730">2 ปี</option><option value="1095" selected>3 ปี</option><option value="1460">4 ปี</option></select></div>
+  </div>
+  <button id="swRun">ทดสอบย้อนหลัง</button>
+  <div id="swStatus" class="status-line">ดูแถว Squeeze v2 ในตารางผลรายปี: ตัวเลขบวก = ปีนั้นได้กำไร</div>
+  <div id="swResults" class="hidden" style="margin-top:12px">
+    <div id="swBest"></div>
+    <div style="overflow-x:auto;margin-top:10px"><table><thead><tr><th>เทคนิค</th><th>Dev ไม้·win·R</th><th>Valid ไม้·win·R</th><th>Valid PF</th></tr></thead><tbody id="swTable"></tbody></table></div>
+    <h2 style="margin-top:14px">ผลรายปี <small class="muted">(R เฉลี่ยต่อไม้ หลังหักต้นทุน)</small></h2>
+    <div style="overflow-x:auto"><table><thead id="swYearHead"></thead><tbody id="swYears"></tbody></table></div>
+    <p class="muted" style="font-size:12px;margin:8px 0 0">เป็นกฎจำลองจากหลักการในคลิป ไม่ใช่สูตรตรงของผู้สอนทุกข้อ · ผลในอดีตไม่รับประกันอนาคต</p>
+  </div>
+</section>
+<div class="hidden">
 <section>
   <h2>ตั้งค่า</h2>
   <label>คู่เหรียญ (ทดสอบเป็นพอร์ตเดียวกัน)</label>
@@ -277,28 +282,6 @@ a{color:var(--accent)}
   <button id="run">ดาวน์โหลดข้อมูล & Backtest</button>
   <div id="status">กดปุ่มเพื่อดึงแท่ง 15 นาทีที่ปิดแล้วจาก Binance (ไม่ต้องใช้ API key)</div>
 </section>
-
-<section>
-  <h2>เทคนิคของฉัน</h2>
-  <p class="muted" style="margin:0;font-size:13px">ทดสอบ 5 เทคนิคจากคลังความรู้ของคุณ (เทรนด์ไลน์, Inside Bar, Fibo, Breakout+Pullback, Double Bottom) และสูตร Momentum + Squeeze จาก ONE BEST COMBO เป็นกฎตายตัว ใช้ค่าธรรมเนียมจากช่องด้านบน ผลเป็น R (หน่วยความเสี่ยงต่อไม้) หลังหักต้นทุน</p>
-  <label>เหรียญ</label><div class="checks" id="swCoins" style="flex-wrap:wrap;gap:10px;font-size:13px"></div>
-  <div class="row">
-    <div><label for="swTf">กรอบเวลา</label><select id="swTf"><option value="1h">1 ชม. (Squeeze ออกแบบมาที่นี่)</option><option value="4h" selected>4 ชม.</option></select></div>
-    <div><label for="swDays">ช่วงข้อมูล</label><select id="swDays"><option value="730">2 ปี</option><option value="1095" selected>3 ปี</option><option value="1460">4 ปี</option></select></div>
-  </div>
-  <p class="muted" style="margin:6px 0 0;font-size:12px">ค่าธรรมเนียมใช้ช่องด้านบน: Spot ปกติ 0.10%/ข้าง · Futures taker ประมาณ 0.05%/ข้าง (สคริปต์ ONE BEST COMBO ใช้รวม 0.14% ไป-กลับ)</p>
-  <button id="swRun">Backtest เทคนิคของฉัน</button>
-  <div id="swStatus" class="status-line">แต่ละเทคนิคแบ่งข้อมูล 60/20/20 เลือกผู้ชนะจากช่วง Valid แล้วตรวจกับ Holdout ครั้งเดียว</div>
-  <div id="swResults" class="hidden" style="margin-top:12px">
-    <div id="swBest"></div>
-    <div style="overflow-x:auto;margin-top:10px"><table><thead><tr><th>เทคนิค</th><th>Dev ไม้·win·R</th><th>Valid ไม้·win·R</th><th>Valid PF</th></tr></thead><tbody id="swTable"></tbody></table></div>
-    <h2 style="margin-top:14px">ผลรายปี <small class="muted">(R เฉลี่ยต่อไม้ หลังหักต้นทุน)</small></h2>
-    <div style="overflow-x:auto"><table><thead id="swYearHead"></thead><tbody id="swYears"></tbody></table></div>
-    <p class="muted" style="font-size:12px;margin:6px 0 0">ONE BEST COMBO ถูกเลือกจาก 4,104 แบบโดยดูข้อมูล BTC ปี 2024–2025 แล้ว ปี 2026 และเหรียญอื่นจึงเป็นข้อมูลใหม่ที่ใช้ตัดสินได้จริง</p>
-    <p class="muted" style="font-size:12px;margin:8px 0 0">เป็นกฎจำลองจากหลักการในคลิป ไม่ใช่สูตรตรงของผู้สอนทุกข้อ · ผลในอดีตไม่รับประกันอนาคต</p>
-  </div>
-</section>
-
 <div id="results" class="hidden">
   <section>
     <h2>สัญญาณที่ดีที่สุดหลังทดสอบ</h2>
@@ -348,12 +331,10 @@ a{color:var(--accent)}
     <div id="trades"></div>
   </section>
 </div>
-
+</div>
 </div>
 
-<footer>
-  ผลย้อนหลังไม่ใช่ผลเงินจริงและไม่รับประกันอนาคต · ไม่ได้จำลองตัวกรองข่าว · กราฟโดย <a href="https://www.tradingview.com/lightweight-charts/">TradingView Lightweight Charts™</a> (Apache-2.0)
-</footer>
+<footer>ผลย้อนหลังไม่รับประกันอนาคต · แอปไม่ส่งคำสั่งซื้อขาย · กราฟ <a href="https://www.tradingview.com/lightweight-charts/">TradingView Lightweight Charts™</a></footer>
 </main>
 <button id="guideBar" class="hidden" type="button"><span id="guideBarStep"></span><b id="guideBarTitle"></b><span class="go">แตะเพื่อไป ▶</span></button>
 <script>
@@ -1751,35 +1732,82 @@ a{color:var(--accent)}
   // ---- Google Gemini analysis (user's own API key, stored on this device only) ----
   var AI = (function () {
     var BASE = "https://generativelanguage.googleapis.com/v1beta/models/";
-    function key() { return ($("aiKey").value || "").trim(); }
+    // Several keys: when one is out of quota or rejected, the next one is tried and remembered.
+    function keys() {
+      try { var a = JSON.parse(localStorage.getItem("aiKeys") || "[]"); if (Array.isArray(a)) return a; } catch (e) { /* ignore */ }
+      return [];
+    }
+    var idx = 0;
+    try { idx = parseInt(localStorage.getItem("aiKeyIdx") || "0", 10) || 0; } catch (e) { /* ignore */ }
+    function key() { var a = keys(); return a.length ? a[idx % a.length] : ""; }
+    function useKey(k) {
+      idx = Math.max(0, keys().indexOf(k));
+      try { localStorage.setItem("aiKeyIdx", String(idx)); } catch (e) { /* ignore */ }
+    }
+    function saveKeys(a) {
+      try { localStorage.setItem("aiKeys", JSON.stringify(a)); } catch (e) { /* ignore */ }
+      $("aiKey").value = a[0] || "";
+      renderKeys();
+    }
+    var keyState = {};
+    function renderKeys() {
+      var a = keys();
+      $("aiKeyList").innerHTML = a.length ? a.map(function (k, i) {
+        var st = keyState[k];
+        return '<div class="keyrow"><span>คีย์ ' + (i + 1) + '</span><code>' + esc(k.slice(0, 4) + "…" + k.slice(-4)) + "</code>" +
+          (st ? '<span class="st ' + (st.ok ? "up" : "down") + '">' + esc(st.text) + "</span>" : "") +
+          '<button class="x" data-delkey="' + i + '" type="button">✕</button></div>';
+      }).join("") : '<p class="muted" style="margin:0;font-size:13px">ยังไม่มีคีย์ · ไม่ใส่ก็ใช้แอปได้ แค่ไม่มี AI ช่วยเช็กข่าว</p>';
+      Array.prototype.forEach.call(document.querySelectorAll("[data-delkey]"), function (b) {
+        b.onclick = function () { var list = keys(); list.splice(+b.getAttribute("data-delkey"), 1); saveKeys(list); };
+      });
+    }
+    function addKey(text) {
+      var k = (text || "").trim();
+      if (!/^AIza[0-9A-Za-z_-]{20,}$/.test(k)) return false;
+      var a = keys();
+      if (a.indexOf(k) < 0) a.push(k);
+      saveKeys(a);
+      return true;
+    }
     var FALLBACK = "gemini-flash-latest";
     function model() { return ($("aiModel").value || FALLBACK).trim(); }
     function status(t, err) { $("aiStatus").textContent = t; $("aiStatus").className = "status-line" + (err ? " err" : ""); }
 
     // Google retires models; when it answers 404 and names a replacement ("use models/xyz"), switch to it, remember it and retry once.
-    function post(m, retry, body) {
-      return httpPost(BASE + encodeURIComponent(m) + ":generateContent?key=" + encodeURIComponent(key()), JSON.stringify(body)).catch(function (e) {
-        var msg = String(e.message || e), gone = /HTTP 404|no longer available|not found/i.test(msg);
+    function post(m, retry, body, k, left) {
+      k = k || key();
+      if (left === undefined) left = keys().length - 1;
+      return httpPost(BASE + encodeURIComponent(m) + ":generateContent?key=" + encodeURIComponent(k), JSON.stringify(body)).then(function (t) {
+        useKey(k);
+        return t;
+      }, function (e) {
+        var msg = String(e.message || e);
+        if (left > 0 && /HTTP (429|403)|HTTP 400[\s\S]*API.?key|RESOURCE_EXHAUSTED|quota/i.test(msg)) {
+          var a = keys(), next = a[(a.indexOf(k) + 1) % a.length];
+          return post(m, retry, body, next, left - 1);
+        }
+        var gone = /HTTP 404|no longer available|not found/i.test(msg);
         if (!retry || !gone) throw friendly(msg);
         var hint = (msg.match(/models\/([A-Za-z0-9._-]+)/g) || []).map(function (x) { return x.slice(7); }).filter(function (x) { return x !== m; })[0];
         var next = hint || (m !== FALLBACK ? FALLBACK : null);
         if (!next) throw friendly(msg);
         $("aiModel").value = next;
         try { localStorage.setItem("aiModel", next); } catch (x) { /* ignore */ }
-        return post(next, false, body);
+        return post(next, false, body, k, left);
       });
     }
     function friendly(msg) {
       var j = null; try { j = JSON.parse(msg.slice(msg.indexOf("{"))); } catch (e) { /* not JSON */ }
       var code = /HTTP (\d+)/.exec(msg), text = j && j.error && j.error.message ? j.error.message : msg;
-      var th = code && code[1] === "400" && /API key/i.test(text) ? "คีย์ไม่ถูกต้อง ลองกด ② วางคีย์ใหม่" :
-        code && code[1] === "403" ? "คีย์นี้ใช้ Gemini ไม่ได้ (ยังไม่เปิดสิทธิ์)" : code && code[1] === "429" ? "ใช้เกินโควตาฟรีแล้ว รอสักพักแล้วลองใหม่" :
+      var th = code && code[1] === "400" && /API key/i.test(text) ? "คีย์ไม่ถูกต้อง ลบแล้ววางคีย์ใหม่" :
+        code && code[1] === "403" ? "คีย์นี้ใช้ Gemini ไม่ได้ (ยังไม่เปิดสิทธิ์)" : code && code[1] === "429" ? "โควตาฟรีหมด รอสักพักหรือเพิ่มคีย์" :
         code && code[1] === "404" ? "หาโมเดลไม่เจอ ลองล้างช่อง Model ให้ว่างแล้วกดทดสอบใหม่" : "";
       return new Error((th ? th + " · " : "") + (code ? "HTTP " + code[1] + " · " : "") + text.slice(0, 200));
     }
 
     function ask(prompt, search) {
-      if (!key()) return Promise.reject(new Error("ยังไม่ได้ใส่ Gemini API key (ส่วน AI ในแท็บสัญญาณ)"));
+      if (!key()) return Promise.reject(new Error("ยังไม่ได้ใส่ Gemini API key (หน้าแรก → AI)"));
       var body = { contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 1200 } };
       if (search) body.tools = [{ google_search: {} }];
       return post(model(), true, body).then(JSON.parse).then(function (res) {
@@ -1861,7 +1889,13 @@ a{color:var(--accent)}
         .catch(function (e) { $("cvAiOut").innerHTML = '<div class="ai down">AI: ' + esc(e.message) + "</div>"; });
     }
 
-    ["aiKey", "aiModel", "aiAuto"].forEach(function (id) {
+    try {
+      var old = localStorage.getItem("aiKey");
+      if (old && !keys().length) localStorage.setItem("aiKeys", JSON.stringify([old]));
+      localStorage.removeItem("aiKey");
+    } catch (e) { /* ignore */ }
+    saveKeys(keys());
+    ["aiModel", "aiAuto"].forEach(function (id) {
       try {
         var v = localStorage.getItem(id);
         if (v !== null) { if (id === "aiAuto") $(id).checked = v === "1"; else $(id).value = v; }
@@ -1872,21 +1906,26 @@ a{color:var(--accent)}
     });
     $("aiPaste").onclick = function () {
       var done = function (text) {
-        var k = (text || "").trim();
-        if (!/^AIza/.test(k)) { status("ในคลิปบอร์ดยังไม่มีคีย์ที่ขึ้นต้นด้วย AIza — กดค้างในช่องคีย์แล้วเลือก \"วาง\" แทนได้", true); $("aiKey").focus(); return; }
-        $("aiKey").value = k;
-        try { localStorage.setItem("aiKey", k); } catch (e) { /* ignore */ }
-        $("aiKey").dispatchEvent(new Event("change"));
-        status("วางคีย์แล้ว · กดปุ่ม ทดสอบคีย์ ได้เลย");
+        if (!addKey(text)) { status("ในคลิปบอร์ดยังไม่มีคีย์ที่ขึ้นต้นด้วย AIza · ไปกด ① คัดลอกคีย์ก่อน", true); return; }
+        status("เพิ่มคีย์แล้ว (" + keys().length + " คีย์) · กดทดสอบคีย์ได้เลย");
       };
       if (window.NativeHttp && window.NativeHttp.clipboard) { done(window.NativeHttp.clipboard()); return; }
       if (navigator.clipboard && navigator.clipboard.readText) navigator.clipboard.readText().then(done, function () { done(""); });
       else done("");
     };
     $("aiTest").onclick = function () {
-      status("กำลังทดสอบ…");
-      ask("ตอบคำเดียวว่า พร้อม", false).then(function (r) { status("ใช้งานได้ · " + model() + " ตอบ: " + r.text.slice(0, 40)); })
-        .catch(function (e) { status(e.message.slice(0, 200), true); });
+      var a = keys();
+      if (!a.length) { status("ยังไม่มีคีย์ · กด ① เอาคีย์ แล้ว ② วางคีย์", true); return; }
+      status("กำลังทดสอบ " + a.length + " คีย์…");
+      var body = { contents: [{ role: "user", parts: [{ text: "ตอบคำเดียวว่า พร้อม" }] }], generationConfig: { temperature: 0, maxOutputTokens: 20 } }, good = 0;
+      a.reduce(function (chain, k) {
+        return chain.then(function () {
+          return post(model(), true, body, k, 0).then(function () { good++; keyState[k] = { ok: true, text: "ใช้ได้" }; },
+            function (e) { keyState[k] = { ok: false, text: e.message.split(" · ")[0].slice(0, 40) }; }).then(renderKeys);
+        });
+      }, Promise.resolve()).then(function () {
+        status(good ? "ใช้ได้ " + good + "/" + a.length + " คีย์ · โมเดล " + model() : "ไม่มีคีย์ที่ใช้ได้", !good);
+      });
     };
     return { ask: ask, auto: auto, analyseSignal: analyseSignal, analyseChart: analyseChart };
   })();
@@ -2136,7 +2175,7 @@ a{color:var(--accent)}
   function binanceHowTo(r, g) {
     var coin = r.symbol.replace("USDT", ""), long = g.dir > 0;
     var lowNotional = g.notional < ({ BTCUSDT: 100, ETHUSDT: 20 }[r.symbol] || 5);
-    return '<button class="mini" data-how="' + r.symbol + '">ดูหน้าตั้งค่าใน Binance (ทำตามภาพ)</button><div class="how hidden" id="how-' + r.symbol + '">' +
+    return '<button class="mini ghost" data-how="' + r.symbol + '" style="width:100%">ดูหน้าตั้งค่าใน Binance (ทำตามภาพ)</button><div class="how hidden" id="how-' + r.symbol + '">' +
       '<b>ช่วง Paper Trading ยังไม่ต้องทำ</b> แอปจดผลให้เอง ใช้หน้านี้เมื่อพร้อมใช้เงินจริง' + orderPanel(r, g) +
       '<details style="margin-top:8px"><summary class="muted" style="font-size:13px">ขั้นตอนแบบข้อความ</summary><ol>' +
       "<li>เปิดแอป Binance → แท็บ <b>Futures</b> → <b>USDⓈ-M</b> → เลือก <b>" + r.symbol + " Perpetual</b></li>" +
@@ -2157,31 +2196,33 @@ a{color:var(--accent)}
     $("scanSummary").innerHTML = sigs.length
       ? '<div class="banner go">มีสัญญาณ ' + sigs.length + " เหรียญ: " + sigs.map(function (r) { return r.symbol.replace("USDT", "") + " " + (r.signal.dir > 0 ? "LONG" : "SHORT"); }).join(", ") + "</div>"
       : '<div class="banner wait">ตอนนี้ไม่มีสัญญาณ — รอแท่ง 1 ชม. ถัดไปปิด แล้วสแกนใหม่</div>';
-    $("scanCards").innerHTML = results.map(function (r) {
-      var name = r.symbol.replace("USDT", ""), g = r.signal, h = r.hist, body = "", pill;
-      if (g) pill = '<span class="pill ' + (g.dir > 0 ? "go" : "short") + '">' + (g.dir > 0 ? "LONG" : "SHORT") + "</span>";
-      else pill = '<span class="pill no">' + (r.trend > 0 ? "ขาขึ้น · รอ" : r.trend < 0 ? "ขาลง · รอ" : "ไม่ชัด · รอ") + "</span>";
-      if (g) {
-        body = '<div class="levels"><div><small>เข้า (Market)</small><b>' + price(g.entry) + '</b></div><div><small>SL (' + fmt(g.stopPct, 2) + '%)</small><b class="down">' + price(g.stop) +
-          '</b></div><div><small>TP1 · TP2 · TP3</small><b class="up" style="font-size:13px">' + g.tps.map(price).join("<br>") + "</b></div></div>" +
-          "<small>TP1 = 1R · TP2 = 2R · TP3 = 5R · SL " + g.stopAtr + " ATR · ถือไม่เกิน " + g.hold + " ชม. · เข้าก่อน " + thai(g.expires).slice(9) + " น.<br>" +
-          (locked() ? '<b style="font-size:16px">10x Isolated</b> (สูตรที่เลือก) · Liquidate ห่างกว่า SL ' + fmt(Math.abs(g.liq - g.entry) / Math.abs(g.stop - g.entry), 1) + " เท่า<br>"
-            : '<b style="font-size:16px">Leverage แนะนำ x' + g.lev + "</b> · ไม่ควรเกิน x" + g.levLiq + " (Liquidate ต้องไกลกว่า SL 1.5 เท่า)<br>") +
-          "ขนาด " + g.qty + " " + name + " (≈ " + fmt(g.notional, 0) + " USDT) · Margin ≈ " + fmt(g.margin, 1) + " USDT · ถ้าโดน SL เสีย ≈ " +
-          fmt(g.riskUsdt * fx, 0) + " ฿<br>ราคา Liquidate ≈ " + price(g.liq) + "</small>" +
-          '<div class="slider-tip">ใน Binance ลากสไลเดอร์ขนาดไปที่ <b style="font-size:20px">' + fmt(Math.max(g.sliderPct, 0.1), g.sliderPct < 10 ? 1 : 0) +
-            "%</b> (ของเงินใน Futures wallet " + fmt(g.balanceUsdt, 0) + " USDT) · ห้ามลากเกินนี้</div>" +
-          (g.sizeLimited ? '<div class="banner wait" style="margin:8px 0 0;font-size:13px">ลดขนาดลงให้ Margin ไม่เกิน ' + (locked() ? "5" : "25") + '% ของทุน (เสี่ยงน้อยกว่าที่ตั้งไว้)</div>' : "") +
-          '<div id="ai-' + r.symbol + '"></div>' + binanceHowTo(r, g) +
-          '<br><button class="mini" data-record="' + esc(JSON.stringify({ symbol: r.symbol, dir: g.dir, entry: g.entry, stop: g.stop, target: g.tps[2], tps: g.tps,
-            qty: g.qty, fx: fx, risk: g.riskUsdt * fx, fee: FUT.fee + FUT.slippage, lev: g.lev, hold_hours: g.hold })) + '">เข้าแล้ว · บันทึกลงพอร์ต</button> ' +
-          '<button class="mini ghost" data-ai="' + r.symbol + '">AI วิเคราะห์</button>';
-      }
-      var stats = h.trades ? "<br><small>สูตรนี้กับ " + name + " 100 วันล่าสุด: " + h.trades + " ไม้ · win " + fmt(h.win_rate, 0) + "% · เฉลี่ย " + fmt(h.exp_r, 2, true) + "R</small>" :
-        "<br><small>100 วันล่าสุดยังไม่มีสัญญาณในเหรียญนี้</small>";
-      return '<div class="coin' + (g ? " go" : "") + '"><div class="coin-head"><span><b>' + r.symbol + '</b> <small class="tag">Perp</small>' + (r.symbol === LOCK.symbol ? "" : ' <small class="tag" style="color:var(--yel)">ยังไม่ผ่านงานวิจัย</small>') + "</span>" + pill + "</div>" +
-        '<div class="mrow"><b class="' + (r.trend > 0 ? "up" : r.trend < 0 ? "down" : "") + '">' + price(r.close) + '</b> <small>USDT</small> <button class="mini ghost" data-chart="' + r.symbol + '">ดูกราฟ</button></div>' + stats + body + "</div>";
+    // Coins with a signal get a full card; the rest are one-line rows.
+    var cards = sigs.map(function (r) {
+      var name = r.symbol.replace("USDT", ""), g = r.signal, h = r.hist;
+      var pill = '<span class="pill ' + (g.dir > 0 ? "go" : "short") + '">' + (g.dir > 0 ? "LONG" : "SHORT") + " " + g.lev + "x</span>";
+      var detail = "TP1 = 1R · TP2 = 2R · TP3 = 5R · SL " + g.stopAtr + " ATR · ถือไม่เกิน " + g.hold + " ชม.<br>" +
+        "ขนาด " + g.qty + " " + name + " (≈ " + fmt(g.notional, 0) + " USDT) · Margin ≈ " + fmt(g.margin, 1) + " USDT · ราคา Liquidate ≈ " + price(g.liq) +
+        (locked() ? "" : "<br>Leverage ไม่ควรเกิน x" + g.levLiq) +
+        (h.trades ? "<br>สูตรนี้กับ " + name + " 100 วันล่าสุด: " + h.trades + " ไม้ · win " + fmt(h.win_rate, 0) + "% · เฉลี่ย " + fmt(h.exp_r, 2, true) + "R" : "");
+      return '<div class="coin go"><div class="coin-head"><span><b>' + r.symbol + '</b> <small class="tag">Perp</small>' +
+        (r.symbol === LOCK.symbol ? "" : ' <small class="tag" style="color:var(--yel)">ยังไม่ผ่านงานวิจัย</small>') + "</span>" + pill + "</div>" +
+        '<div class="levels"><div><small>เข้า (Market)</small><b>' + price(g.entry) + '</b></div><div><small>SL</small><b class="down">' + price(g.stop) +
+        '</b></div><div><small>TP1 · TP2 · TP3</small><b class="up" style="font-size:13px">' + g.tps.map(price).join("<br>") + "</b></div></div>" +
+        '<div class="slider-tip">ลากสไลเดอร์ไปที่ <b style="font-size:20px">' + fmt(Math.max(g.sliderPct, 0.1), g.sliderPct < 10 ? 1 : 0) +
+          "%</b> · โดน SL เสีย ≈ " + fmt(g.riskUsdt * fx, 0) + " ฿ · เข้าก่อน " + thai(g.expires).slice(9) + " น.</div>" +
+        (g.sizeLimited ? '<div class="banner wait" style="margin:8px 0 0;font-size:13px">ลดขนาดให้ Margin ไม่เกิน ' + (locked() ? "5" : "25") + "% ของทุน</div>" : "") +
+        '<div id="ai-' + r.symbol + '"></div>' + binanceHowTo(r, g) +
+        '<div class="btnrow"><button class="mini" data-record="' + esc(JSON.stringify({ symbol: r.symbol, dir: g.dir, entry: g.entry, stop: g.stop, target: g.tps[2], tps: g.tps,
+          qty: g.qty, fx: fx, risk: g.riskUsdt * fx, fee: FUT.fee + FUT.slippage, lev: g.lev, hold_hours: g.hold })) + '">เข้าแล้ว · บันทึก</button>' +
+        '<button class="mini ghost" data-ai="' + r.symbol + '">AI วิเคราะห์</button><button class="mini ghost" data-chart="' + r.symbol + '">กราฟ</button></div>' +
+        '<details style="margin-top:8px"><summary>รายละเอียด</summary><small>' + detail + "</small></details></div>";
     }).join("");
+    var rows = results.filter(function (r) { return !r.signal; }).map(function (r) {
+      var t = r.trend > 0 ? ["up", "ขาขึ้น"] : r.trend < 0 ? ["down", "ขาลง"] : ["", "ไม่ชัด"];
+      return '<div class="mkt" data-chart="' + r.symbol + '"><b>' + r.symbol.replace("USDT", "") + '</b><small>/USDT</small><span class="' + t[0] + '">' + price(r.close) +
+        '</span><small class="' + t[0] + '">' + t[1] + "</small></div>";
+    }).join("");
+    $("scanCards").innerHTML = cards + (rows ? '<section style="padding:6px 14px"><div class="mkthead"><span>ยังไม่มีสัญญาณ</span><span>ราคา · แนวโน้ม</span></div>' + rows + "</section>" : "");
     bindCardButtons();
     var plan = Portfolio.plan();
     if (plan.state !== "ok") $("scanSummary").innerHTML = '<div class="banner stop">' + esc(plan.message) + "</div>" + $("scanSummary").innerHTML;
@@ -2303,7 +2344,7 @@ a{color:var(--accent)}
   }
   var nativeAlerts = !!(window.NativeHttp && window.NativeHttp.setAlerts);
   if (nativeAlerts) {
-    $("autoScanLabel").textContent = "เด้งทันทีเมื่อมีสัญญาณเข้าได้ (เช็กทุกครั้งที่แท่ง 1 ชม. ปิด) แม้ปิดแอป";
+    $("autoScanLabel").textContent = "เด้งเมื่อมีสัญญาณเข้าได้ (ทุกต้นชั่วโมง แม้ปิดแอป)";
     try { $("autoScan").checked = window.NativeHttp.alertsEnabled(); } catch (e) { /* ignore */ }
   }
   function batteryCheck() {
@@ -2332,13 +2373,14 @@ a{color:var(--accent)}
         " · ขนาดไม้คิดจาก % เสี่ยงในแท็บพอร์ต ไม่ใช่จาก Leverage"
       : "Spot: สแกนแนวโน้ม 1 ชม. เลือกกลยุทธ์ที่ได้ผลดีสุดใน 90 วันล่าสุดของแต่ละเหรียญ แล้วดูแท่ง 15 นาทีที่เพิ่งปิด";
     if ($("sgMode").value !== "futures") $("sgLev").disabled = $("sgStrat").disabled = true;
-    if (lock && $("sgMode").value === "futures") $("sgHelp").textContent = "สูตรที่เลือก: ทุกเหรียญ (งานวิจัยทดสอบเฉพาะ BTC) · Momentum2 + Squeeze 3 ชม. · Volume ≥ 1.8x · กรอง FOMC · SL 1.8 ATR · TP1/2/3 = 1R/2R/5R · ถือ ≤ 48 ชม. · 10x Isolated · เสี่ยง 0.25%/ไม้ (Margin ≤ 5% ของพอร์ต) · ใช้เพื่อ Paper Trading ก่อน";
+    if (lock && $("sgMode").value === "futures") $("sgHelp").textContent = "12 เหรียญ · Squeeze v2 · แท่ง 1 ชม. · 10x Isolated · เสี่ยง 0.25%/ไม้ · งดวัน FOMC";
   }
   ["sgMode", "sgLev", "sgStrat"].forEach(function (id) {
     try { var v = localStorage.getItem(id); if (v !== null) $(id).value = v; } catch (e) { /* ignore */ }
     $(id).addEventListener("change", function () { try { localStorage.setItem(id, $(id).value); } catch (e) { /* ignore */ } modeHelp(); });
   });
-  try { var lk = localStorage.getItem("sgLock"); if (lk !== null) $("sgLock").checked = lk === "1"; } catch (e) { /* ignore */ }
+  // The market/strategy pickers are hidden: the app always runs the chosen futures setup.
+  $("sgMode").value = "futures"; $("sgLock").checked = true;
   $("sgLock").addEventListener("change", function () { try { localStorage.setItem("sgLock", $("sgLock").checked ? "1" : "0"); } catch (e) { /* ignore */ } modeHelp(); });
   try { $("sgFomc").value = localStorage.getItem("sgFomc") || FOMC_DEFAULT.join("\n"); } catch (e) { $("sgFomc").value = FOMC_DEFAULT.join("\n"); }
   $("sgFomc").addEventListener("change", function () { try { localStorage.setItem("sgFomc", $("sgFomc").value); } catch (e) { /* ignore */ } });
@@ -2587,20 +2629,18 @@ a{color:var(--accent)}
     function mark(name) { var f = flags(); f[name] = 1; try { localStorage.setItem(KEY, JSON.stringify(f)); } catch (e) { /* ignore */ } render(); }
     function has(key) { try { return !!localStorage.getItem(key); } catch (e) { return false; } }
     var STEPS = [
-      { id: "mode", title: "เลือกตลาด Futures และสูตรที่เลือก", how: "แท็บสัญญาณ → ช่อง \"ตลาด\" เลือก Futures และติ๊ก \"ใช้สูตรที่ผมเลือก\"",
-        tab: "signalTab", target: "sgMode", done: function () { return $("sgMode").value === "futures" && $("sgLock").checked; } },
-      { id: "capital", title: "ใส่เงินทุนที่จะใช้เทรด", how: "แท็บพอร์ต → ช่อง \"ทุนเริ่มต้น (บาท)\" ใส่เงินที่เสียได้ทั้งหมดโดยไม่เดือดร้อน",
-        tab: "portTab", target: "pfCapital", done: function () { return !!flags().capital; } },
+      { id: "capital", title: "ใส่เงินทุนที่จะใช้เทรด", how: "หน้าแรก → ตั้งค่า → \"เงินทุน (บาท)\" ใส่เงินที่เสียได้ทั้งหมดโดยไม่เดือดร้อน",
+        tab: "guideTab", target: "pfCapital", done: function () { return !!flags().capital; } },
       { id: "fomc", title: "ตรวจวันประกาศ FOMC ปี 2026", how: "เปิด federalreserve.gov/monetarypolicy/fomccalendars.htm เทียบกับรายการวันในแอป ผิดตรงไหนแก้ได้เลย แล้วกดปุ่ม \"ตรวจแล้ว ✓\" ใต้รายการ",
-        tab: "signalTab", target: "sgFomc", done: function () { return !!flags().fomc; }, confirm: "ตรวจแล้ว ✓" },
+        tab: "guideTab", target: "sgFomc", done: function () { return !!flags().fomc; }, confirm: "ตรวจแล้ว ✓" },
       { id: "test2026", title: "ดูผลปี 2026 ว่าสูตรยังได้กำไรไหม", how: "แท็บพอร์ต → ปุ่ม \"ดูผลปี 2026 (ข้อมูลใหม่)\" ถ้า R เฉลี่ยเป็นบวกและ PF มากกว่า 1 = ยังดี แคปส่งให้ผู้ช่วยดูได้",
         tab: "portTab", target: "pp2026", done: function () { return !!flags().test2026; } },
       { id: "paper", title: "เริ่ม Paper Trading", how: "แท็บพอร์ต → ปุ่ม \"เริ่ม Paper วันนี้\" แอปจะจดผลให้เองนับจากวันนี้",
         tab: "portTab", target: "ppStart", done: function () { return has("paper.v2"); } },
-      { id: "alerts", title: "เปิดแจ้งเตือนสัญญาณ", how: "แท็บสัญญาณ → ติ๊ก \"เด้งทันทีเมื่อมีสัญญาณเข้าได้\" แล้วกดอนุญาตการแจ้งเตือน (ในแอป Android ตั้งแบตเตอรี่เป็น \"ไม่จำกัด\" ด้วย)",
-        tab: "signalTab", target: "autoScan", done: function () { return $("autoScan").checked; } },
+      { id: "alerts", title: "เปิดแจ้งเตือนสัญญาณ", how: "หน้าแรก → ตั้งค่า → ติ๊ก \"เด้งเมื่อมีสัญญาณเข้าได้\" แล้วกดอนุญาตการแจ้งเตือน (ในแอป Android ตั้งแบตเตอรี่เป็น \"ไม่จำกัด\" ด้วย)",
+        tab: "guideTab", target: "autoScan", done: function () { return $("autoScan").checked; } },
       { id: "ai", title: "(ไม่บังคับ) ใส่ Gemini API key ให้ AI ช่วยเช็กข่าว", how: "แตะ \"พาไป\" → กดปุ่ม ① เปิดหน้าเอาคีย์ → Create API key → คัดลอก → กลับมากด ② วางคีย์ → ทดสอบคีย์",
-        tab: "signalTab", target: "aiGetKey", done: function () { return !!$("aiKey").value.trim(); }, optional: true },
+        tab: "guideTab", target: "aiGetKey", done: function () { return !!$("aiKey").value.trim(); }, optional: true },
       { id: "wait", title: "รอแจ้งเตือน แล้วเปิดดูการ์ดสัญญาณ", how: "สูตรนี้มีสัญญาณประมาณ 5 ครั้งต่อเดือน ช่วง Paper แค่เปิดแท็บพอร์ตดูผลเป็นระยะ ไม่ต้องเปิดไม้จริง",
         tab: "portTab", target: "ppHero", done: function () { return false; }, info: true }
     ];
@@ -2691,7 +2731,7 @@ a{color:var(--accent)}
           }).catch(function (e) { $("swStatus").textContent = c + ": " + e.message; });
         }));
       }).then(function () {
-        var r = Swing.evaluate(data, { fee: readNumber("fee", 0.1) / 100, slippage: readNumber("slip", 0.05) / 100, risk: 0.01 });
+        var r = Swing.evaluate(data, { fee: FUT.fee, slippage: FUT.slippage, risk: 0.01 });
         renderSwing(r, Object.keys(data));
         $("swStatus").textContent = "เสร็จ · " + Object.keys(data).length + " เหรียญ · " + days + " วัน · กราฟ " + tf;
       }).catch(function (e) { $("swStatus").className = "status-line err"; $("swStatus").textContent = e.message; })
