@@ -80,6 +80,8 @@ a{color:var(--accent)}
     <div><label for="sgMode">ตลาด</label><select id="sgMode"><option value="futures">Futures · Long/Short</option><option value="spot">Spot · ซื้ออย่างเดียว</option></select></div>
     <div><label for="sgLev">Leverage สูงสุดที่ยอม</label><input id="sgLev" type="number" inputmode="numeric" min="1" max="125" value="20"></div>
   </div>
+  <label for="sgStrat">สูตรสัญญาณ Futures</label>
+  <select id="sgStrat"><option value="squeeze3_ls">Squeeze v2 · Momentum2 + Squeeze 3 ชม. (งานวิจัย 10,000 แบบ)</option><option value="squeeze_ls">Squeeze v1 · ONE BEST COMBO</option></select>
   <p class="muted" style="margin:8px 0 0;font-size:13px" id="sgHelp"></p>
   <button id="scan">สแกนหาสัญญาณตอนนี้</button>
   <label class="checks" style="margin-top:10px"><input type="checkbox" id="autoScan"> <span id="autoScanLabel">สแกนเองทุก 15 นาที (ต้องเปิดหน้านี้ไว้)</span></label>
@@ -873,7 +875,12 @@ a{color:var(--accent)}
     { id: "squeeze_long", name: "Momentum + Squeeze Breakout (ซื้ออย่างเดียว · Spot)", source: "ONE BEST COMBO 22/10/2569",
       hold: 24, minStopFrac: 0.0015 },
     { id: "squeeze_ls", name: "Momentum + Squeeze Breakout (ซื้อ+ขาย · Futures)", source: "ONE BEST COMBO 22/10/2569",
-      hold: 24, minStopFrac: 0.0015 }
+      hold: 24, minStopFrac: 0.0015 },
+    // CRYPTO_FUTURES_10000: chosen on 2024 only, checked on 2025 (Momentum2_Squeeze3, vol >= 1.8x, SL 1.8 ATR, 48h).
+    { id: "squeeze3_long", name: "Squeeze v2 · Momentum2 + Squeeze 3 ชม. (ซื้ออย่างเดียว)", source: "FUTURES 10,000 22/10/2569",
+      hold: 48, minStopFrac: 0.0015, fundingPer8h: 0.0001, stopAtr: 1.8 },
+    { id: "squeeze3_ls", name: "Squeeze v2 · Momentum2 + Squeeze 3 ชม. (ซื้อ+ขาย · Futures)", source: "FUTURES 10,000 22/10/2569",
+      hold: 48, minStopFrac: 0.0015, fundingPer8h: 0.0001, stopAtr: 1.8 }
   ];
   var byId = {};
   var DEFAULTS = { fee: 0.001, slippage: 0.0005, risk: 0.01, maxHoldBars: 30, pivotK: 3, takeR: 2 };
@@ -912,7 +919,8 @@ a{color:var(--accent)}
       if (isH) highs.push({ i: i, price: bars[i].high, known: i + k });
     }
     var sq = squeezeMomentum(bars);
-    return { e50: e50, e200: e200, atr: atr, lows: lows, highs: highs, squeeze: sq.squeeze, momentum: sq.momentum, atrEma: sq.atr };
+    return { e50: e50, e200: e200, atr: atr, lows: lows, highs: highs, squeeze: sq.squeeze, momentum: sq.momentum,
+      momentum2: sq.momentum2, v20: sq.v20, atrEma: sq.atr };
   }
 
   // Exactly as crypto_best_combo_reproduce_20261022.py: unmasked EMAs seeded at the first bar,
@@ -928,16 +936,18 @@ a{color:var(--accent)}
     var V = bars.map(function (b) { return b.volume || 0; });
     var e20 = full(C, 20), e50 = full(C, 50), e200 = full(C, 200), v20 = full(V, 20);
     var tr = bars.map(function (b, i) { return i ? Math.max(H[i] - L[i], Math.abs(H[i] - C[i - 1]), Math.abs(L[i] - C[i - 1])) : H[i] - L[i]; });
-    var atr = full(tr, 14), squeeze = new Array(n).fill(0), momentum = new Array(n).fill(0);
+    var atr = full(tr, 14), squeeze = new Array(n).fill(0), momentum = new Array(n).fill(0), momentum2 = new Array(n).fill(0);
     for (var i = 260; i < n; i++) {
       var hi = -Infinity, lo = Infinity;
       for (var k = i - 12; k < i; k++) { hi = Math.max(hi, H[k]); lo = Math.min(lo, L[k]); }
       var up = e20[i] > e50[i] && e50[i] > e200[i], down = e20[i] < e50[i] && e50[i] < e200[i];
       if (hi - lo < 3 * atr[i] && V[i] > 1.4 * v20[i]) squeeze[i] = up && C[i] > hi ? 1 : down && C[i] < lo ? -1 : 0;
-      if (Math.abs(C[i] - O[i]) > 0.7 * atr[i])
-        momentum[i] = up && C[i] > O[i] && C[i - 1] > O[i - 1] ? 1 : down && C[i] < O[i] && C[i - 1] < O[i - 1] ? -1 : 0;
+      var body = Math.abs(C[i] - O[i]);
+      var same = up && C[i] > O[i] && C[i - 1] > O[i - 1] ? 1 : down && C[i] < O[i] && C[i - 1] < O[i - 1] ? -1 : 0;
+      if (body > 0.7 * atr[i]) momentum[i] = same;
+      if (body > 0.75 * atr[i]) momentum2[i] = same;   // crypto_futures_10000_replay: Momentum2
     }
-    return { squeeze: squeeze, momentum: momentum, atr: atr };
+    return { squeeze: squeeze, momentum: momentum, momentum2: momentum2, v20: v20, atr: atr };
   }
 
   function rejection(b) {
@@ -957,6 +967,12 @@ a{color:var(--accent)}
       var dir = ind.momentum[i];
       if (!dir || (id === "squeeze_long" && dir !== 1)) return null;
       for (var j = Math.max(260, i - 8); j <= i; j++) if (ind.squeeze[j] === dir) return { dir: dir, dist: 2.5 * ind.atrEma[i], rr: 5 };
+      return null;
+    }
+    if (id === "squeeze3_long" || id === "squeeze3_ls") {
+      var d2 = ind.momentum2[i];
+      if (!d2 || (id === "squeeze3_long" && d2 !== 1) || !((bars[i].volume || 0) >= 1.8 * ind.v20[i])) return null;
+      for (var j2 = i - 3; j2 <= i; j2++) if (ind.squeeze[j2] === d2) return { dir: d2, dist: 1.8 * ind.atrEma[i], rr: 5 };
       return null;
     }
     var b = bars[i], atr = ind.atr[i];
@@ -1030,12 +1046,13 @@ a{color:var(--accent)}
    * R uses the risk at entry and includes round-trip costs. */
   function runTechnique(id, bars, ind, from, to, opt) {
     var trades = [], pos = null, cost = 2 * (opt.fee + opt.slippage), spec = byId[id] || {};
-    var hold = spec.hold || opt.maxHoldBars;
+    var hold = spec.hold || opt.maxHoldBars, funding = spec.fundingPer8h || 0;
     function close(i, exit, reason) {
       var risk = Math.abs(pos.entry - pos.stop);
       trades.push({ technique: id, side: pos.dir > 0 ? "long" : "short", entry_time: bars[pos.bar].time, exit_time: bars[i].time,
         entry: pos.entry, stop: pos.stop, target: pos.target, exit: exit,
-        r: pos.dir * (exit - pos.entry) / risk - cost * pos.entry / risk, reason: reason });
+        r: pos.dir * (exit - pos.entry) / risk - (cost + funding * (bars[i].time - bars[pos.bar - 1].time) / 28800000) * pos.entry / risk,
+        reason: reason });
       pos = null;
     }
     for (var i = from; i < to; i++) {
@@ -1638,9 +1655,9 @@ a{color:var(--accent)}
         "คุณคือผู้ช่วยตรวจความเสี่ยงก่อนเปิดไม้ Crypto Futures ตอบเป็นภาษาไทย สั้น กระชับ",
         "กฎ: ใช้ตัวเลขที่ให้มาเท่านั้น ห้ามแต่งราคาหรือสถิติเพิ่ม; ใช้ Google Search หาข่าวใน 24 ชม. ล่าสุดของ " + coin +
           " และตลาด crypto/เศรษฐกิจสหรัฐที่กระทบราคา (CPI, FOMC, ETF, hack, delist, liquidation ใหญ่) ถ้าไม่พบให้บอกว่าไม่พบ ห้ามเดาข่าว",
-        "สัญญาณจากระบบ (สูตร Momentum + Squeeze แท่ง 1 ชม. ยังไม่พิสูจน์ว่าทำกำไร):",
+        "สัญญาณจากระบบ (" + g.stratName + " แท่ง 1 ชม. ยังไม่พิสูจน์ว่าทำกำไรกับข้อมูลใหม่):",
         "- เหรียญ " + r.symbol + " ฝั่ง " + (g.dir > 0 ? "LONG" : "SHORT") + " เข้า " + price(g.entry) + " SL " + price(g.stop) + " (" + fmt(g.stopPct, 2) + "%)",
-        "- TP1/TP2/TP3 " + g.tps.map(price).join(" / ") + " ถือไม่เกิน 24 ชม.",
+        "- TP1/TP2/TP3 " + g.tps.map(price).join(" / ") + " ถือไม่เกิน " + g.hold + " ชม.",
         "- แนวโน้ม EMA50/200 แท่ง 1 ชม.: " + (g.trend > 0 ? "ขาขึ้น" : g.trend < 0 ? "ขาลง" : "ไม่ชัด"),
         "- สูตรนี้กับเหรียญนี้ 100 วันล่าสุด: " + (h.trades || 0) + " ไม้, win " + fmt(h.win_rate, 0) + "%, เฉลี่ย " + fmt(h.exp_r, 2, true) + "R",
         "- Leverage ที่ระบบคำนวณ x" + g.lev + " (ไม่ควรเกิน x" + g.levLiq + "), ราคา Liquidate " + price(g.liq),
@@ -1747,10 +1764,11 @@ a{color:var(--accent)}
   function futuresCard(symbol, bars, fx, lev) {
     var opt = Object.assign({}, Swing.DEFAULTS, { fee: FUT.fee, slippage: FUT.slippage }), n = bars.length;
     var ind = Swing.indicators(bars, opt), last = bars[n - 1];
-    var hist = Swing.stats(Swing.runTechnique("squeeze_ls", bars, ind, 270, n, opt), 0.01);
+    var tech = $("sgStrat").value, spec = Swing.TECHNIQUES.filter(function (t) { return t.id === tech; })[0];
+    var hist = Swing.stats(Swing.runTechnique(tech, bars, ind, 270, n, opt), 0.01);
     var e = ind.e50[n - 1], e2 = ind.e200[n - 1];
     var out = { symbol: symbol, close: last.close, trend: e > e2 && last.close > e2 ? 1 : e < e2 && last.close < e2 ? -1 : 0, hist: hist, signal: null };
-    var sig = Swing.signal("squeeze_ls", bars, ind, n - 1, opt);
+    var sig = Swing.signal(tech, bars, ind, n - 1, opt);
     if (!sig || !(sig.dist / last.close >= 0.0015)) return out;
     var plan = Portfolio.plan(), dir = sig.dir, entry = last.close, dist = sig.dist, cost = 2 * (FUT.fee + FUT.slippage);
     var balance = plan.balance / fx, riskUsdt = balance * plan.riskPct / 100, stopFrac = dist / entry;
@@ -1767,7 +1785,7 @@ a{color:var(--accent)}
     out.signal = { dir: dir, entry: entry, stop: entry - dir * dist, tps: [1, 2, 5].map(function (r) { return entry + dir * r * dist; }),
       qty: +qty.toPrecision(4), notional: notional, margin: notional / rec, liq: liq, riskUsdt: riskUsdt, lev: rec, levLiq: levLiq,
       sizeLimited: sizeLimited, expires: last.close_time + 1 + FUT.enterWithinMin * 60000, stopPct: stopFrac * 100,
-      trend: out.trend, hist: hist };
+      trend: out.trend, hist: hist, stratName: spec.name, hold: spec.hold, stopAtr: spec.stopAtr || 2.5 };
     return out;
   }
 
@@ -1784,14 +1802,14 @@ a{color:var(--accent)}
       if (g) {
         body = '<div class="levels"><div><small>เข้า (Market)</small><b>' + price(g.entry) + '</b></div><div><small>SL (' + fmt(g.stopPct, 2) + '%)</small><b class="down">' + price(g.stop) +
           '</b></div><div><small>TP1 · TP2 · TP3</small><b class="up" style="font-size:13px">' + g.tps.map(price).join("<br>") + "</b></div></div>" +
-          "<small>TP1 = 1R · TP2 = 2R · TP3 = 5R · ถือไม่เกิน 24 ชม. · เข้าก่อน " + thai(g.expires).slice(9) + " น.<br>" +
+          "<small>TP1 = 1R · TP2 = 2R · TP3 = 5R · SL " + g.stopAtr + " ATR · ถือไม่เกิน " + g.hold + " ชม. · เข้าก่อน " + thai(g.expires).slice(9) + " น.<br>" +
           '<b style="font-size:16px">Leverage แนะนำ x' + g.lev + "</b> · ไม่ควรเกิน x" + g.levLiq + " (Liquidate ต้องไกลกว่า SL 1.5 เท่า)<br>" +
           "ขนาด " + g.qty + " " + name + " (≈ " + fmt(g.notional, 0) + " USDT) · Margin ≈ " + fmt(g.margin, 1) + " USDT · ถ้าโดน SL เสีย ≈ " +
           fmt(g.riskUsdt * fx, 0) + " ฿<br>ราคา Liquidate ≈ " + price(g.liq) + "</small>" +
           (g.sizeLimited ? '<div class="banner wait" style="margin:8px 0 0;font-size:13px">ทุนน้อยเมื่อเทียบกับไม้นี้: ลดขนาดลงให้ Margin ไม่เกิน 25% ของทุน (เสี่ยงน้อยกว่าที่ตั้งไว้)</div>' : "") +
           '<div id="ai-' + r.symbol + '"></div>' +
           '<br><button class="mini" data-record="' + esc(JSON.stringify({ symbol: r.symbol, dir: g.dir, entry: g.entry, stop: g.stop, target: g.tps[2], tps: g.tps,
-            qty: g.qty, fx: fx, risk: g.riskUsdt * fx, fee: FUT.fee + FUT.slippage, lev: g.lev, hold_hours: 24 })) + '">เข้าแล้ว · บันทึกลงพอร์ต</button> ' +
+            qty: g.qty, fx: fx, risk: g.riskUsdt * fx, fee: FUT.fee + FUT.slippage, lev: g.lev, hold_hours: g.hold })) + '">เข้าแล้ว · บันทึกลงพอร์ต</button> ' +
           '<button class="mini ghost" data-ai="' + r.symbol + '">AI วิเคราะห์</button>';
       }
       var stats = h.trades ? "<br><small>สูตรนี้กับ " + name + " 100 วันล่าสุด: " + h.trades + " ไม้ · win " + fmt(h.win_rate, 0) + "% · เฉลี่ย " + fmt(h.exp_r, 2, true) + "R</small>" :
@@ -1929,12 +1947,15 @@ a{color:var(--accent)}
   };
   $("scan").onclick = scan;
   function modeHelp() {
+    var v2 = $("sgStrat").value === "squeeze3_ls";
     $("sgHelp").textContent = $("sgMode").value === "futures"
-      ? "สูตร Momentum + Squeeze (ONE BEST COMBO) แท่ง 1 ชม.: เทรนด์ EMA20/50/200 + บีบตัวแล้วทะลุพร้อม Volume + แท่งโมเมนตัม · SL 2.5 ATR · TP1/TP2/TP3 = 1R/2R/5R · ถือไม่เกิน 24 ชม. · ขนาดไม้คิดจาก % เสี่ยงในแท็บพอร์ต ไม่ใช่จาก Leverage"
+      ? (v2 ? "Squeeze v2 แท่ง 1 ชม.: เทรนด์ EMA20/50/200 + บีบตัวแล้วทะลุภายใน 3 ชม. + แท่งโมเมนตัม 2 แท่ง + Volume ≥ 1.8 เท่า · SL 1.8 ATR · TP1/2/3 = 1R/2R/5R · ถือไม่เกิน 48 ชม."
+          : "Squeeze v1 แท่ง 1 ชม.: เทรนด์ EMA20/50/200 + บีบตัวแล้วทะลุภายใน 8 ชม. + แท่งโมเมนตัม · SL 2.5 ATR · TP1/2/3 = 1R/2R/5R · ถือไม่เกิน 24 ชม.") +
+        " · ขนาดไม้คิดจาก % เสี่ยงในแท็บพอร์ต ไม่ใช่จาก Leverage"
       : "Spot: สแกนแนวโน้ม 1 ชม. เลือกกลยุทธ์ที่ได้ผลดีสุดใน 90 วันล่าสุดของแต่ละเหรียญ แล้วดูแท่ง 15 นาทีที่เพิ่งปิด";
-    $("sgLev").disabled = $("sgMode").value !== "futures";
+    $("sgLev").disabled = $("sgStrat").disabled = $("sgMode").value !== "futures";
   }
-  ["sgMode", "sgLev"].forEach(function (id) {
+  ["sgMode", "sgLev", "sgStrat"].forEach(function (id) {
     try { var v = localStorage.getItem(id); if (v !== null) $(id).value = v; } catch (e) { /* ignore */ }
     $(id).addEventListener("change", function () { try { localStorage.setItem(id, $(id).value); } catch (e) { /* ignore */ } modeHelp(); });
   });
