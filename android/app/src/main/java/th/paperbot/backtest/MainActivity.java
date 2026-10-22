@@ -59,6 +59,9 @@ public class MainActivity extends Activity {
             }
         });
         setContentView(web);
+        if (Alerts.isEnabled(this)) {
+            Alerts.armAlarm(this);
+        }
         if (savedInstanceState != null) {
             web.restoreState(savedInstanceState);
         } else {

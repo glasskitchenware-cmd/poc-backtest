@@ -1,5 +1,6 @@
 package th.paperbot.backtest;
 
+import android.app.AlarmManager;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -15,7 +16,7 @@ import android.os.Build;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-/** Background scan every 15 minutes and a notification for each new set of signals. */
+/** Scan right after every 1H candle closes (exact alarm), a 15-minute backup job, and one notification per new signal. */
 final class Alerts {
     private static final int JOB_ID = 15;
     private static final String CHANNEL = "signals";
@@ -33,14 +34,39 @@ final class Alerts {
         JobScheduler scheduler = (JobScheduler) context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
         if (!enabled) {
             scheduler.cancel(JOB_ID);
+            alarms(context).cancel(alarmIntent(context));
             return;
         }
+        armAlarm(context);
         JobInfo job = new JobInfo.Builder(JOB_ID, new ComponentName(context, ScanJobService.class))
                 .setPeriodic(15 * 60 * 1000L)
                 .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
                 .setPersisted(true)
                 .build();
         scheduler.schedule(job);
+    }
+
+    /** Next alarm 40 s after the coming hour, when Binance has the closed 1H candle. */
+    static void armAlarm(Context context) {
+        long hour = 3600000L, at = (System.currentTimeMillis() / hour + 1) * hour + 40000L;
+        AlarmManager manager = alarms(context);
+        PendingIntent pending = alarmIntent(context);
+        if (Build.VERSION.SDK_INT >= 31 && !manager.canScheduleExactAlarms()) {
+            manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending);
+        } else if (Build.VERSION.SDK_INT >= 23) {
+            manager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending);
+        } else {
+            manager.setExact(AlarmManager.RTC_WAKEUP, at, pending);
+        }
+    }
+
+    private static AlarmManager alarms(Context context) {
+        return (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+    }
+
+    private static PendingIntent alarmIntent(Context context) {
+        Intent intent = new Intent(context, AlarmReceiver.class).setAction(AlarmReceiver.ACTION_SCAN);
+        return PendingIntent.getBroadcast(context, 1, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
     /** Notifies once per closed candle and set of coins; scan errors stay silent. */
@@ -51,6 +77,10 @@ final class Alerts {
             if (signals == null || signals.length() == 0) {
                 return;
             }
+            long candle = result.optLong("candle");
+            if (candle > 0 && System.currentTimeMillis() - candle > 20 * 60000L) {
+                return;   // the 15-minute entry window has passed: a late alert would only invite chasing
+            }
             StringBuilder coins = new StringBuilder();
             StringBuilder detail = new StringBuilder();
             for (int i = 0; i < signals.length(); i++) {
@@ -60,10 +90,10 @@ final class Alerts {
                     detail.append("\n");
                 }
                 coins.append(s.getString("coin"));
-                detail.append(s.getString("coin")).append(" ซื้อ ~").append(s.getString("entry"))
-                        .append(" · stop ").append(s.getString("stop")).append(" · เป้า ").append(s.getString("target"));
+                detail.append(s.getString("coin")).append(" · เข้า ~").append(s.getString("entry"))
+                        .append(" · SL ").append(s.getString("stop")).append(" · TP ").append(s.getString("target"));
             }
-            String key = result.optLong("candle") + ":" + coins;
+            String key = candle + ":" + coins;
             SharedPreferences prefs = prefs(context);
             if (key.equals(prefs.getString("last", ""))) {
                 return;
@@ -73,7 +103,11 @@ final class Alerts {
             if (!note.isEmpty()) {
                 detail.append("\n").append(note);
             }
-            show(context, "สัญญาณเข้า: " + coins, detail.toString());
+            if (candle > 0) {
+                detail.append("\nเข้าได้ถึง ").append(new java.text.SimpleDateFormat("HH:mm", java.util.Locale.US)
+                        .format(new java.util.Date(candle + 15 * 60000L))).append(" น. · เลยเวลานี้ให้ข้าม");
+            }
+            show(context, "เข้าได้เลย: " + coins, detail.toString());
         } catch (Exception ignored) {
             // A malformed result must never crash the background job.
         }

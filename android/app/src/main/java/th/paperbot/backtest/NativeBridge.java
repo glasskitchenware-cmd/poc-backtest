@@ -3,6 +3,7 @@ package th.paperbot.backtest;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.content.Intent;
 import android.os.Handler;
 import android.os.Looper;
 import android.webkit.JavascriptInterface;
@@ -132,6 +133,42 @@ final class NativeBridge {
         } catch (Exception error) {
             return "";
         }
+    }
+
+    /** Opens the screen where the user lets the app run in the background (no battery optimisation). */
+    @JavascriptInterface
+    public void openBatterySettings() {
+        main.post(() -> {
+            Intent intent;
+            if (android.os.Build.VERSION.SDK_INT >= 23) {
+                intent = new Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                        android.net.Uri.parse("package:" + context.getPackageName()));
+            } else {
+                intent = new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                        android.net.Uri.parse("package:" + context.getPackageName()));
+            }
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            try {
+                context.startActivity(intent);
+            } catch (Exception error) {
+                try {
+                    context.startActivity(new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            android.net.Uri.parse("package:" + context.getPackageName())).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                } catch (Exception ignored) {
+                    // No settings screen available.
+                }
+            }
+        });
+    }
+
+    /** True when Android will not delay the app's alarms to save battery. */
+    @JavascriptInterface
+    public boolean batteryUnrestricted() {
+        if (android.os.Build.VERSION.SDK_INT < 23) {
+            return true;
+        }
+        android.os.PowerManager power = (android.os.PowerManager) context.getSystemService(Context.POWER_SERVICE);
+        return power != null && power.isIgnoringBatteryOptimizations(context.getPackageName());
     }
 
     @JavascriptInterface

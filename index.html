@@ -151,7 +151,8 @@ a{color:var(--accent)}
   </details>
   <p class="muted" style="margin:8px 0 0;font-size:13px" id="sgHelp"></p>
   <button id="scan">สแกนหาสัญญาณตอนนี้</button>
-  <label class="checks" style="margin-top:10px"><input type="checkbox" id="autoScan"> <span id="autoScanLabel">สแกนเองทุก 15 นาที (ต้องเปิดหน้านี้ไว้)</span></label>
+  <label class="checks" style="margin-top:10px"><input type="checkbox" id="autoScan"> <span id="autoScanLabel">เด้งทันทีเมื่อมีสัญญาณเข้าได้ (ต้องเปิดหน้านี้ไว้)</span></label>
+  <div id="batteryBox" class="notice hidden">มือถือยังจำกัดแบตแอปนี้อยู่ แจ้งเตือนอาจช้าหรือไม่เด้ง<br><button class="mini" id="batteryBtn">อนุญาตให้ทำงานเบื้องหลัง</button><br><small>OPPO/realme/Xiaomi: เข้า ตั้งค่า → แอป → POC Signal → แบตเตอรี่ → เลือก "ไม่จำกัด" และเปิด "เริ่มอัตโนมัติ" ด้วย</small></div>
   <div id="scanStatus" class="status-line">ใช้เวลาประมาณ 1 นาที ใช้ทุนจากช่อง "ทุน" ในแท็บ Backtest (ค่าเริ่มต้น 10,000 บาท)</div>
 </section>
 <div id="scanSummary"></div>
@@ -2297,16 +2298,24 @@ a{color:var(--accent)}
   function scheduleAuto() {
     clearTimeout(autoTimer);
     if (!$("autoScan").checked) return;
-    var wait = Engine.BAR_MS - (Date.now() % Engine.BAR_MS) + 20000;
+    var bar = $("sgMode").value === "futures" ? 3600000 : Engine.BAR_MS, wait = bar - (Date.now() % bar) + 40000;
     autoTimer = setTimeout(function () { scan(); scheduleAuto(); }, wait);
   }
   var nativeAlerts = !!(window.NativeHttp && window.NativeHttp.setAlerts);
   if (nativeAlerts) {
-    $("autoScanLabel").textContent = "แจ้งเตือนทุก 15 นาที แม้ปิดแอป";
+    $("autoScanLabel").textContent = "เด้งทันทีเมื่อมีสัญญาณเข้าได้ (เช็กทุกครั้งที่แท่ง 1 ชม. ปิด) แม้ปิดแอป";
     try { $("autoScan").checked = window.NativeHttp.alertsEnabled(); } catch (e) { /* ignore */ }
   }
+  function batteryCheck() {
+    var show = false;
+    try { show = nativeAlerts && $("autoScan").checked && window.NativeHttp.batteryUnrestricted && !window.NativeHttp.batteryUnrestricted(); } catch (e) { /* ignore */ }
+    $("batteryBox").classList.toggle("hidden", !show);
+  }
+  $("batteryBtn").onclick = function () { try { window.NativeHttp.openBatterySettings(); } catch (e) { /* ignore */ } };
+  document.addEventListener("visibilitychange", function () { if (!document.hidden) batteryCheck(); });
+  setTimeout(batteryCheck, 500);
   $("autoScan").onchange = function () {
-    if (nativeAlerts) { window.NativeHttp.setAlerts($("autoScan").checked); return; }
+    if (nativeAlerts) { window.NativeHttp.setAlerts($("autoScan").checked); batteryCheck(); return; }
     if ($("autoScan").checked && window.Notification && Notification.permission === "default") {
       try { Notification.requestPermission(); } catch (e) { /* optional */ }
     }
@@ -2588,7 +2597,7 @@ a{color:var(--accent)}
         tab: "portTab", target: "pp2026", done: function () { return !!flags().test2026; } },
       { id: "paper", title: "เริ่ม Paper Trading", how: "แท็บพอร์ต → ปุ่ม \"เริ่ม Paper วันนี้\" แอปจะจดผลให้เองนับจากวันนี้",
         tab: "portTab", target: "ppStart", done: function () { return has("paper.v2"); } },
-      { id: "alerts", title: "เปิดแจ้งเตือนสัญญาณ", how: "แท็บสัญญาณ → ติ๊ก \"แจ้งเตือนทุก 15 นาที\" แล้วกดอนุญาตการแจ้งเตือน (ในแอป Android ตั้งแบตเตอรี่เป็น \"ไม่จำกัด\" ด้วย)",
+      { id: "alerts", title: "เปิดแจ้งเตือนสัญญาณ", how: "แท็บสัญญาณ → ติ๊ก \"เด้งทันทีเมื่อมีสัญญาณเข้าได้\" แล้วกดอนุญาตการแจ้งเตือน (ในแอป Android ตั้งแบตเตอรี่เป็น \"ไม่จำกัด\" ด้วย)",
         tab: "signalTab", target: "autoScan", done: function () { return $("autoScan").checked; } },
       { id: "ai", title: "(ไม่บังคับ) ใส่ Gemini API key ให้ AI ช่วยเช็กข่าว", how: "แตะ \"พาไป\" → กดปุ่ม ① เปิดหน้าเอาคีย์ → Create API key → คัดลอก → กลับมากด ② วางคีย์ → ทดสอบคีย์",
         tab: "signalTab", target: "aiGetKey", done: function () { return !!$("aiKey").value.trim(); }, optional: true },
