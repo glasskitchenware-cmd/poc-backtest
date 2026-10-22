@@ -18,6 +18,7 @@ jobs:
       - run: python -m pip install -r requirements_crypto_mtf.txt
       - run: python CRYPTO_MTF_10000_M5_M15_V3.py --selftest
       - run: python CRYPTO_MTF_10000_M5_M15_V3.py
+      - run: python summarize.py
       - if: always()
         uses: actions/upload-artifact@v4
         with:
