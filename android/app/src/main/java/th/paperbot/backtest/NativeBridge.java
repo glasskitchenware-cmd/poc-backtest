@@ -171,6 +171,37 @@ final class NativeBridge {
         return power != null && power.isIgnoringBatteryOptimizations(context.getPackageName());
     }
 
+    /** False when the user has blocked this app's notifications in Android settings. */
+    @JavascriptInterface
+    public boolean notificationsAllowed() {
+        return Alerts.notificationsAllowed(context);
+    }
+
+    @JavascriptInterface
+    public void testNotification() {
+        main.post(() -> Alerts.show(context, "ทดสอบแจ้งเตือน ✓",
+                "ถ้าเห็นข้อความนี้ แปลว่าแจ้งเตือนสัญญาณเด้งได้ · ของจริงจะขึ้นว่า \"เข้าได้เลย: BTC LONG x10\""));
+    }
+
+    @JavascriptInterface
+    public void openNotificationSettings() {
+        main.post(() -> {
+            Intent intent;
+            if (android.os.Build.VERSION.SDK_INT >= 26) {
+                intent = new Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                        .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, context.getPackageName());
+            } else {
+                intent = new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                        android.net.Uri.parse("package:" + context.getPackageName()));
+            }
+            try {
+                context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            } catch (Exception ignored) {
+                // No settings screen available.
+            }
+        });
+    }
+
     @JavascriptInterface
     public boolean alertsEnabled() {
         return Alerts.isEnabled(context);

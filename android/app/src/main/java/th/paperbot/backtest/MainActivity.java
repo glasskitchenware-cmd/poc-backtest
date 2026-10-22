@@ -29,16 +29,17 @@ public class MainActivity extends Activity {
         bridge = new NativeBridge(this, web, new NativeBridge.Host() {
             @Override
             public void onScanDone(String json) {
-                // The open app shows signals on screen; background scans notify.
+                // Scans in the open app notify too (same once-per-candle rule as background scans).
+                Alerts.onScan(MainActivity.this, json);
             }
 
             @Override
             public void onAlertsChanged(boolean enabled) {
-                if (enabled && Build.VERSION.SDK_INT >= 33
-                        && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                    requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 1);
+                if (enabled) {
+                    enableAlerts();
+                } else {
+                    Alerts.setEnabled(MainActivity.this, false);
                 }
-                Alerts.setEnabled(MainActivity.this, enabled);
             }
         });
         web.addJavascriptInterface(bridge, "NativeHttp");
@@ -59,7 +60,9 @@ public class MainActivity extends Activity {
             }
         });
         setContentView(web);
-        if (Alerts.isEnabled(this)) {
+        if (Alerts.isFirstRun(this)) {
+            enableAlerts();
+        } else if (Alerts.isEnabled(this)) {
             Alerts.armAlarm(this);
         }
         if (savedInstanceState != null) {
@@ -67,6 +70,14 @@ public class MainActivity extends Activity {
         } else {
             web.loadUrl("file:///android_asset/index.html");
         }
+    }
+
+    private void enableAlerts() {
+        if (Build.VERSION.SDK_INT >= 33
+                && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 1);
+        }
+        Alerts.setEnabled(this, true);
     }
 
     @Override

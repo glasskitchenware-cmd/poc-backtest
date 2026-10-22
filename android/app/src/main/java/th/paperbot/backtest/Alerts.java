@@ -29,6 +29,21 @@ final class Alerts {
         return prefs(context).getBoolean("enabled", false);
     }
 
+    /** True once per install/update to 3.3: alerts get switched on by default. */
+    static boolean isFirstRun(Context context) {
+        SharedPreferences prefs = prefs(context);
+        if (prefs.getBoolean("defaultOn", false)) {
+            return false;
+        }
+        prefs.edit().putBoolean("defaultOn", true).apply();
+        return true;
+    }
+
+    static boolean notificationsAllowed(Context context) {
+        NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        return manager == null || Build.VERSION.SDK_INT < 24 || manager.areNotificationsEnabled();
+    }
+
     static void setEnabled(Context context, boolean enabled) {
         prefs(context).edit().putBoolean("enabled", enabled).apply();
         JobScheduler scheduler = (JobScheduler) context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
@@ -113,7 +128,7 @@ final class Alerts {
         }
     }
 
-    private static void show(Context context, String title, String text) {
+    static void show(Context context, String title, String text) {
         NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         if (Build.VERSION.SDK_INT >= 26) {
             manager.createNotificationChannel(new NotificationChannel(CHANNEL, "สัญญาณเทรด",
@@ -130,7 +145,9 @@ final class Alerts {
                 .setContentText(text)
                 .setStyle(new Notification.BigTextStyle().bigText(text))
                 .setContentIntent(tap)
-                .setAutoCancel(true);
+                .setAutoCancel(true)
+                .setDefaults(Notification.DEFAULT_ALL)
+                .setPriority(Notification.PRIORITY_HIGH);
         manager.notify((int) (System.currentTimeMillis() / 1000), builder.build());
     }
 

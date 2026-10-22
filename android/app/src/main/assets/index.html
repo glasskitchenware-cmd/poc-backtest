@@ -133,6 +133,8 @@ a{color:var(--accent)}
   <h2>ตั้งค่า</h2>
   <label for="pfCapital">เงินทุน (บาท)</label><input id="pfCapital" type="number" inputmode="decimal" value="10000">
   <label class="checks" style="margin-top:12px"><input type="checkbox" id="autoScan"> <span id="autoScanLabel">เด้งเมื่อมีสัญญาณเข้าได้ (ต้องเปิดหน้านี้ไว้)</span></label>
+  <div id="notifBox" class="notice hidden" style="border-color:var(--down);background:rgba(246,70,93,.1)">แจ้งเตือนของแอปนี้ถูกปิดอยู่ในมือถือ สัญญาณจะไม่เด้ง<br><button class="mini" id="notifBtn">เปิดการแจ้งเตือน</button></div>
+  <button class="mini ghost hidden" id="notifTest" type="button" style="width:100%;margin-top:8px">ทดสอบแจ้งเตือน (ต้องเด้งภายใน 2 วินาที)</button>
   <div id="batteryBox" class="notice hidden">มือถือยังจำกัดแบตแอปนี้อยู่ แจ้งเตือนอาจไม่เด้ง<br><button class="mini" id="batteryBtn">อนุญาตให้ทำงานเบื้องหลัง</button><br><small>OPPO/realme/Xiaomi: ตั้งค่า → แอป → POC Signal → แบตเตอรี่ → "ไม่จำกัด" และเปิด "เริ่มอัตโนมัติ"</small></div>
   <details style="margin-top:12px"><summary>วันประกาศ FOMC (วันงดเข้าไม้)</summary>
     <textarea id="sgFomc" rows="4" style="width:100%;background:var(--deep);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:8px;font:12px ui-monospace,monospace"></textarea>
@@ -2348,10 +2350,16 @@ a{color:var(--accent)}
     try { $("autoScan").checked = window.NativeHttp.alertsEnabled(); } catch (e) { /* ignore */ }
   }
   function batteryCheck() {
+    var blocked = false;
+    try { blocked = nativeAlerts && window.NativeHttp.notificationsAllowed && !window.NativeHttp.notificationsAllowed(); } catch (e) { /* ignore */ }
+    $("notifBox").classList.toggle("hidden", !blocked);
+    $("notifTest").classList.toggle("hidden", !(nativeAlerts && window.NativeHttp.testNotification));
     var show = false;
     try { show = nativeAlerts && $("autoScan").checked && window.NativeHttp.batteryUnrestricted && !window.NativeHttp.batteryUnrestricted(); } catch (e) { /* ignore */ }
     $("batteryBox").classList.toggle("hidden", !show);
   }
+  $("notifBtn").onclick = function () { try { window.NativeHttp.openNotificationSettings(); } catch (e) { /* ignore */ } };
+  $("notifTest").onclick = function () { try { window.NativeHttp.testNotification(); } catch (e) { /* ignore */ } setTimeout(batteryCheck, 800); };
   $("batteryBtn").onclick = function () { try { window.NativeHttp.openBatterySettings(); } catch (e) { /* ignore */ } };
   document.addEventListener("visibilitychange", function () { if (!document.hidden) batteryCheck(); });
   setTimeout(batteryCheck, 500);
