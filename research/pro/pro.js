@@ -5,6 +5,7 @@
 // Execution: signal on a closed bar, entry/exit at the next open, stops checked inside the bar (gaps fill at
 // the open), one position per coin. Costs: 0.05% fee + 0.02% slippage per side, funding 0.01%/8h always paid.
 // Usage: node pro.js COINS   (bars from ../evidence/bars/<COIN>_<TF>.json)
+// The last section checks the app's copy of the chosen rule (web/trend.js) against this file; see qc().
 const fs = require("fs");
 const COINS = process.argv[2].split(",");
 const FEE = 0.0005, SLIP = 0.0002, FUNDING = 0.0001, H = 3600000;
@@ -116,11 +117,13 @@ const runs = grid.map(P => {
 
 // Walk-forward selection.
 let oos = [];
+const picks = [];
 console.log("== WALK-FORWARD (choose on years before, trade the year) ==");
 for (const Y of YEARS) {
   const scored = runs.map(r => ({ r, s: stats(r.tr.filter(t => t.t < ms(Y))) })).filter(x => x.s.n >= 60).sort((a, b) => b.s.t - a.s.t);
   const pick = scored[0], test = pick.r.tr.filter(t => t.t >= ms(Y) && t.t < ms(Y + 1));
   oos = oos.concat(test);
+  picks.push({ Y, P: pick.r.P });
   console.log(`${Y}: chose ${label(pick.r.P)} (train n=${pick.s.n} avgR ${pick.s.avgR} t ${pick.s.t}) -> ${Y} ${JSON.stringify(stats(test))}`);
 }
 const from = ms(2022), to = Date.UTC(2026, 9, 1);
@@ -139,3 +142,116 @@ for (const P of [{ fam: "donchian", tf: "1d", n: 20, m: 10, k: 2, trend: false }
 console.log("\n== ALL VARIANTS 2022-2026 (for reference only; not used to choose) ==");
 for (const r of runs) console.log(label(r.P).padEnd(40), JSON.stringify(stats(r.tr.filter(t => t.t >= from))));
 console.log("\nper coin (walk-forward OOS):", COINS.map(c => { const s = stats(oos.filter(t => t.coin === c)); return `${c.replace("USDT", "")} ${s.n} ${s.avgR}`; }).join(" · "));
+
+// ---- QC of the rule the app trades: web/trend.js, Donchian 4h 20/10, stop 3 ATR, EMA200 filter ----
+// 1. Parity: web/trend.js and backtest() above give identical trades on the full history.
+// 2. Live replay: at sampled closed bars, the app's live call on the 1,500 bars it downloads (250 days) returns
+//    the same decision (enter / exit / nothing) and the same open position as the full-history backtest.
+// 3. Evidence for the years in which the walk-forward chose this rule, with the app's own filter (a signal is
+//    not sent when the stop is too wide for 5x after the liquidation buffer), costs x2, open positions at once,
+//    stop distance -> leverage, and portfolio results by risk per trade. Ends with one JSON line for the app.
+(function qc() {
+  const Trend = require("../../web/trend.js");
+  const CHOSEN = { fam: "donchian", tf: "4h", n: 20, m: 10, k: 3, trend: true }, W = 1500, MMR_SAFE = 0.01;
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const app = c => data[c + "4h"].map(x => ({ time: x.t, open: x.o, high: x.h, low: x.l, close: x.c, close_time: x.ct }));
+  const levLiq = t => Math.max(1, Math.floor(1 / (1.5 * t.risk / t.entry + MMR_SAFE)));
+  const wilson = (k, n) => {
+    if (!n) return [null, null];
+    const z = 1.96, p = k / n, d = 1 + z * z / n, c = (p + z * z / (2 * n)) / d, h = z * Math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / d;
+    return [+(100 * (c - h)).toFixed(1), +(100 * (c + h)).toFixed(1)];
+  };
+  const pct = (xs, q) => { const s = xs.slice().sort((a, b) => a - b); return s.length ? s[Math.min(s.length - 1, Math.floor(q * s.length))] : null; };
+  const summary = tr => {
+    const n = tr.length; if (!n) return { n: 0 };
+    const m = tr.reduce((a, t) => a + t.r, 0) / n, sd = Math.sqrt(tr.reduce((a, t) => a + (t.r - m) ** 2, 0) / Math.max(1, n - 1)), se = sd / Math.sqrt(n);
+    const w = tr.filter(t => t.r > 0).length, big = tr.filter(t => t.r >= 3).length;
+    const gp = tr.reduce((a, t) => a + Math.max(0, t.r), 0), gl = tr.reduce((a, t) => a - Math.min(0, t.r), 0);
+    return { n, win: +(100 * w / n).toFixed(1), winCI: wilson(w, n), big3: +(100 * big / n).toFixed(1), big3CI: wilson(big, n),
+      avgR: +m.toFixed(3), avgRCI: [+(m - 1.96 * se).toFixed(3), +(m + 1.96 * se).toFixed(3)], pf: gl ? +(gp / gl).toFixed(2) : null,
+      t: +(m / se).toFixed(2), holdDays: +(tr.reduce((a, t) => a + (t.exit_time - t.entry_time), 0) / n / 86400000).toFixed(1) };
+  };
+
+  console.log("\n== QC: APP RULE (web/trend.js) ==");
+  let bad = 0, total = 0;
+  const full = {};
+  for (const c of COINS) {
+    if (!data[c + "4h"]) continue;
+    const a = backtest(data[c + "4h"], CHOSEN, c), b = Trend.run(app(c)).trades;
+    full[c] = b; total += a.length;
+    const diff = a.length !== b.length ? 0 : a.findIndex((t, i) => t.t !== b[i].entry_time || t.tx !== b[i].exit_time || t.dir !== b[i].dir || t.r !== b[i].r);
+    if (a.length !== b.length || diff >= 0) { bad++; console.log("PARITY FAIL", c, "trades", a.length, b.length, "first difference", diff); }
+  }
+  console.log(bad ? `PARITY FAIL on ${bad} coin(s)` : `PARITY OK: web/trend.js = pro.js on ${Object.keys(full).length} coins, ${total} trades, identical entry/exit times, side and R`);
+
+  let checked = 0, decisions = 0, miss = 0;
+  for (const c of Object.keys(full)) {
+    const bars = app(c), tr = full[c], dec = new Map();
+    for (const t of tr) { dec.set(t.entry_index - 1, t.dir); if (t.reason === "exit") dec.set(t.exit_index - 1, "exit"); }
+    const ks = new Set([...dec.keys()].filter(k => k >= W - 1 && k < bars.length - 1));
+    for (let k = W - 1; k < bars.length - 1; k += 11) ks.add(k);
+    for (const k of ks) {
+      const res = Trend.run(bars.slice(k - W + 1, k + 1), { live: true });
+      const got = res.pend ? (res.pend.exit ? "exit" : res.pend.dir) : 0, want = dec.get(k) || 0;
+      const open = tr.find(t => t.entry_index <= k && k < t.exit_index);
+      const gotPos = res.pos ? res.pos.entry_time + ":" + res.pos.dir : "", wantPos = open ? open.entry_time + ":" + open.dir : "";
+      const stopOk = !open || !res.pos || Math.abs(res.pos.stop - open.stop) <= 1e-9 * open.entry;
+      checked++; if (want) decisions++;
+      if (got !== want || gotPos !== wantPos || !stopOk) {
+        if (++miss <= 10) console.log("REPLAY MISMATCH", c, new Date(bars[k].time).toISOString(), "decision", got, "want", want, "position", gotPos, "want", wantPos);
+      }
+    }
+  }
+  console.log(`LIVE REPLAY ${miss ? "FAIL" : "OK"}: ${checked} closed bars checked with a ${W}-bar window (${decisions} of them enter/exit decisions), ${miss} mismatch(es)`);
+
+  let evYears = picks.filter(p => same(p.P, CHOSEN)).map(p => p.Y);
+  console.log("walk-forward chose this rule for:", evYears.join(", ") || "no year (evidence below uses 2023-2026 and is NOT walk-forward)");
+  if (!evYears.length) evYears = [2023, 2024, 2025, 2026];
+  const contiguous = evYears[evYears.length - 1] === 2026 && evYears.every((y, i) => !i || y === evYears[i - 1] + 1);
+  const inYears = (t, ys) => ys.indexOf(new Date(t.entry_time).getUTCFullYear()) >= 0;
+  const all = [].concat(...Object.keys(full).map(c => full[c].map(t => Object.assign({ coin: c }, t))));
+  const ev = all.filter(t => inYears(t, evYears)), evApp = ev.filter(t => levLiq(t) >= 5);
+  console.log("evidence years, all trades:", JSON.stringify(summary(ev)));
+  console.log("evidence years, app filter (lev >= 5x):", JSON.stringify(summary(evApp)), `· filtered out ${ev.length - evApp.length} (${(100 * (ev.length - evApp.length) / Math.max(1, ev.length)).toFixed(1)}%)`,
+    "· those:", JSON.stringify(summary(ev.filter(t => levLiq(t) < 5))));
+  const y2022 = all.filter(t => inYears(t, [2022]) && levLiq(t) >= 5);
+  console.log("2022 (rule not chosen that year), app filter:", JSON.stringify(summary(y2022)));
+  const years = {};
+  for (const Y of YEARS) years[Y] = summary(all.filter(t => inYears(t, [Y]) && levLiq(t) >= 5));
+  console.log("per year, app filter:", JSON.stringify(years));
+  const rows = {};
+  for (const c of Object.keys(full)) rows[c] = summary(evApp.filter(t => t.coin === c));
+  console.log("per coin, evidence years, app filter:", Object.keys(rows).map(c => `${c.replace("USDT", "")} ${rows[c].n} ${rows[c].avgR}`).join(" · "));
+
+  const stress = [].concat(...Object.keys(full).map(c => Trend.run(app(c), { fee: 0.001, slippage: 0.0004, funding: 0.0002 }).trades))
+    .filter(t => inYears(t, evYears) && levLiq(t) >= 5);
+  console.log("costs x2 (fee 0.10% + slippage 0.04% per side, funding 0.02%/8h):", JSON.stringify(summary(stress)));
+
+  const stops = evApp.map(t => 100 * t.risk / t.entry), levs = evApp.map(levLiq);
+  const capped = cap => +(100 * levs.filter(l => l < cap).length / Math.max(1, levs.length)).toFixed(0);
+  const stopInfo = { p10: +pct(stops, 0.1).toFixed(2), p50: +pct(stops, 0.5).toFixed(2), p90: +pct(stops, 0.9).toFixed(2), max: +Math.max(...stops).toFixed(2) };
+  const levInfo = { p10: pct(levs, 0.1), p50: pct(levs, 0.5), p90: pct(levs, 0.9), lowered: { 10: capped(10), 20: capped(20), 50: capped(50) } };
+  console.log("stop distance % (p10/p50/p90/max):", JSON.stringify(stopInfo), "· leverage allowed by the liquidation buffer:", JSON.stringify(levInfo));
+
+  const from = Date.UTC(Math.min(...evYears), 0, 1), to = Date.UTC(2026, 9, 1), STEP = 4 * H;
+  let maxOpen = 0, sumOpen = 0, bars = 0; const counts = [];
+  for (let t = from; t < to; t += STEP) {
+    const k = evApp.filter(x => x.entry_time <= t && t < x.exit_time).length;
+    maxOpen = Math.max(maxOpen, k); sumOpen += k; bars++; counts.push(k);
+  }
+  const conc = { max: maxOpen, avg: +(sumOpen / bars).toFixed(1), p95: pct(counts, 0.95) };
+  console.log("open positions at the same time (12 coins):", JSON.stringify(conc));
+  const flat = evApp.map(t => ({ t: t.entry_time, tx: t.exit_time, r: t.r }));
+  const port = {};
+  for (const risk of [0.0025, 0.005, 0.01]) port[risk * 100] = portfolio(flat, risk, from, to);
+  console.log("portfolio (P&L booked at exit, compounding):", JSON.stringify(port));
+
+  const out = { strategy: "donchian4h", name: "Trend 4H · Donchian 20/10 · SL 3 ATR · EMA200 · Long/Short",
+    period: contiguous ? `${evYears[0]}-01-01..2026-09-30` : evYears.join(", "), years_chosen: evYears,
+    selection: "walk-forward: each year the rule was picked using only earlier years (24 candidates)",
+    costs: "fee 0.05% + slippage 0.02% per side, funding 0.01%/8h", filter: "signals whose stop needs leverage below 5x are not sent",
+    generated: "2026-10-22", all: summary(evApp), y2022: summary(y2022), years, rows, stress: summary(stress), stops: stopInfo, lev: levInfo, open: conc, portfolio: port,
+    parity: bad ? "FAIL" : "OK", replay: miss ? "FAIL" : "OK", replay_checked: checked };
+  console.log("EVIDENCE_TREND=" + JSON.stringify(out));
+  if (bad || miss) process.exitCode = 1;
+})();
