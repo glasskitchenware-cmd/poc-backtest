@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Debug build only: hooks for the emulator end-to-end test (.github/workflows/android-e2e.yml). -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application android:networkSecurityConfig="@xml/debug_network">
+        <receiver
+            android:name=".DebugHooks"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="th.paperbot.backtest.DEBUG_INJECT" />
+                <action android:name="th.paperbot.backtest.DEBUG_SCAN" />
+                <action android:name="th.paperbot.backtest.DEBUG_CONFIG" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

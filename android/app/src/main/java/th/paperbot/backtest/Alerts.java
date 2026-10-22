@@ -13,12 +13,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Build;
 
-import org.json.JSONArray;
 import org.json.JSONObject;
-
-import java.util.Date;
-import java.text.SimpleDateFormat;
-import java.util.Locale;
 
 /**
  * Read-only multi-symbol signal notification scheduler.
@@ -30,6 +25,7 @@ final class Alerts {
     private static final String CHANNEL = "signals";
     private static final String PREFS = "alerts";
     private static final String GROUP = "poc_crypto_signals";
+    private static final int SUMMARY_ID = 7_000_001;
 
     private Alerts() {}
 
@@ -86,7 +82,10 @@ final class Alerts {
     /** Schedule shortly after the NEXT candle boundary. Backup JobScheduler is never exact. */
     static void armAlarm(Context context) {
         long interval = scanMinutes(context) * 60_000L;
-        long when = (System.currentTimeMillis() / interval + 1) * interval + 25_000L;
+        armAlarmAt(context, (System.currentTimeMillis() / interval + 1) * interval + 25_000L);
+    }
+
+    static void armAlarmAt(Context context, long when) {
         AlarmManager manager = alarms(context);
         PendingIntent pending = alarmIntent(context);
         if (Build.VERSION.SDK_INT >= 31 && !manager.canScheduleExactAlarms()) {
@@ -108,59 +107,56 @@ final class Alerts {
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
-    /** Each symbol gets its own notification; dedupe independently across foreground / backup scans. */
+    /**
+     * One notification per coin/side/timeframe/closed candle (see SignalAlerts). A packet that failed, is stale,
+     * or arrives while notifications are blocked posts nothing, and the dedup marks are only written for
+     * notifications actually posted, so a later scan of the same candle can still deliver them.
+     */
     static void onScan(Context context, String json) {
         try {
-            JSONObject packet = new JSONObject(json);
-            if (!packet.optString("error", "").isEmpty()) return;
-            JSONArray items = packet.optJSONArray("signals");
-            if (items == null || items.length() == 0 || !notificationsAllowed(context)) return;
-
-            long candle = packet.optLong("candle", 0);
-            int minutes = packet.optInt("interval_minutes", scanMinutes(context));
-            if (minutes != 5 && minutes != 15 && minutes != 60) return;
-            long now = System.currentTimeMillis();
-            long maxAge = Math.min(minutes * 60_000L, 15 * 60_000L);
-            if (candle <= 0 || candle > now + 60_000L || now - candle > maxAge) return;
-
             SharedPreferences p = prefs(context);
-            for (int i = 0; i < items.length(); i++) {
-                JSONObject item = items.optJSONObject(i);
-                if (item == null) continue;
-                String symbol = item.optString("symbol", "").trim();
-                String side = item.optString("side", "").trim().toUpperCase(Locale.US);
-                if (!symbol.matches("[A-Z0-9]{2,20}USDT") || !(side.equals("LONG") || side.equals("SHORT"))) continue;
-                String tf = minutes == 5 ? "M5" : minutes == 15 ? "M15" : "H1";
-                String dedup = "sent:" + tf + ":" + symbol + ":" + side;
-                if (p.getLong(dedup, -1) >= candle) continue;
-
-                String entry = item.optString("entry", "—");
-                String stop = item.optString("sl", "—");
-                String tp = item.optString("tp5", "—");
-                int leverage = item.optInt("leverage", 0);
-                String title = "ทดลอง " + symbol + " " + side + " · " + tf + (leverage > 0 ? " · " + leverage + "x" : "");
-                StringBuilder body = new StringBuilder();
-                body.append("เข้าอ้างอิง ").append(entry).append("  |  SL ").append(stop)
-                    .append("  |  TP 5R ").append(tp);
-                int sample = item.optInt("samples", 0);
-                double rate = item.optDouble("win_pct", -1);
-                if (sample >= 30 && Double.isFinite(rate) && rate >= 0 && rate <= 100) {
-                    body.append("\nBacktest ย้อนหลัง ").append(sample).append(" ไม้: ชนะ ")
-                        .append(String.format(Locale.US, "%.1f", rate))
-                        .append("% (ไม่ใช่โอกาสชนะครั้งนี้)");
-                } else {
-                    body.append("\nWin rate: ข้อมูลไม่พอ/ยังไม่ผ่านการยืนยัน");
-                }
-                body.append("\nสัญญาณทดลอง · ตรวจราคา Futures ล่าสุดก่อนตัดสินใจ · ไม่มีการส่งคำสั่ง");
-                showSignal(context, title, body.toString(), (dedup + ":" + candle).hashCode());
-                p.edit().putLong(dedup, candle).apply();
+            SignalAlerts.Plan plan = SignalAlerts.plan(json, System.currentTimeMillis(), key -> p.getLong(key, -1));
+            if (!plan.ok) {
+                recordStatus(context, false, plan.status);
+                return;
             }
-        } catch (Exception ignored) {
-            // Never crash the scanning service on malformed data or disabled notification permissions.
+            if (!plan.notes.isEmpty() && !notificationsAllowed(context)) {
+                recordStatus(context, false, plan.status + " · แจ้งเตือนถูกปิดในมือถือ จึงไม่ได้เด้ง " + plan.notes.size() + " สัญญาณ");
+                return;
+            }
+            SharedPreferences.Editor edit = p.edit();
+            for (SignalAlerts.Note note : plan.notes) {
+                showSignal(context, note.title, note.body, note.id(), note.candle);
+                edit.putLong(note.key, note.candle);
+            }
+            edit.apply();
+            if (plan.notes.size() >= 2) {
+                showSummary(context, "สัญญาณทดลอง " + plan.notes.size() + " เหรียญ", SignalAlerts.summaryText(plan.notes));
+            }
+            recordStatus(context, true, plan.status);
+        } catch (Exception error) {
+            // Never crash the scanning service on malformed data.
+            recordStatus(context, false, "ประมวลผลผลสแกนไม่ได้: " + error.getClass().getSimpleName());
         }
     }
 
-    private static void showSignal(Context context, String title, String text, int id) {
+    /** Last scan outcome, shown in the app so failures are visible instead of silent. */
+    static void recordStatus(Context context, boolean ok, String text) {
+        prefs(context).edit().putLong("lastScanAt", System.currentTimeMillis()).putBoolean("lastScanOk", ok)
+                .putString("lastScanText", text == null ? "" : text).apply();
+    }
+
+    static String lastStatusJson(Context context) {
+        SharedPreferences p = prefs(context);
+        try {
+            return new JSONObject().put("at", p.getLong("lastScanAt", 0)).put("ok", p.getBoolean("lastScanOk", false))
+                    .put("text", p.getString("lastScanText", "")).toString();
+        } catch (Exception e) {
+            return "{}";
+        }
+    }
+
+    private static void showSignal(Context context, String title, String text, int id, long when) {
         try {
             NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
             if (manager == null) return;
@@ -174,6 +170,7 @@ final class Alerts {
                 .setContentTitle(title).setContentText(text)
                 .setStyle(new Notification.BigTextStyle().bigText(text))
                 .setContentIntent(tap).setAutoCancel(true)
+                .setWhen(when > 0 ? when : System.currentTimeMillis()).setShowWhen(true)
                 .setDefaults(Notification.DEFAULT_ALL)
                 .setPriority(Notification.PRIORITY_HIGH)
                 .setGroup(GROUP);
@@ -182,7 +179,23 @@ final class Alerts {
     }
 
     static void show(Context context, String title, String text) {
-        showSignal(context, title, text, (int)(System.currentTimeMillis() / 1000L));
+        showSignal(context, title, text, (int)(System.currentTimeMillis() / 1000L), 0);
+    }
+
+    private static void showSummary(Context context, String title, String text) {
+        try {
+            NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+            if (manager == null) return;
+            ensureChannel(manager);
+            Intent open = new Intent(context, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            PendingIntent tap = PendingIntent.getActivity(context, 0, open,
+                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+            Notification.Builder b = Build.VERSION.SDK_INT >= 26
+                ? new Notification.Builder(context, CHANNEL) : new Notification.Builder(context);
+            b.setSmallIcon(R.drawable.ic_notify).setContentTitle(title).setContentText(text)
+                .setContentIntent(tap).setAutoCancel(true).setGroup(GROUP).setGroupSummary(true);
+            manager.notify(SUMMARY_ID, b.build());
+        } catch (Exception ignored) {}
     }
 
     private static void ensureChannel(NotificationManager m) {

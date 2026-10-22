@@ -32,6 +32,8 @@ final class NativeBridge {
 
     private static final List<String> ALLOWED_HOSTS = Arrays.asList(
             "data-api.binance.vision", "api.binance.com", "fapi.binance.com", "fapi1.binance.com", "api.bitkub.com", "open.er-api.com");
+    // Emulator tests only: the host machine as seen from the Android emulator, used when the APK is debuggable.
+    private static final String DEBUG_MOCK_HOST = "10.0.2.2";
     private static final List<String> POST_HOSTS = Arrays.asList("generativelanguage.googleapis.com");
 
     private final Context context;
@@ -57,7 +59,8 @@ final class NativeBridge {
             String body;
             try {
                 URL url = new URL(address);
-                if (!"https".equals(url.getProtocol()) || !ALLOWED_HOSTS.contains(url.getHost())) {
+                boolean debugMock = isDebuggable() && "http".equals(url.getProtocol()) && DEBUG_MOCK_HOST.equals(url.getHost());
+                if (!debugMock && (!"https".equals(url.getProtocol()) || !ALLOWED_HOSTS.contains(url.getHost()))) {
                     throw new IllegalArgumentException("host not allowed: " + url.getHost());
                 }
                 HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -200,6 +203,23 @@ final class NativeBridge {
                 // No settings screen available.
             }
         });
+    }
+
+    /** Last scan outcome recorded by Alerts as JSON {at, ok, text}. */
+    @JavascriptInterface
+    public String lastScanStatus() {
+        return Alerts.lastStatusJson(context);
+    }
+
+    /** Futures API base override for emulator tests; always empty in the release APK. */
+    @JavascriptInterface
+    public String debugFuturesBase() {
+        if (!isDebuggable()) return "";
+        return context.getSharedPreferences("alerts", Context.MODE_PRIVATE).getString("debugFuturesBase", "");
+    }
+
+    private boolean isDebuggable() {
+        return (context.getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0;
     }
 
     @JavascriptInterface

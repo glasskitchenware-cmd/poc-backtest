@@ -18,16 +18,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: index.html is built from web/
+        run: python3 tools/build_web.py --check
+
       - name: Use the same page as the website
         run: cp index.html android/app/src/main/assets/index.html
 
       - name: Verify UI JavaScript and alert settings
         run: python3 tools/check_embedded_js.py
 
+      - name: JS tests (real index.html in headless Chrome, mock USD-M API)
+        run: CHROME=$(which google-chrome) python3 tests/js/run_tests.py
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
+
+      - name: Notification rule tests (SignalAlerts, incl. the JS packets above)
+        run: tools/java-tests/run.sh tests/js/out/*.json
 
       - uses: gradle/actions/setup-gradle@v4
         with:

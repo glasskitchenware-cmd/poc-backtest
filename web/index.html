@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>POC Backtest</title>
+<meta name="theme-color" content="#0b1220">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<style>
+:root{color-scheme:dark;--bg:#0b0e11;--panel:#181a20;--deep:#2b3139;--line:#2b3139;--ink:#eaecef;--muted:#848e9c;--up:#0ecb81;--upText:#0ecb81;--down:#f6465d;--warn:#f0b90b;--accent:#f0b90b;--yel:#f0b90b}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 "IBM Plex Sans","Binance Plex",Roboto,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-text-size-adjust:100%}
+main{max-width:640px;margin:auto;padding:10px 12px calc(84px + env(safe-area-inset-bottom,0px))}
+h1{font-size:20px;margin:4px 0 2px}h2{font-size:16px;margin:0 0 10px}
+.eyebrow{color:var(--muted);font-size:11px;letter-spacing:.02em}
+.muted,small{color:var(--muted)}small{font-size:12px}
+section{background:var(--panel);border:0;border-radius:12px;padding:14px;margin:10px 0}
+label{display:block;font-size:13px;color:var(--muted);margin:8px 0 4px}
+input,select{width:100%;background:var(--deep);color:var(--ink);border:1px solid transparent;border-radius:8px;padding:10px;font:inherit}input:focus,select:focus{outline:0;border-color:var(--yel)}input[type=checkbox],input[type=radio],input[type=range]{accent-color:var(--yel)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.checks{display:flex;gap:16px;margin-top:4px}.checks label{display:flex;gap:6px;align-items:center;color:var(--ink);margin:0}.checks input{width:auto}
+button{width:100%;margin-top:14px;padding:13px;border:0;border-radius:8px;background:var(--yel);color:#181a20;font:600 16px inherit;font-family:inherit}
+button:disabled{opacity:.5}
+.tabs{display:flex;gap:18px;margin-bottom:8px;border-bottom:1px solid var(--line);overflow-x:auto}.tabs button{width:auto;margin:0;padding:8px 0;font-size:14px;background:none;color:var(--muted);border:0;border-radius:0;border-bottom:2px solid transparent;white-space:nowrap}.tabs button.on{color:var(--ink);border-bottom-color:var(--yel)}
+#mainTabs{position:fixed;left:0;right:0;bottom:0;z-index:30;margin:0;gap:0;justify-content:space-around;background:#181a20;border-top:1px solid var(--line);padding:4px 4px env(safe-area-inset-bottom,0px);overflow:visible}
+#mainTabs button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0 6px;font-size:11px;border:0;color:var(--muted)}#mainTabs button svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}#mainTabs button.on{color:var(--ink);border:0}#mainTabs button.on svg{stroke:var(--yel)}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:2px 0 6px}.topbar .brand{display:flex;align-items:center;gap:8px;font-weight:700;font-size:18px}.topbar .brand i{width:26px;height:26px;border-radius:50%;background:var(--yel);color:#181a20;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:13px;font-weight:800}
+#status,.status-line{font-size:13px;color:var(--muted);margin-top:10px;white-space:pre-wrap}
+.status-line.err{color:var(--down)}
+.coin{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;margin:10px 0}
+.coin.go{border-color:var(--yel)}
+.coin-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.coin-head b{font-size:18px}
+.pill{font-size:12px;padding:3px 10px;border-radius:99px;border:1px solid var(--line);white-space:nowrap}
+.pill.go{background:rgba(14,203,129,.15);color:var(--up);border-color:transparent}.pill.short{background:rgba(246,70,93,.15);color:var(--down)}
+.pill.wait{color:var(--yel);background:rgba(240,185,11,.12);border-color:transparent}
+.pill.no{color:var(--muted)}
+.levels{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:10px 0}
+.levels div{background:var(--deep);border-radius:8px;padding:8px}
+.levels b{display:block;font-size:15px;font-variant-numeric:tabular-nums}
+.banner{border-radius:14px;padding:14px;margin:12px 0;font-weight:600}
+.banner.go{background:rgba(14,203,129,.12);border:1px solid var(--up)}
+.banner.wait{background:var(--panel);border:1px solid var(--line)}
+.banner.stop{background:rgba(246,70,93,.12);border:1px solid var(--down);color:#ffd2d8}
+.bar{height:10px;background:var(--deep);border-radius:99px;overflow:hidden;margin:8px 0}
+.bar i{display:block;height:100%;background:var(--yel)}
+.mini{width:auto;margin:6px 0 0;padding:8px 12px;font-size:14px}
+.mini.ghost{background:var(--deep);color:var(--ink);border:1px solid var(--line)}
+.ai{background:#1e2329;border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-top:8px;font-size:13.5px;white-space:pre-wrap}
+.ai a{word-break:break-all}
+.guide-step{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--line)}
+.guide-step .dot{flex:none;width:26px;height:26px;border-radius:50%;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600}
+.guide-step.done .dot{background:var(--yel);border-color:var(--yel);color:#181a20}
+.guide-step.next{background:rgba(240,185,11,.08);border-radius:8px;padding:10px 8px}
+.guide-step .body{flex:1;min-width:0;font-size:14px;overflow-wrap:anywhere}.guide-step .body small{display:block}
+.flash{outline:3px solid var(--yel);outline-offset:3px;border-radius:10px;transition:outline-color .3s}
+.how{background:#1e2329;border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-top:8px;font-size:13.5px}
+.how ol{margin:0;padding-left:20px}.how li{margin:4px 0}
+#guideBar{position:fixed;left:8px;right:8px;bottom:calc(62px + env(safe-area-inset-bottom,0px));z-index:20;margin:0;border-radius:12px;display:flex;flex-direction:column;align-items:flex-start;gap:2px;
+  padding:10px 14px;
+  background:var(--yel);color:#181a20;text-align:left;box-shadow:0 -6px 20px rgba(0,0,0,.45)}
+#guideBar.hidden{display:none}#guideBar span{font-size:12px;font-weight:500}#guideBar b{font-size:16px}#guideBar .go{align-self:flex-end;margin-top:-20px;font-weight:700;font-size:14px}
+body.has-guide main{padding-bottom:calc(150px + env(safe-area-inset-bottom,0px))}
+.guide-step{cursor:pointer}
+.verdict{border-radius:16px;padding:16px;text-align:center}.verdict.good{background:rgba(14,203,129,.12);border:1px solid var(--up)}.verdict.bad{background:rgba(246,70,93,.12);border:1px solid var(--down)}.verdict.wait{background:var(--deep);border:1px solid var(--line)}
+.verdict .big{font-size:30px;font-weight:700;margin:4px 0;font-variant-numeric:tabular-nums}.verdict p{margin:6px 0 0;font-size:14px}
+.mmrow{margin:10px 0}.mmrow .lbl{display:flex;justify-content:space-between;font-size:14px;gap:8px}.mmrow .track{height:14px;background:var(--deep);border-radius:99px;overflow:hidden;margin-top:4px}
+.mmrow .track i{display:block;height:100%;border-radius:99px}.mmrow.app .lbl b{color:var(--up)}
+.slider-tip{background:rgba(240,185,11,.1);border:1px solid rgba(240,185,11,.4);border-radius:12px;padding:10px 12px;margin-top:8px;font-size:15px}
+.bx{background:#0b0e11;border:1px solid #2b3139;border-radius:14px;padding:12px;margin-top:10px;color:#eaecef;font-size:14px}
+.bx .hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}.bx .sym{font-size:18px;font-weight:700}
+.bx .row2{display:flex;gap:8px;margin-bottom:8px}.bx .chip{flex:1;background:#2b3139;border-radius:8px;padding:8px;text-align:center;position:relative;font-weight:600}
+.bx .tabs2{display:flex;background:#2b3139;border-radius:8px;margin-bottom:8px}.bx .tabs2 div{flex:1;text-align:center;padding:7px;border-radius:8px;color:#848e9c}.bx .tabs2 .on{background:#474d57;color:#eaecef}
+.bx .fld{background:#2b3139;border-radius:8px;padding:10px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;position:relative}
+.bx .fld small{color:#848e9c}.bx .val{font-weight:700;font-variant-numeric:tabular-nums}
+.bx .sl{position:relative;height:22px;margin:4px 6px 10px}.bx .sl .ln{position:absolute;left:0;right:0;top:10px;height:2px;background:#474d57}
+.bx .sl .fill{position:absolute;left:0;top:10px;height:2px;background:#f0b90b}.bx .sl .kb{position:absolute;top:3px;width:16px;height:16px;margin-left:-8px;transform:rotate(45deg);background:#f0b90b;border:2px solid #181a20}
+.bx .sl .tick{position:absolute;top:6px;width:10px;height:10px;margin-left:-5px;transform:rotate(45deg);border:2px solid #474d57;background:#181a20}
+.bx .ck{display:flex;align-items:center;gap:8px;margin:4px 0 8px}.bx .ck i{width:16px;height:16px;border-radius:4px;background:#f0b90b;display:inline-flex;align-items:center;justify-content:center;color:#181a20;font-style:normal;font-size:12px;font-weight:700}
+.bx .btn2{flex:1;border-radius:8px;padding:12px;text-align:center;font-weight:700;position:relative}.bx .buy{background:#2ebd85;color:#fff}.bx .sell{background:#f6465d;color:#fff}.bx .dim{opacity:.25}
+.bx .n{position:absolute;top:-8px;right:-6px;width:22px;height:22px;border-radius:50%;background:#f0b90b;color:#181a20;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #181a20}
+.bx .hl{outline:2px solid #f0b90b;outline-offset:1px}
+.bx-steps{margin:10px 0 0;padding-left:0;list-style:none;font-size:14px}.bx-steps li{display:flex;gap:8px;margin:6px 0}.bx-steps b.k{flex:none;width:22px;height:22px;border-radius:50%;background:#f0b90b;color:#181a20;font-size:12px;display:flex;align-items:center;justify-content:center}
+.cvhead{display:flex;justify-content:space-between;align-items:center;gap:10px}.cvhead small{display:block;margin-top:2px}#cvPrice{font-size:24px;font-variant-numeric:tabular-nums}
+.symsel{width:auto;background:none;border:0;padding:0 18px 0 0;font-size:20px;font-weight:700}
+.tfbar{display:flex;gap:16px;margin:10px 0 4px;border-bottom:1px solid var(--line)}.tfbar button{width:auto;margin:0;padding:6px 0;background:none;color:var(--muted);border-radius:0;font-size:14px;border-bottom:2px solid transparent}.tfbar button.on{color:var(--ink);border-bottom-color:var(--yel)}
+.pos{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;margin:10px 0}.pos-hd{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.pos-hd b{font-size:16px}
+.pos .side{width:20px;height:20px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff}.pos .side.l{background:var(--up)}.pos .side.s{background:var(--down)}
+.pos .tag{font-size:11px;padding:1px 6px;border-radius:4px;background:var(--deep);color:var(--muted)}
+.pos-pnl{display:flex;justify-content:space-between;margin:10px 0}.pos-pnl b{display:block;font-size:20px;font-variant-numeric:tabular-nums}
+.pos-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 6px}.pos-grid b{display:block;font-size:13.5px;font-variant-numeric:tabular-nums}.pos-grid div:nth-child(3n){text-align:right}.pos-grid div:nth-child(3n+2){text-align:center}
+.pos-tpsl{margin:10px 0 4px;font-size:13px;color:var(--muted)}.warn{color:var(--yel)}
+.coin .tag{font-size:11px;padding:1px 6px;border-radius:4px;background:var(--deep);color:var(--muted)}.mrow{display:flex;align-items:center;gap:6px;margin-top:4px}.mrow b{font-size:22px;font-variant-numeric:tabular-nums}.mrow .mini{margin:0 0 0 auto}
+summary{cursor:pointer;color:var(--muted);font-size:14px}
+.tips{background:var(--panel);border-radius:12px;padding:12px 14px;margin:10px 0}.tips ul{margin:8px 0 0;padding-left:18px;font-size:14px}
+.keyrow{display:flex;align-items:center;gap:8px;background:var(--deep);border-radius:8px;padding:8px 10px;margin-top:6px;font-size:14px}.keyrow code{flex:1;font-family:ui-monospace,monospace}.keyrow .x{width:auto;margin:0;padding:4px 10px;background:none;color:var(--muted);font-size:16px}.keyrow .st{font-size:12px}
+.btnrow{display:flex;gap:6px;margin-top:8px}.btnrow .mini{flex:1;margin:0;padding:9px 6px}
+.mkthead{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);padding:6px 0}
+.mkt{display:grid;grid-template-columns:auto 1fr auto 56px;align-items:baseline;gap:4px 8px;padding:10px 0;border-top:1px solid var(--line);cursor:pointer}.mkt b{font-size:15px}.mkt span{font-variant-numeric:tabular-nums;font-weight:600}.mkt small:last-child{text-align:right}
+a.mini{background:var(--deep);color:var(--yel);border-radius:8px;font-weight:600}
+body.simple #guideBar{display:none!important}body.simple main{padding-bottom:24px}body.simple.coaching main{padding-bottom:200px}
+.sm-cap{display:flex;align-items:center;gap:8px;background:var(--panel);border-radius:12px;padding:10px 12px}.sm-cap label{margin:0;flex:1;color:var(--ink);font-size:14px}.sm-cap input{width:120px;text-align:right;font-weight:700;font-size:17px}
+.sm-tf{display:flex;gap:6px;margin-top:10px}.sm-tf button{flex:1;margin:0;padding:8px 4px;font-size:13px;background:var(--deep);color:var(--muted)}.sm-tf button.on{background:var(--yel);color:#181a20}
+.sm-exp{margin-top:8px;padding:8px 12px;border-radius:10px;background:rgba(240,185,11,.12);border:1px solid var(--yel);color:var(--yel);font-weight:700;font-size:13px;text-align:center}
+.ev{margin:8px 0 0;padding:8px 10px;border-radius:8px;font-size:12.5px;background:var(--deep)}.ev.good{border-left:3px solid var(--up)}.ev.bad{border-left:3px solid var(--down)}
+.sm-bt{background:var(--panel);border-radius:12px;padding:10px 12px;margin-top:8px;font-size:14px}.sm-bt.good{background:rgba(14,203,129,.12);border:1px solid var(--up)}.sm-bt.bad{background:rgba(246,70,93,.12);border:1px solid var(--down)}.sm-bt small{font-size:12px;color:var(--muted)}
+.sm-wait{background:var(--panel);border-radius:12px;padding:16px;margin-top:10px;text-align:center}.sm-wait b{display:block;font-size:22px}.sm-wait small{display:block;margin-top:4px;font-size:13px}
+.sm-pick{display:flex;gap:6px;margin-top:10px;overflow-x:auto}.sm-pick button{width:auto;margin:0;padding:8px 12px;font-size:14px;background:var(--deep);color:var(--ink);white-space:nowrap}.sm-pick button.on.l{background:var(--up);color:#fff}.sm-pick button.on.s{background:var(--down);color:#fff}
+.sm-sum{background:var(--panel);border-radius:12px;padding:10px 12px;margin-top:8px;font-size:15px}.sm-sum small{font-size:12px}
+.sm-note{font-size:12px;color:var(--muted);margin:8px 0 0}
+.tx{background:#0b0e11;border:1px solid #2b3139;border-radius:14px;margin-top:10px;overflow:hidden;color:#eaecef;font-size:13px}.tx.idle .tx-form{opacity:.45}
+.tx-top{display:flex;justify-content:center;padding:8px}.tx-seg{display:flex;gap:18px;font-size:15px;color:#848e9c}.tx-seg .on{color:#eaecef;font-weight:700}
+.tx-hd{display:flex;align-items:baseline;gap:6px;padding:4px 12px 8px}.tx-hd b{font-size:18px}.tx-chg{font-size:12px;margin-left:auto;font-weight:600}
+.tx-body{display:grid;grid-template-columns:58% 42%;gap:8px;padding:0 10px 10px}
+.tx-chips{display:flex;gap:6px;margin-bottom:6px}.tx-chips span{flex:1;background:#2b3139;border-radius:6px;padding:6px 0;text-align:center;font-weight:600}
+.tx-tabs{display:flex;background:#2b3139;border-radius:6px;margin-bottom:6px}.tx-tabs span{flex:1;text-align:center;padding:5px;border-radius:6px;color:#848e9c}.tx-tabs .on{background:#474d57;color:#eaecef}
+.tx-avbl{display:flex;justify-content:space-between;font-size:11px;color:#848e9c;margin-bottom:6px}.tx-avbl span{color:#eaecef}
+.tx-fld{background:#2b3139;border-radius:6px;padding:8px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;min-height:34px}.tx-fld small{color:#848e9c}.tx-fld span{font-weight:700;font-variant-numeric:tabular-nums}.tx-fld.sm{padding:6px 8px;min-height:0;font-size:12px}
+.tx-sl{position:relative;height:20px;margin:2px 6px 0}.tx-sl .ln{position:absolute;left:0;right:0;top:9px;height:2px;background:#474d57}.tx-sl .fill{position:absolute;left:0;top:9px;height:2px;background:#f0b90b}
+.tx-sl .tick{position:absolute;top:5px;width:9px;height:9px;margin-left:-4px;transform:rotate(45deg);border:2px solid #474d57;background:#0b0e11}.tx-sl .kb{position:absolute;top:2px;width:14px;height:14px;margin-left:-7px;transform:rotate(45deg);background:#f0b90b;border:2px solid #0b0e11}
+.tx-pct{text-align:center;font-size:12px;color:#f0b90b;font-weight:700;min-height:16px}
+.tx-ck{display:flex;align-items:center;gap:6px;margin:4px 0 6px}.tx-ck i{width:15px;height:15px;border-radius:3px;border:1px solid #848e9c;display:inline-flex;align-items:center;justify-content:center;font-style:normal;font-size:11px;font-weight:800;color:#181a20}.tx-ck i:not(:empty){background:#f0b90b;border-color:#f0b90b}
+.tx-btn{border-radius:6px;padding:10px;text-align:center;font-weight:700;color:#fff;margin-top:6px}.tx-btn.buy{background:#2ebd85}.tx-btn.sell{background:#f6465d}.tx-btn.dim{opacity:.3}
+.tx-book{font-size:11px;font-variant-numeric:tabular-nums}.bk-h{display:flex;justify-content:space-between;color:#848e9c;margin-bottom:4px}.bk-r{display:flex;justify-content:space-between;line-height:1.75}.bk-r span:last-child{color:#b7bdc6}
+.bk-mid{font-size:15px;font-weight:700;padding:6px 0;text-align:left}
+.tx-pos{display:flex;gap:16px;border-top:1px solid #2b3139;padding:8px 12px;color:#848e9c}.tx-pos .on{color:#eaecef;font-weight:600}
+.tx-nav{display:flex;justify-content:space-around;border-top:1px solid #2b3139;padding:8px 4px;font-size:11px;color:#848e9c}.tx-nav .on{color:#f0b90b;font-weight:700}
+.coach-on{outline:3px solid #f0b90b;outline-offset:2px;border-radius:6px;animation:pulse 1.2s infinite;position:relative;z-index:2;cursor:pointer}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(240,185,11,.6)}50%{box-shadow:0 0 0 8px rgba(240,185,11,0)}}
+#coach{position:fixed;left:8px;right:8px;bottom:calc(8px + env(safe-area-inset-bottom,0px));z-index:40;background:#1e2329;border:2px solid #f0b90b;border-radius:14px;padding:12px 14px;box-shadow:0 -6px 24px rgba(0,0,0,.5)}
+#coach .co-n{font-size:12px;color:#f0b90b;font-weight:700}#coach .co-t{font-size:16px;margin:4px 0 10px;line-height:1.5}#coach .co-b{display:flex;gap:8px}#coach .co-b button{flex:1;margin:0;padding:11px}
+.inline{display:flex;gap:8px;align-items:center;margin-top:8px}.inline input{flex:1;min-width:0}
+#status.err{color:var(--down)}
+.hero{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.stat{background:var(--deep);border-radius:8px;padding:10px 12px}.stat b{display:block;font-size:22px;font-variant-numeric:tabular-nums}.stat small{display:block}
+.big b{font-size:30px}
+.notice{border:1px solid rgba(240,185,11,.35);background:rgba(240,185,11,.08);border-radius:12px;padding:10px 12px;font-size:13px;margin:10px 0 0}
+.notice li{margin:4px 0}
+.up{color:var(--upText)}.down{color:var(--down)}
+table{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums}
+th{color:var(--muted);font-weight:500;text-align:right}th:first-child,td:first-child{text-align:left}
+td{text-align:right;padding:7px 4px;border-top:1px solid var(--line)}
+.chart{height:340px;margin:0 -6px}.chart.small{height:220px}
+.trade{display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-top:1px solid var(--line);font-size:13px}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--muted);margin-bottom:6px}.legend i{display:inline-block;width:14px;height:3px;vertical-align:middle;margin-right:5px}
+footer{color:var(--muted);font-size:12px;margin-top:18px}
+a{color:var(--accent)}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<main>
+<div class="topbar"><div class="brand"><i>P</i>POC Signal</div><button id="menuBtn" type="button" class="mini ghost" style="margin:0">☰ เมนู</button></div>
+<div id="simpleView">
+  <div class="sm-cap"><label for="smCap">💰 เงินของผมใน Binance Futures (บาท)</label><input id="smCap" type="number" inputmode="decimal" min="0"></div>
+  <div id="smMain"></div>
+  <button id="smScan" class="mini ghost" type="button" style="width:100%;margin-top:10px">เช็กสัญญาณอีกครั้ง</button>
+  <div id="coach" class="hidden"></div>
+</div>
+<div id="fullView" class="hidden">
+<nav class="tabs" id="mainTabs"><button data-tab="guideTab"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>หน้าแรก</button><button data-tab="signalTab" class="on"><svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>สัญญาณ</button><button data-tab="chartTab"><svg viewBox="0 0 24 24"><path d="M7 4v16M17 4v16"/><rect x="4.5" y="8" width="5" height="8" rx="1"/><rect x="14.5" y="6" width="5" height="9" rx="1"/></svg>กราฟ</button><button data-tab="portTab"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="14" rx="2"/><path d="M3 10h18M16 15h2"/><path d="M7 6V4h10v2"/></svg>พอร์ต</button><button data-tab="backtestTab"><svg viewBox="0 0 24 24"><path d="M4 20V4M4 20h16"/><rect x="7" y="12" width="3" height="5"/><rect x="12" y="8" width="3" height="9"/><rect x="17" y="5" width="3" height="12"/></svg>Backtest</button></nav>
+
+<div id="guideTab" class="hidden">
+<section>
+  <h2>เริ่มใช้งาน</h2>
+  <div id="guideProgress" class="bar"><i style="width:0%"></i></div>
+  <div id="guideSteps"></div>
+</section>
+<section>
+  <h2>ตั้งค่า</h2>
+  <label for="pfCapital">เงินทุน (บาท)</label><input id="pfCapital" type="number" inputmode="decimal" value="10000">
+  <label class="checks" style="margin-top:12px"><input type="checkbox" id="autoScan"> <span id="autoScanLabel">เด้งเมื่อมีสัญญาณเข้าได้ (ต้องเปิดหน้านี้ไว้)</span></label>
+  <div id="notifBox" class="notice hidden" style="border-color:var(--down);background:rgba(246,70,93,.1)">แจ้งเตือนของแอปนี้ถูกปิดอยู่ในมือถือ สัญญาณจะไม่เด้ง<br><button class="mini" id="notifBtn">เปิดการแจ้งเตือน</button></div>
+  <button class="mini ghost hidden" id="notifTest" type="button" style="width:100%;margin-top:8px">ทดสอบแจ้งเตือน (ต้องเด้งภายใน 2 วินาที)</button>
+  <p id="scanLog" class="muted" style="font-size:12px;margin:6px 0 0"></p>
+  <div id="batteryBox" class="notice hidden">มือถือยังจำกัดแบตแอปนี้อยู่ แจ้งเตือนอาจไม่เด้ง<br><button class="mini" id="batteryBtn">อนุญาตให้ทำงานเบื้องหลัง</button><br><small>OPPO/realme/Xiaomi: ตั้งค่า → แอป → POC Signal → แบตเตอรี่ → "ไม่จำกัด" และเปิด "เริ่มอัตโนมัติ"</small></div>
+  <details style="margin-top:12px"><summary>วันประกาศ FOMC (วันงดเข้าไม้)</summary>
+    <textarea id="sgFomc" rows="4" style="width:100%;background:var(--deep);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:8px;font:12px ui-monospace,monospace"></textarea>
+    <button class="mini" id="sgFomcOk" type="button">ตรวจแล้ว ✓</button>
+    <p class="muted" style="font-size:12px;margin:4px 0 0">ไม่มีฟีดข่าว CPI/NFP แบบมีเวลา จึงไม่ได้กรองข่าวเหล่านี้</p>
+    <p class="muted" style="font-size:12px;margin:4px 0 0">ปี 2026 ยังไม่ได้ตรวจ เทียบกับ federalreserve.gov/monetarypolicy/fomccalendars.htm</p>
+  </details>
+</section>
+<section>
+  <h2>AI (Google Gemini) <small class="muted">ไม่บังคับ</small></h2>
+  <div id="aiKeyList"></div>
+  <div class="row" style="margin-top:8px">
+    <a class="mini" id="aiGetKey" href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener"
+     style="display:block;text-align:center;text-decoration:none;margin:0;padding:10px">① เอาคีย์ ↗</a>
+    <button class="mini" id="aiPaste" type="button" style="width:100%;margin:0">② วางคีย์ (เพิ่มได้หลายอัน)</button>
+  </div>
+  <details style="margin-top:8px"><summary>วิธีเอาคีย์ · ตั้งค่าเพิ่ม</summary>
+    <ol class="how" style="padding-left:30px">
+      <li>กด ① แล้วล็อกอิน Google</li>
+      <li>กด <b>Create API key</b> แล้วกด <b>คัดลอก</b> (ขึ้นต้นด้วย AIza)</li>
+      <li>กลับมากด ② วางคีย์ · ใส่หลายคีย์ได้ ถ้าคีย์แรกโควตาหมด แอปสลับไปคีย์ถัดไปเอง</li>
+    </ol>
+    <input id="aiKey" type="hidden">
+    <label for="aiModel">Model</label><input id="aiModel" value="" placeholder="อัตโนมัติ (เว้นว่างได้)">
+    <label class="checks" style="margin-top:10px"><input type="checkbox" id="aiAuto" checked> วิเคราะห์ข่าวอัตโนมัติเมื่อมีสัญญาณ</label>
+    <p class="muted" style="font-size:12px;margin:6px 0 0">คีย์เก็บในมือถือเครื่องนี้เท่านั้น ห้ามแชร์คีย์ให้ใคร</p>
+  </details>
+  <button class="mini ghost" id="aiTest" style="width:100%;margin-top:8px">ทดสอบคีย์ทั้งหมด</button>
+  <div id="aiStatus" class="status-line"></div>
+</section>
+</div>
+
+<div id="signalTab">
+<section>
+  <div style="background:#101820;border:1px solid #334155;border-radius:12px;padding:12px;margin-bottom:10px">
+    <b>Crypto Signal · เลือกเหรียญสำหรับแจ้งเตือน</b>
+    <div class="row" style="margin-top:8px">
+      <label>กราฟสัญญาณ
+        <select id="alertTf"><option value="5m">M5 · ทดลอง</option><option value="15m" selected>M15 · ทดลอง</option><option value="1h">H1 · สูตรเดิม</option></select>
+      </label>
+      <label>เพดาน Leverage (Isolated)
+        <select id="alertLev"><option value="5">5x</option><option value="10" selected>10x</option><option value="20">20x</option><option value="50">50x</option></select>
+      </label>
+    </div>
+    <div id="alertCoinList" class="checks" style="flex-wrap:wrap;gap:8px 12px;margin-top:10px"></div>
+    <div class="btnrow"><button class="mini ghost" id="alertAllCoins" type="button">เลือกทุกเหรียญ</button><button class="mini ghost" id="alertCoreCoins" type="button">เฉพาะ BTC · ETH · SOL</button></div>
+    <small>สัญญาณทดลอง 12 เหรียญจาก Binance USDⓈ-M Futures · วิเคราะห์แท่งที่ปิดแล้ว · ไม่ส่งคำสั่งซื้อขาย · Win rate ย้อนหลังไม่ใช่ความแม่นยำที่รับประกัน</small>
+  </div>
+  <button id="scan" style="margin-top:0">สแกนหาสัญญาณตอนนี้</button>
+  <p class="muted" style="margin:8px 0 0;font-size:12px" id="sgHelp"></p>
+  <div id="scanStatus" class="status-line"></div>
+  <div class="hidden">
+    <select id="sgMode"><option value="futures">Futures</option><option value="spot">Spot</option></select>
+    <input id="sgLev" type="number" value="10">
+    <select id="sgStrat"><option value="squeeze3_ls">Squeeze v2</option><option value="squeeze_ls">Squeeze v1</option></select>
+    <input type="checkbox" id="sgLock" checked>
+  </div>
+</section>
+<div id="scanSummary"></div>
+<div id="scanCards"></div>
+<details class="tips"><summary>กฎก่อนเปิดไม้</summary>
+  <ul>
+    <li>เข้าภายใน 15 นาทีหลังสัญญาณ ราคาวิ่งไปไกลแล้วให้ข้าม ห้ามไล่ราคา</li>
+    <li>Isolated 10x ตั้ง TP/SL ตอนเปิดไม้ ห้ามเลื่อน SL ห้ามถัว</li>
+    <li>ครบ 48 ชม. ยังไม่ชน TP/SL ให้ปิดเอง</li>
+    <li>มีข่าวแรง (hack, ล้มละลาย, ระงับถอน) ให้ข้าม</li>
+  </ul>
+</details>
+</div>
+
+<div id="chartTab" class="hidden">
+<section style="padding:10px">
+  <div class="cvhead"><div><select id="cvSymbol" class="symsel"></select><small id="cvChg">—</small></div><b id="cvPrice">—</b></div>
+  <div class="tfbar" id="cvTfBar"><button data-tf="15m">15m</button><button data-tf="1h">1H</button><button data-tf="4h" class="on">4H</button><button data-tf="1d">1D</button></div>
+  <select id="cvTf" class="hidden"><option value="15m">15 นาที</option><option value="1h">1 ชม.</option><option value="4h" selected>4 ชม.</option><option value="1d">1 วัน</option></select>
+  <div class="checks" style="flex-wrap:wrap;gap:10px;margin-top:8px;font-size:13px">
+    <label><input type="checkbox" id="cvEma" checked> EMA 20/50/200</label>
+    <label><input type="checkbox" id="cvFib" checked> Fibonacci</label>
+    <label><input type="checkbox" id="cvTrend" checked> เทรนด์ไลน์</label>
+    <label><input type="checkbox" id="cvBb"> Bollinger</label>
+  </div>
+  <div class="legend" style="margin-top:8px"><span id="cvLive">● กำลังเชื่อมต่อ…</span><span><i style="background:#ffb74d"></i>EMA20</span><span><i style="background:#ba68c8"></i>EMA50</span><span><i style="background:#90a4ae"></i>EMA200</span><span><i style="background:#4dd0e1"></i>เทรนด์ไลน์</span></div>
+  <div id="cvChart" class="chart" style="height:420px"></div>
+  <div class="legend" style="margin:6px 0 0"><span>RSI 14</span><span>เส้นประ 70 / 30</span></div>
+  <div id="cvRsi" class="chart" style="height:110px"></div>
+</section>
+<section>
+  <h2>วิเคราะห์ <small id="cvTime" class="muted"></small></h2>
+  <div id="cvAnalysis"><p class="muted">เลือกเหรียญเพื่อดูการวิเคราะห์</p></div>
+  <button class="mini" id="cvAi">ให้ AI วิเคราะห์กราฟนี้ + ข่าว</button>
+  <div id="cvAiOut" style="margin-top:8px"></div>
+  <p class="muted" style="font-size:12px;margin:10px 0 0">Fibo/เทรนด์ไลน์ตีอัตโนมัติ ใช้ช่วยดูเท่านั้น</p>
+</section>
+</div>
+
+<div id="portTab" class="hidden">
+<section>
+  <h2>Paper Trading <small class="muted">BTC · Squeeze v2 · 10x</small></h2>
+  <div class="row">
+    <button class="mini" id="ppStart" style="width:100%;margin:0">เริ่ม Paper วันนี้</button>
+    <button class="mini ghost" id="pp2026" style="width:100%;margin:0">ดูผลปี 2026</button>
+  </div>
+  <div id="ppStatus" class="status-line"></div>
+  <div id="ppSimple" style="margin-top:10px"></div>
+  <div id="ppChart" class="chart small hidden" style="height:180px;margin-top:8px"></div>
+  <div id="ppTrades"></div>
+  <details style="margin-top:10px"><summary>ตัวเลขเทคนิค</summary>
+    <div class="hero" id="ppHero" style="margin-top:8px"></div>
+    <p class="muted" style="font-size:12px;margin:8px 0 0">งานวิจัยปี 2025: 61 ไม้ · win 32.8% · +0.38R · PF 1.50 · Max DD 2.52% · ต้องมี 30 ไม้ก่อนสรุป</p>
+  </details>
+</section>
+<div id="pfState"></div>
+<section><h2>ไม้ที่บันทึกไว้ <small class="muted">(เงินจริง)</small></h2><div class="hero" id="pfHero"></div><div id="pfOpen"></div><div id="pfClosed"></div></section>
+<section>
+  <details><summary><b>ทำไมห้ามลาก 10%</b> <small class="muted">ถ้าแพ้ติดกัน เงินเหลือเท่าไหร่</small></summary>
+  <p style="margin:8px 0 0;font-size:14px">ลากสไลเดอร์ใน Binance ตามตัวเลขในการ์ดสัญญาณเท่านั้น โดน Stop เสียแค่ไม้ละ <b id="mmLoss">—</b></p>
+  <h2 style="margin-top:12px">แพ้ติดกัน <span id="mmNLabel">10</span> ไม้</h2>
+  <input id="mmN" type="range" min="1" max="20" value="10" style="width:100%">
+  <div id="mmCompare"></div>
+  <p class="muted" style="font-size:12px;margin:8px 0 0">สูตรนี้ชนะราว 1 ใน 3 ไม้ แพ้ติดกัน 5–10 ไม้เป็นเรื่องปกติ</p>
+  </details>
+</section>
+<div class="hidden"><input id="pfRisk" type="number" value="0.25"><input id="pfTarget" type="number" value="3"><div id="pfGoal"></div></div>
+</div>
+
+<div id="backtestTab" class="hidden">
+<section>
+  <h2>ทดสอบสูตรย้อนหลัง</h2>
+  <label>เหรียญ</label><div class="checks" id="swCoins" style="flex-wrap:wrap;gap:10px;font-size:13px"></div>
+  <div class="row">
+    <div><label for="swTf">กรอบเวลา</label><select id="swTf"><option value="1h" selected>1 ชม. (ใช้กับ Squeeze)</option><option value="4h">4 ชม.</option></select></div>
+    <div><label for="swDays">ช่วงข้อมูล</label><select id="swDays"><option value="730">2 ปี</option><option value="1095" selected>3 ปี</option><option value="1460">4 ปี</option></select></div>
+  </div>
+  <button id="swRun">ทดสอบย้อนหลัง</button>
+  <div id="swStatus" class="status-line">ดูแถว Squeeze v2 ในตารางผลรายปี: ตัวเลขบวก = ปีนั้นได้กำไร</div>
+  <div id="swResults" class="hidden" style="margin-top:12px">
+    <div id="swBest"></div>
+    <div style="overflow-x:auto;margin-top:10px"><table><thead><tr><th>เทคนิค</th><th>Dev ไม้·win·R</th><th>Valid ไม้·win·R</th><th>Valid PF</th></tr></thead><tbody id="swTable"></tbody></table></div>
+    <h2 style="margin-top:14px">ผลรายปี <small class="muted">(R เฉลี่ยต่อไม้ หลังหักต้นทุน)</small></h2>
+    <div style="overflow-x:auto"><table><thead id="swYearHead"></thead><tbody id="swYears"></tbody></table></div>
+    <p class="muted" style="font-size:12px;margin:8px 0 0">เป็นกฎจำลองจากหลักการในคลิป ไม่ใช่สูตรตรงของผู้สอนทุกข้อ · ผลในอดีตไม่รับประกันอนาคต</p>
+  </div>
+</section>
+<div class="hidden">
+<section>
+  <h2>ตั้งค่า</h2>
+  <label>คู่เหรียญ (ทดสอบเป็นพอร์ตเดียวกัน)</label>
+  <div class="checks"><label><input type="checkbox" id="btc" checked> BTC/USDT</label><label><input type="checkbox" id="eth" checked> ETH/USDT</label></div>
+  <div class="row">
+    <div><label for="days">ช่วงข้อมูล</label>
+      <select id="days"><option value="90">90 วัน</option><option value="180">180 วัน</option><option value="365">365 วัน</option><option value="730" selected>730 วัน (แนะนำ)</option></select></div>
+    <div><label for="capital">ทุน (บาท)</label><input id="capital" type="number" inputmode="decimal" value="10000" min="100"></div>
+  </div>
+  <div class="row">
+    <div><label for="fx">USDT/THB (ว่าง = ดึงจาก Bitkub)</label><input id="fx" type="number" inputmode="decimal" step="0.01" placeholder="อัตโนมัติ"></div>
+    <div><label for="fee">ค่าธรรมเนียม/ข้าง (%)</label><input id="fee" type="number" inputmode="decimal" step="0.01" value="0.10"></div>
+  </div>
+  <div class="row">
+    <div><label for="slip">Slippage/ข้าง (%)</label><input id="slip" type="number" inputmode="decimal" step="0.01" value="0.05"></div>
+    <div><label for="risk">เสี่ยงต่อไม้ (% equity)</label><input id="risk" type="number" inputmode="decimal" step="0.05" value="0.25"></div>
+  </div>
+  <button id="run">ดาวน์โหลดข้อมูล & Backtest</button>
+  <div id="status">กดปุ่มเพื่อดึงแท่ง 15 นาทีที่ปิดแล้วจาก Binance (ไม่ต้องใช้ API key)</div>
+</section>
+<div id="results" class="hidden">
+  <section>
+    <h2>สัญญาณที่ดีที่สุดหลังทดสอบ</h2>
+    <div id="bestBox"></div>
+  </section>
+
+  <section>
+    <h2>ผลช่วง Holdout <small id="holdoutRange"></small></h2>
+    <div class="hero" id="hero"></div>
+    <div class="notice"><ul id="warnings" style="margin:0;padding-left:18px"></ul></div>
+  </section>
+
+  <section>
+    <h2>ปรับกลยุทธ์ตามช่วงเวลา (walk-forward)</h2>
+    <p class="muted" style="margin:0 0 10px;font-size:13px">ทุก 30 วัน ระบบเลือกกลยุทธ์ที่ดีที่สุดจาก 90 วันก่อนหน้า (ต้อง ≥ 10 ไม้, กำไรเฉลี่ยต่อไม้เป็นบวก, PF &gt; 1) แล้วใช้เทรด 30 วันถัดไป ถ้าไม่มีแบบไหนผ่านจะถือเงินสด ผลนี้ไม่ได้เห็นอนาคตตอนเลือก</p>
+    <div class="hero" id="wfHero"></div>
+    <table style="margin-top:10px"><thead><tr><th>เริ่ม</th><th>กลยุทธ์ที่เลือก</th><th>ไม้</th><th>กำไร</th></tr></thead><tbody id="wfWindows"></tbody></table>
+  </section>
+
+  <section>
+    <h2>เทียบทุกกลยุทธ์</h2>
+    <p class="muted" style="margin:0 0 10px;font-size:13px" id="researchVerdict"></p>
+    <div style="overflow-x:auto"><table><thead><tr><th>กลยุทธ์</th><th>Dev win</th><th>Dev PF</th><th>Val ไม้</th><th>Val win</th><th>Val PF</th></tr></thead><tbody id="variants"></tbody></table></div>
+  </section>
+
+  <section>
+    <h2>กราฟแท่งเทียน</h2>
+    <div class="tabs" id="symbolTabs"></div>
+    <div class="legend"><span><i style="background:#ffb74d"></i>EMA50</span><span><i style="background:#4dd0e1"></i>POC (ประมาณ)</span><span>▲ เข้า ▼ ออก · เวลาไทย</span></div>
+    <div id="chart" class="chart"></div>
+  </section>
+
+  <section>
+    <h2>มูลค่าพอร์ตช่วง Holdout (บาทเทียบเท่า)</h2>
+    <div class="legend"><span><i style="background:#56d6b4"></i>บอท</span><span><i style="background:#86a9ff"></i>ซื้อถือ BTC/ETH 50%</span></div>
+    <div id="equity" class="chart small"></div>
+  </section>
+
+  <section>
+    <h2>ทุกช่วงเวลา</h2>
+    <table><thead><tr><th>ช่วง</th><th>ไม้</th><th>Win</th><th>กำไร</th><th>PF</th><th>MaxDD</th></tr></thead><tbody id="splits"></tbody></table>
+    <p class="muted" style="font-size:12px">แบ่งตามเวลา 60/20/20 แต่ละช่วงเริ่มทุนใหม่ ไม่ได้ทบต้นกัน · แถว "ต้นทุนสูง" ใช้ fee 0.15% + slippage 0.20% ต่อข้างในช่วง holdout</p>
+  </section>
+
+  <section>
+    <h2>รายการล่าสุดใน Holdout</h2>
+    <div id="trades"></div>
+  </section>
+</div>
+</div>
+</div>
+
+<footer>ผลย้อนหลังไม่รับประกันอนาคต · แอปไม่ส่งคำสั่งซื้อขาย · กราฟ <a href="https://www.tradingview.com/lightweight-charts/">TradingView Lightweight Charts™</a></footer>
+</div>
+</main>
+<button id="guideBar" class="hidden" type="button"><span id="guideBarStep"></span><b id="guideBarTitle"></b><span class="go">แตะเพื่อไป ▶</span></button>
+<script src="lightweight-charts.standalone.production.js"></script>
+<script src="engine.js"></script>
+<script src="swing.js"></script>
+<script src="evidence.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,3 +1,12 @@
 android/.gradle/
 android/build/
 android/app/build/
+tests/js/out/
+tests/e2e/out/
+tests/e2e/bars/
+tests/e2e/replay.json
+tests/e2e/mock.log
+build-tools/
+research/evidence/bars/
+research/evidence/evidence.json
+__pycache__/

@@ -56,6 +56,8 @@ final class BgScan {
         }
         if (json != null) {
             Alerts.onScan(context, json);
+        } else {
+            Alerts.recordStatus(context, false, "สแกนไม่เสร็จในเวลาที่กำหนด (เน็ตช้า/ถูกบล็อก) · ไม่แจ้งเตือน");
         }
         release();
         Done callback = done;

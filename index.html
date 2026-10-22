@@ -102,6 +102,8 @@ a.mini{background:var(--deep);color:var(--yel);border-radius:8px;font-weight:600
 body.simple #guideBar{display:none!important}body.simple main{padding-bottom:24px}body.simple.coaching main{padding-bottom:200px}
 .sm-cap{display:flex;align-items:center;gap:8px;background:var(--panel);border-radius:12px;padding:10px 12px}.sm-cap label{margin:0;flex:1;color:var(--ink);font-size:14px}.sm-cap input{width:120px;text-align:right;font-weight:700;font-size:17px}
 .sm-tf{display:flex;gap:6px;margin-top:10px}.sm-tf button{flex:1;margin:0;padding:8px 4px;font-size:13px;background:var(--deep);color:var(--muted)}.sm-tf button.on{background:var(--yel);color:#181a20}
+.sm-exp{margin-top:8px;padding:8px 12px;border-radius:10px;background:rgba(240,185,11,.12);border:1px solid var(--yel);color:var(--yel);font-weight:700;font-size:13px;text-align:center}
+.ev{margin:8px 0 0;padding:8px 10px;border-radius:8px;font-size:12.5px;background:var(--deep)}.ev.good{border-left:3px solid var(--up)}.ev.bad{border-left:3px solid var(--down)}
 .sm-bt{background:var(--panel);border-radius:12px;padding:10px 12px;margin-top:8px;font-size:14px}.sm-bt.good{background:rgba(14,203,129,.12);border:1px solid var(--up)}.sm-bt.bad{background:rgba(246,70,93,.12);border:1px solid var(--down)}.sm-bt small{font-size:12px;color:var(--muted)}
 .sm-wait{background:var(--panel);border-radius:12px;padding:16px;margin-top:10px;text-align:center}.sm-wait b{display:block;font-size:22px}.sm-wait small{display:block;margin-top:4px;font-size:13px}
 .sm-pick{display:flex;gap:6px;margin-top:10px;overflow-x:auto}.sm-pick button{width:auto;margin:0;padding:8px 12px;font-size:14px;background:var(--deep);color:var(--ink);white-space:nowrap}.sm-pick button.on.l{background:var(--up);color:#fff}.sm-pick button.on.s{background:var(--down);color:#fff}
@@ -171,10 +173,12 @@ a{color:var(--accent)}
   <label class="checks" style="margin-top:12px"><input type="checkbox" id="autoScan"> <span id="autoScanLabel">เด้งเมื่อมีสัญญาณเข้าได้ (ต้องเปิดหน้านี้ไว้)</span></label>
   <div id="notifBox" class="notice hidden" style="border-color:var(--down);background:rgba(246,70,93,.1)">แจ้งเตือนของแอปนี้ถูกปิดอยู่ในมือถือ สัญญาณจะไม่เด้ง<br><button class="mini" id="notifBtn">เปิดการแจ้งเตือน</button></div>
   <button class="mini ghost hidden" id="notifTest" type="button" style="width:100%;margin-top:8px">ทดสอบแจ้งเตือน (ต้องเด้งภายใน 2 วินาที)</button>
+  <p id="scanLog" class="muted" style="font-size:12px;margin:6px 0 0"></p>
   <div id="batteryBox" class="notice hidden">มือถือยังจำกัดแบตแอปนี้อยู่ แจ้งเตือนอาจไม่เด้ง<br><button class="mini" id="batteryBtn">อนุญาตให้ทำงานเบื้องหลัง</button><br><small>OPPO/realme/Xiaomi: ตั้งค่า → แอป → POC Signal → แบตเตอรี่ → "ไม่จำกัด" และเปิด "เริ่มอัตโนมัติ"</small></div>
   <details style="margin-top:12px"><summary>วันประกาศ FOMC (วันงดเข้าไม้)</summary>
     <textarea id="sgFomc" rows="4" style="width:100%;background:var(--deep);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:8px;font:12px ui-monospace,monospace"></textarea>
     <button class="mini" id="sgFomcOk" type="button">ตรวจแล้ว ✓</button>
+    <p class="muted" style="font-size:12px;margin:4px 0 0">ไม่มีฟีดข่าว CPI/NFP แบบมีเวลา จึงไม่ได้กรองข่าวเหล่านี้</p>
     <p class="muted" style="font-size:12px;margin:4px 0 0">ปี 2026 ยังไม่ได้ตรวจ เทียบกับ federalreserve.gov/monetarypolicy/fomccalendars.htm</p>
   </details>
 </section>
@@ -1282,6 +1286,12 @@ a{color:var(--accent)}
 
 </script>
 <script>
+/* Generated from research/evidence/evidence_20261022.json (GitHub Actions run on real USD-M futures bars).
+ * Rule squeeze3_ls replayed per coin and timeframe; oos = 2026-01..2026-09, data the rule never saw. */
+window.EVIDENCE = {"strategy":"squeeze3_ls (Squeeze v2)","source":"Binance USD-M futures monthly klines (data.binance.vision)","periods":{"dev":"2023-10-01..2024-12-31","val":"2025-01-01..2025-12-31","oos":"2026-01-01..2026-09-30"},"costs":"fee 0.05% + slippage 0.02% per side, funding 0.01%/8h, no FOMC filter","generated":"2026-10-22","run":"https://github.com/glasskitchenware-cmd/poc-backtest/actions/runs/39779737193","rows":{"BTCUSDT|5m":{"dev":{"n":969,"win":23.1,"winCI":[20.6,25.9],"tp5":9.8,"tp5CI":[8.1,11.8],"avgR":-0.44,"pf":0.59},"val":{"n":646,"win":22,"winCI":[19,25.3],"tp5":7.7,"tp5CI":[5.9,10.1],"avgR":-0.578,"pf":0.49},"oos":{"n":517,"win":23.6,"winCI":[20.1,27.4],"tp5":8.7,"tp5CI":[6.6,11.4],"avgR":-0.506,"pf":0.53}},"BTCUSDT|15m":{"dev":{"n":377,"win":26.5,"winCI":[22.3,31.2],"tp5":11.4,"tp5CI":[8.6,15],"avgR":-0.085,"pf":0.9},"val":{"n":282,"win":27,"winCI":[22.1,32.4],"tp5":7.8,"tp5CI":[5.2,11.5],"avgR":-0.354,"pf":0.62},"oos":{"n":204,"win":32.4,"winCI":[26.3,39],"tp5":11.3,"tp5CI":[7.6,16.3],"avgR":0.006,"pf":1.01}},"BTCUSDT|1h":{"dev":{"n":88,"win":36.4,"winCI":[27.1,46.8],"tp5":15.9,"tp5CI":[9.7,25],"avgR":0.393,"pf":1.57},"val":{"n":67,"win":29.9,"winCI":[20.2,41.7],"tp5":17.9,"tp5CI":[10.6,28.7],"avgR":0.191,"pf":1.24},"oos":{"n":57,"win":29.8,"winCI":[19.5,42.7],"tp5":12.3,"tp5CI":[6.1,23.2],"avgR":0.071,"pf":1.09}},"ETHUSDT|5m":{"dev":{"n":1036,"win":21.1,"winCI":[18.8,23.7],"tp5":7.8,"tp5CI":[6.3,9.6],"avgR":-0.48,"pf":0.53},"val":{"n":809,"win":23.6,"winCI":[20.8,26.7],"tp5":9.1,"tp5CI":[7.3,11.3],"avgR":-0.315,"pf":0.67},"oos":{"n":607,"win":22.9,"winCI":[19.7,26.4],"tp5":11.5,"tp5CI":[9.2,14.3],"avgR":-0.346,"pf":0.66}},"ETHUSDT|15m":{"dev":{"n":396,"win":28.5,"winCI":[24.3,33.2],"tp5":8.6,"tp5CI":[6.2,11.8],"avgR":-0.132,"pf":0.84},"val":{"n":275,"win":28.4,"winCI":[23.4,34],"tp5":11.6,"tp5CI":[8.4,16],"avgR":0.002,"pf":1},"oos":{"n":216,"win":27.8,"winCI":[22.2,34.1],"tp5":11.1,"tp5CI":[7.6,16],"avgR":-0.043,"pf":0.95}},"ETHUSDT|1h":{"dev":{"n":87,"win":27.6,"winCI":[19.3,37.8],"tp5":11.5,"tp5CI":[6.4,19.9],"avgR":0.1,"pf":1.13},"val":{"n":68,"win":35.3,"winCI":[25,47.2],"tp5":16.2,"tp5CI":[9.3,26.7],"avgR":0.389,"pf":1.59},"oos":{"n":64,"win":31.3,"winCI":[21.2,43.4],"tp5":12.5,"tp5CI":[6.5,22.8],"avgR":0.156,"pf":1.21}},"BNBUSDT|5m":{"dev":{"n":813,"win":23.4,"winCI":[20.6,26.4],"tp5":10.8,"tp5CI":[8.9,13.1],"avgR":-0.362,"pf":0.64},"val":{"n":620,"win":23.7,"winCI":[20.5,27.2],"tp5":9,"tp5CI":[7,11.5],"avgR":-0.419,"pf":0.6},"oos":{"n":487,"win":21.1,"winCI":[17.8,25],"tp5":8.8,"tp5CI":[6.6,11.7],"avgR":-0.544,"pf":0.52}},"BNBUSDT|15m":{"dev":{"n":319,"win":26.6,"winCI":[22.1,31.8],"tp5":10.3,"tp5CI":[7.5,14.2],"avgR":-0.066,"pf":0.92},"val":{"n":234,"win":27.8,"winCI":[22.4,33.8],"tp5":10.3,"tp5CI":[7,14.8],"avgR":-0.123,"pf":0.86},"oos":{"n":183,"win":28.4,"winCI":[22.4,35.3],"tp5":9.8,"tp5CI":[6.3,15],"avgR":-0.176,"pf":0.8}},"BNBUSDT|1h":{"dev":{"n":86,"win":24.4,"winCI":[16.6,34.5],"tp5":7,"tp5CI":[3.2,14.4],"avgR":-0.101,"pf":0.87},"val":{"n":63,"win":27,"winCI":[17.6,39],"tp5":12.7,"tp5CI":[6.6,23.1],"avgR":0.145,"pf":1.2},"oos":{"n":44,"win":20.5,"winCI":[11.2,34.5],"tp5":4.5,"tp5CI":[1.3,15.1],"avgR":-0.476,"pf":0.45}},"SOLUSDT|5m":{"dev":{"n":899,"win":24.8,"winCI":[22.1,27.7],"tp5":8.8,"tp5CI":[7.1,10.8],"avgR":-0.22,"pf":0.75},"val":{"n":698,"win":27.1,"winCI":[23.9,30.5],"tp5":7.6,"tp5CI":[5.9,9.8],"avgR":-0.248,"pf":0.71},"oos":{"n":568,"win":26.2,"winCI":[22.8,30],"tp5":9.9,"tp5CI":[7.7,12.6],"avgR":-0.287,"pf":0.7}},"SOLUSDT|15m":{"dev":{"n":346,"win":28,"winCI":[23.6,33],"tp5":9.5,"tp5CI":[6.9,13.1],"avgR":-0.012,"pf":0.98},"val":{"n":254,"win":23.6,"winCI":[18.8,29.2],"tp5":5.1,"tp5CI":[3,8.6],"avgR":-0.292,"pf":0.64},"oos":{"n":212,"win":25.9,"winCI":[20.5,32.2],"tp5":9.9,"tp5CI":[6.6,14.7],"avgR":-0.138,"pf":0.84}},"SOLUSDT|1h":{"dev":{"n":84,"win":27.4,"winCI":[19,37.7],"tp5":11.9,"tp5CI":[6.6,20.5],"avgR":0.016,"pf":1.02},"val":{"n":56,"win":33.9,"winCI":[22.9,47],"tp5":16.1,"tp5CI":[8.7,27.8],"avgR":0.45,"pf":1.67},"oos":{"n":61,"win":26.2,"winCI":[16.8,38.4],"tp5":9.8,"tp5CI":[4.6,19.8],"avgR":-0.057,"pf":0.93}},"XRPUSDT|5m":{"dev":{"n":827,"win":21,"winCI":[18.4,23.9],"tp5":8.7,"tp5CI":[7,10.8],"avgR":-0.415,"pf":0.57},"val":{"n":696,"win":24,"winCI":[21,27.3],"tp5":8.2,"tp5CI":[6.4,10.5],"avgR":-0.336,"pf":0.64},"oos":{"n":507,"win":24.3,"winCI":[20.7,28.2],"tp5":9.3,"tp5CI":[7,12.1],"avgR":-0.358,"pf":0.64}},"XRPUSDT|15m":{"dev":{"n":351,"win":22.5,"winCI":[18.4,27.2],"tp5":10.3,"tp5CI":[7.5,13.9],"avgR":-0.22,"pf":0.75},"val":{"n":260,"win":23.1,"winCI":[18.4,28.6],"tp5":9.6,"tp5CI":[6.6,13.8],"avgR":-0.181,"pf":0.79},"oos":{"n":190,"win":25.8,"winCI":[20.1,32.4],"tp5":11.1,"tp5CI":[7.3,16.3],"avgR":-0.153,"pf":0.83}},"XRPUSDT|1h":{"dev":{"n":82,"win":28,"winCI":[19.5,38.6],"tp5":11,"tp5CI":[5.9,19.6],"avgR":-0.111,"pf":0.85},"val":{"n":67,"win":26.9,"winCI":[17.7,38.5],"tp5":14.9,"tp5CI":[8.3,25.3],"avgR":0.147,"pf":1.19},"oos":{"n":52,"win":19.2,"winCI":[10.8,31.9],"tp5":9.6,"tp5CI":[4.2,20.6],"avgR":-0.177,"pf":0.8}},"DOGEUSDT|5m":{"dev":{"n":898,"win":24.7,"winCI":[22,27.6],"tp5":10.4,"tp5CI":[8.5,12.5],"avgR":-0.218,"pf":0.75},"val":{"n":718,"win":25.8,"winCI":[22.7,29.1],"tp5":9.7,"tp5CI":[7.8,12.1],"avgR":-0.19,"pf":0.79},"oos":{"n":548,"win":25.2,"winCI":[21.7,29],"tp5":8.9,"tp5CI":[6.8,11.6],"avgR":-0.307,"pf":0.67}},"DOGEUSDT|15m":{"dev":{"n":325,"win":30.5,"winCI":[25.7,35.7],"tp5":12,"tp5CI":[8.9,16],"avgR":0.114,"pf":1.15},"val":{"n":246,"win":27.2,"winCI":[22.1,33.1],"tp5":10.6,"tp5CI":[7.3,15],"avgR":-0.013,"pf":0.98},"oos":{"n":191,"win":23.6,"winCI":[18.1,30.1],"tp5":9.4,"tp5CI":[6,14.4],"avgR":-0.183,"pf":0.79}},"DOGEUSDT|1h":{"dev":{"n":88,"win":20.5,"winCI":[13.3,30],"tp5":10.2,"tp5CI":[5.5,18.3],"avgR":-0.113,"pf":0.86},"val":{"n":77,"win":31.2,"winCI":[21.9,42.2],"tp5":19.5,"tp5CI":[12.2,29.7],"avgR":0.37,"pf":1.52},"oos":{"n":49,"win":30.6,"winCI":[19.5,44.5],"tp5":8.2,"tp5CI":[3.2,19.2],"avgR":-0.082,"pf":0.89}},"ADAUSDT|5m":{"dev":{"n":747,"win":23.6,"winCI":[20.7,26.7],"tp5":8.2,"tp5CI":[6.4,10.4],"avgR":-0.308,"pf":0.66},"val":{"n":622,"win":25.7,"winCI":[22.4,29.3],"tp5":7.9,"tp5CI":[6,10.3],"avgR":-0.24,"pf":0.73},"oos":{"n":458,"win":25.8,"winCI":[22,30],"tp5":6.6,"tp5CI":[4.6,9.2],"avgR":-0.295,"pf":0.67}},"ADAUSDT|15m":{"dev":{"n":290,"win":29.3,"winCI":[24.4,34.8],"tp5":10.3,"tp5CI":[7.3,14.4],"avgR":0.011,"pf":1.01},"val":{"n":217,"win":30,"winCI":[24.3,36.4],"tp5":8.8,"tp5CI":[5.7,13.3],"avgR":-0.068,"pf":0.91},"oos":{"n":180,"win":35,"winCI":[28.4,42.2],"tp5":8.3,"tp5CI":[5.1,13.3],"avgR":0.085,"pf":1.12}},"ADAUSDT|1h":{"dev":{"n":79,"win":25.3,"winCI":[17,35.9],"tp5":8.9,"tp5CI":[4.4,17.2],"avgR":-0.118,"pf":0.85},"val":{"n":66,"win":28.8,"winCI":[19.3,40.6],"tp5":10.6,"tp5CI":[5.2,20.3],"avgR":0.095,"pf":1.14},"oos":{"n":45,"win":26.7,"winCI":[16,41],"tp5":4.4,"tp5CI":[1.2,14.8],"avgR":-0.15,"pf":0.79}},"AVAXUSDT|5m":{"dev":{"n":771,"win":25,"winCI":[22.1,28.2],"tp5":9.2,"tp5CI":[7.4,11.5],"avgR":-0.2,"pf":0.77},"val":{"n":582,"win":28.7,"winCI":[25.2,32.5],"tp5":7.9,"tp5CI":[6,10.4],"avgR":-0.158,"pf":0.81},"oos":{"n":494,"win":26.9,"winCI":[23.2,31],"tp5":10.5,"tp5CI":[8.1,13.5],"avgR":-0.198,"pf":0.79}},"AVAXUSDT|15m":{"dev":{"n":306,"win":31,"winCI":[26.1,36.4],"tp5":9.5,"tp5CI":[6.7,13.3],"avgR":0.058,"pf":1.08},"val":{"n":226,"win":36.3,"winCI":[30.3,42.7],"tp5":10.2,"tp5CI":[6.9,14.8],"avgR":0.229,"pf":1.33},"oos":{"n":176,"win":26.7,"winCI":[20.7,33.7],"tp5":11.4,"tp5CI":[7.5,16.9],"avgR":-0.041,"pf":0.95}},"AVAXUSDT|1h":{"dev":{"n":84,"win":27.4,"winCI":[19,37.7],"tp5":10.7,"tp5CI":[5.7,19.1],"avgR":0.01,"pf":1.01},"val":{"n":59,"win":32.2,"winCI":[21.7,44.9],"tp5":13.6,"tp5CI":[7,24.5],"avgR":0.269,"pf":1.39},"oos":{"n":48,"win":25,"winCI":[14.9,38.8],"tp5":8.3,"tp5CI":[3.3,19.6],"avgR":-0.055,"pf":0.93}},"LINKUSDT|5m":{"dev":{"n":753,"win":24.7,"winCI":[21.8,27.9],"tp5":8.4,"tp5CI":[6.6,10.6],"avgR":-0.269,"pf":0.7},"val":{"n":560,"win":28,"winCI":[24.5,31.9],"tp5":7.1,"tp5CI":[5.3,9.6],"avgR":-0.207,"pf":0.76},"oos":{"n":496,"win":22.6,"winCI":[19.1,26.5],"tp5":8.3,"tp5CI":[6.2,11],"avgR":-0.391,"pf":0.6}},"LINKUSDT|15m":{"dev":{"n":306,"win":27.5,"winCI":[22.8,32.7],"tp5":7.2,"tp5CI":[4.8,10.6],"avgR":-0.126,"pf":0.84},"val":{"n":194,"win":30.9,"winCI":[24.8,37.7],"tp5":7.2,"tp5CI":[4.3,11.7],"avgR":-0.051,"pf":0.93},"oos":{"n":181,"win":29.8,"winCI":[23.6,36.9],"tp5":6.6,"tp5CI":[3.8,11.2],"avgR":-0.076,"pf":0.9}},"LINKUSDT|1h":{"dev":{"n":76,"win":36.8,"winCI":[26.9,48.1],"tp5":10.5,"tp5CI":[5.4,19.4],"avgR":0.351,"pf":1.52},"val":{"n":46,"win":28.3,"winCI":[17.3,42.5],"tp5":15.2,"tp5CI":[7.6,28.2],"avgR":0.271,"pf":1.4},"oos":{"n":38,"win":36.8,"winCI":[23.4,52.7],"tp5":10.5,"tp5CI":[4.2,24.1],"avgR":0.223,"pf":1.34}},"DOTUSDT|5m":{"dev":{"n":736,"win":26.4,"winCI":[23.3,29.7],"tp5":8.6,"tp5CI":[6.7,10.8],"avgR":-0.224,"pf":0.75},"val":{"n":578,"win":26.1,"winCI":[22.7,29.9],"tp5":7.1,"tp5CI":[5.3,9.5],"avgR":-0.251,"pf":0.71},"oos":{"n":404,"win":25.7,"winCI":[21.7,30.2],"tp5":6.4,"tp5CI":[4.4,9.3],"avgR":-0.324,"pf":0.63}},"DOTUSDT|15m":{"dev":{"n":280,"win":28.2,"winCI":[23.3,33.8],"tp5":10.4,"tp5CI":[7.3,14.5],"avgR":-0.022,"pf":0.97},"val":{"n":217,"win":30,"winCI":[24.3,36.4],"tp5":9.7,"tp5CI":[6.4,14.3],"avgR":-0.001,"pf":1},"oos":{"n":163,"win":27,"winCI":[20.8,34.3],"tp5":6.1,"tp5CI":[3.4,10.9],"avgR":-0.172,"pf":0.78}},"DOTUSDT|1h":{"dev":{"n":85,"win":25.9,"winCI":[17.8,36.1],"tp5":8.2,"tp5CI":[4,16],"avgR":-0.115,"pf":0.85},"val":{"n":62,"win":22.6,"winCI":[14,34.4],"tp5":11.3,"tp5CI":[5.6,21.5],"avgR":-0.105,"pf":0.86},"oos":{"n":43,"win":25.6,"winCI":[14.9,40.2],"tp5":4.7,"tp5CI":[1.3,15.5],"avgR":-0.128,"pf":0.83}},"TRXUSDT|5m":{"dev":{"n":552,"win":29,"winCI":[25.4,32.9],"tp5":9.2,"tp5CI":[7.1,11.9],"avgR":-0.328,"pf":0.68},"val":{"n":550,"win":27.5,"winCI":[23.9,31.3],"tp5":10.4,"tp5CI":[8.1,13.2],"avgR":-0.355,"pf":0.67},"oos":{"n":192,"win":30.7,"winCI":[24.6,37.6],"tp5":6.8,"tp5CI":[4,11.2],"avgR":-0.437,"pf":0.61}},"TRXUSDT|15m":{"dev":{"n":259,"win":32,"winCI":[26.7,38],"tp5":13.1,"tp5CI":[9.5,17.8],"avgR":0.035,"pf":1.04},"val":{"n":226,"win":29.2,"winCI":[23.7,35.4],"tp5":7.5,"tp5CI":[4.7,11.7],"avgR":-0.232,"pf":0.75},"oos":{"n":138,"win":30.4,"winCI":[23.4,38.6],"tp5":12.3,"tp5CI":[7.8,18.8],"avgR":-0.279,"pf":0.73}},"TRXUSDT|1h":{"dev":{"n":59,"win":37.3,"winCI":[26.1,50],"tp5":15.3,"tp5CI":[8.2,26.5],"avgR":0.449,"pf":1.65},"val":{"n":50,"win":32,"winCI":[20.8,45.8],"tp5":16,"tp5CI":[8.3,28.5],"avgR":0.239,"pf":1.31},"oos":{"n":44,"win":15.9,"winCI":[7.9,29.4],"tp5":4.5,"tp5CI":[1.3,15.1],"avgR":-0.702,"pf":0.34}},"LTCUSDT|5m":{"dev":{"n":761,"win":20.4,"winCI":[17.7,23.4],"tp5":8.3,"tp5CI":[6.5,10.5],"avgR":-0.431,"pf":0.57},"val":{"n":587,"win":21.8,"winCI":[18.7,25.3],"tp5":9.2,"tp5CI":[7.1,11.8],"avgR":-0.317,"pf":0.67},"oos":{"n":434,"win":24.2,"winCI":[20.4,28.4],"tp5":6.2,"tp5CI":[4.3,8.9],"avgR":-0.455,"pf":0.54}},"LTCUSDT|15m":{"dev":{"n":266,"win":25.9,"winCI":[21,31.5],"tp5":7.9,"tp5CI":[5.2,11.8],"avgR":-0.228,"pf":0.73},"val":{"n":187,"win":28.9,"winCI":[22.9,35.7],"tp5":8.6,"tp5CI":[5.3,13.4],"avgR":-0.067,"pf":0.91},"oos":{"n":161,"win":25.5,"winCI":[19.4,32.7],"tp5":6.2,"tp5CI":[3.4,11.1],"avgR":-0.242,"pf":0.72}},"LTCUSDT|1h":{"dev":{"n":65,"win":29.2,"winCI":[19.6,41.2],"tp5":7.7,"tp5CI":[3.3,16.8],"avgR":-0.112,"pf":0.85},"val":{"n":54,"win":29.6,"winCI":[19.1,42.8],"tp5":7.4,"tp5CI":[2.9,17.6],"avgR":-0.082,"pf":0.88},"oos":{"n":49,"win":32.7,"winCI":[21.2,46.6],"tp5":10.2,"tp5CI":[4.4,21.8],"avgR":0.105,"pf":1.15}}}};
+
+</script>
+<script>
 /* UI for the Android backtest app: download closed Binance 15m candles, run engine.js, chart results. */
 (function () {
   "use strict";
@@ -1343,7 +1353,9 @@ a{color:var(--accent)}
 
   function futuresApi(path) {
     var errors = [];
-    return FUTURES_BASES.reduce(function (chain, base) {
+    var dbg = "";
+    try { dbg = window.NativeHttp && window.NativeHttp.debugFuturesBase ? window.NativeHttp.debugFuturesBase() : ""; } catch (e) { /* release build */ }
+    return (dbg ? [dbg] : FUTURES_BASES).reduce(function (chain, base) {
       return chain.catch(function (e) {
         if (e) errors.push(String(e.message || e));
         return httpGet(base + path).then(JSON.parse);
@@ -1352,6 +1364,32 @@ a{color:var(--accent)}
       errors.push(String(e.message || e));
       throw new Error("เชื่อมต่อ Binance Futures ไม่ได้: " + errors.join(" | ").slice(0, 280));
     });
+  }
+
+  // USD-M symbol rules (tick size, lot step, minimum notional) from /fapi/v1/exchangeInfo, cached for 6 hours.
+  var futRulesCache = null;
+  function futuresRules() {
+    if (futRulesCache && Date.now() - futRulesCache.at < 6 * 3600000) return Promise.resolve(futRulesCache.map);
+    return futuresApi("/fapi/v1/exchangeInfo").then(function (info) {
+      var map = {};
+      (info.symbols || []).forEach(function (x) {
+        if (x.contractType !== "PERPETUAL" || x.quoteAsset !== "USDT") return;
+        var f = {};
+        (x.filters || []).forEach(function (y) { f[y.filterType] = y; });
+        map[x.symbol] = { status: x.status, tick: +(f.PRICE_FILTER || {}).tickSize, step: +(f.MARKET_LOT_SIZE || f.LOT_SIZE || {}).stepSize,
+          minQty: +(f.MARKET_LOT_SIZE || f.LOT_SIZE || {}).minQty, minNotional: +(f.MIN_NOTIONAL || {}).notional || 0 };
+      });
+      if (!Object.keys(map).length) throw new Error("exchangeInfo ว่าง");
+      futRulesCache = { at: Date.now(), map: map };
+      return map;
+    });
+  }
+  // Round to the exchange grid; decimals from the step itself so 0.1 + 0.2 noise never leaks into the display.
+  function decimalsOf(step) { var t = String(step); if (t.indexOf("e-") > 0) return +t.split("e-")[1]; var i = t.indexOf("."); return i < 0 ? 0 : t.replace(/0+$/, "").length - i - 1; }
+  function toGrid(v, step, mode) {
+    if (!(step > 0)) return v;
+    var k = v / step, n = mode === "floor" ? Math.floor(k + 1e-9) : mode === "ceil" ? Math.ceil(k - 1e-9) : Math.round(k);
+    return +(n * step).toFixed(decimalsOf(step));
   }
 
   function status(text, isError) {
@@ -1818,13 +1856,7 @@ a{color:var(--accent)}
       box.querySelectorAll("input").forEach(function (x) { x.checked = ["BTCUSDT", "ETHUSDT", "SOLUSDT"].indexOf(x.getAttribute("data-coin")) >= 0; });
       saveCoins();
     };
-    tf.onchange = function () {
-      try { localStorage.setItem("tradeTf", tf.value); } catch (e) {}
-      if (window.NativeHttp && window.NativeHttp.setScanMinutes) {
-        window.NativeHttp.setScanMinutes(TF[tf.value].ms / 60000);
-      }
-      modeHelp(); scheduleAuto();
-    };
+    tf.onchange = function () { setTradeTf(tf.value); modeHelp(); scheduleAuto(); };
     lev.onchange = function () { try { localStorage.setItem("alertLeverage", lev.value); } catch (e) {} };
     if (window.NativeHttp && window.NativeHttp.setScanMinutes) window.NativeHttp.setScanMinutes(TF[tf.value].ms / 60000);
   }
@@ -1937,17 +1969,18 @@ a{color:var(--accent)}
     }
 
     function signalPrompt(r) {
-      var g = r.signal, coin = r.symbol.replace("USDT", ""), h = g.hist || {};
+      var g = r.signal, coin = r.symbol.replace("USDT", "");
       return [
         "คุณคือผู้ช่วยตรวจความเสี่ยงก่อนเปิดไม้ Crypto Futures ตอบเป็นภาษาไทย สั้น กระชับ",
         "กฎ: ใช้ตัวเลขที่ให้มาเท่านั้น ห้ามแต่งราคาหรือสถิติเพิ่ม; ใช้ Google Search หาข่าวใน 24 ชม. ล่าสุดของ " + coin +
           " และตลาด crypto/เศรษฐกิจสหรัฐที่กระทบราคา (CPI, FOMC, ETF, hack, delist, liquidation ใหญ่) ถ้าไม่พบให้บอกว่าไม่พบ ห้ามเดาข่าว",
-        "สัญญาณจากระบบ (" + g.stratName + " แท่ง 1 ชม. ยังไม่พิสูจน์ว่าทำกำไรกับข้อมูลใหม่):",
+        "สัญญาณทดลองจากระบบ (" + g.stratName + " แท่ง " + TF[g.tf].name + " ยังไม่พิสูจน์ว่าทำกำไร):",
         "- เหรียญ " + r.symbol + " ฝั่ง " + (g.dir > 0 ? "LONG" : "SHORT") + " เข้า " + price(g.entry) + " SL " + price(g.stop) + " (" + fmt(g.stopPct, 2) + "%)",
         "- TP1/TP2/TP3 " + g.tps.map(price).join(" / ") + " ถือไม่เกิน " + g.hold + " ชม.",
-        "- แนวโน้ม EMA50/200 แท่ง 1 ชม.: " + (g.trend > 0 ? "ขาขึ้น" : g.trend < 0 ? "ขาลง" : "ไม่ชัด"),
-        "- สูตรนี้กับเหรียญนี้ 100 วันล่าสุด: " + (h.trades || 0) + " ไม้, win " + fmt(h.win_rate, 0) + "%, เฉลี่ย " + fmt(h.exp_r, 2, true) + "R",
-        "- Leverage ที่ระบบคำนวณ x" + g.lev + " (ไม่ควรเกิน x" + g.levLiq + "), ราคา Liquidate " + price(g.liq),
+        "- แนวโน้ม EMA50/200 แท่งเดียวกัน: " + (g.trend > 0 ? "ขาขึ้น" : g.trend < 0 ? "ขาลง" : "ไม่ชัด"),
+        "- หลักฐานย้อนหลังของสูตรนี้กับเหรียญนี้: " + evidenceFor(r.symbol, g.tf).text,
+        "- Leverage เพดาน x" + g.lev + ", ราคา Liquidate ประมาณ " + price(g.liq) + " (ไม่มีตาราง bracket จริง)",
+        "ห้ามให้ตัวเลขความน่าจะเป็นหรือ % โอกาสชนะของไม้นี้ ห้ามแต่งสถิติ ถ้าข้อมูลไม่พอให้บอกว่าไม่พอ",
         "ตอบตามรูปแบบนี้เท่านั้น:",
         "คำตัดสิน: เข้า หรือ รอ หรือ ข้าม (เลือกคำเดียว)",
         "เหตุผล: 3 ข้อสั้น",
@@ -2062,10 +2095,10 @@ a{color:var(--accent)}
       var opt = Object.assign({}, Swing.DEFAULTS, { fee: 0.0007, slippage: 0, fomcDates: fomcDates() });
       status("กำลังดึงแท่ง 1 ชม. ของ BTCUSDT…");
       var fx = 33;
-      return Promise.all([binance("/api/v3/time"), fetchFx().catch(function () { return { rate: 33 }; })]).then(function (res) {
+      return Promise.all([futuresApi("/fapi/v1/time"), fetchFx().catch(function () { return { rate: 33 }; })]).then(function (res) {
         fx = res[1].rate;
         var end = Math.floor(res[0].serverTime / 3600000) * 3600000, from = Math.floor(startMs / 3600000) * 3600000 - 2000 * 3600000;
-        return fetchCandles(LOCK.symbol, from, end, function (k) { status("ดึงแล้ว " + k + " แท่ง…"); }, "1h");
+        return fetchCandles(LOCK.symbol, from, end, function (k) { status("ดึงแล้ว " + k + " แท่ง…"); }, "1h", true);
       }).then(function (bars) {
         lastFx = fx;
         var ind = Swing.indicators(bars, opt), first = 0;
@@ -2175,9 +2208,16 @@ a{color:var(--accent)}
   })();
 
   // ---- Futures: ONE BEST COMBO (Momentum + Squeeze, 1H) long/short with leverage-aware sizing ----
-  var FUT = { fee: 0.0005, slippage: 0.0002, mmr: 0.005, enterWithinMin: 15, marginShare: 0.25 };
+  var FUT = { fee: 0.0005, slippage: 0.0002, mmr: 0.005, mmrSafe: 0.01, enterWithinMin: 15, marginShare: 0.25 };
   // The Android scanner and the visible scanner share persisted M5/M15/H1 settings.
   var TF = { "1h": { ms: 3600000, days: 100, name: "1 ชม." }, "15m": { ms: 900000, days: 30, name: "15 นาที" }, "5m": { ms: 300000, days: 14, name: "5 นาที" } };
+  // One place that changes the signal timeframe, so the visible scanner and the Android alarm never disagree.
+  function setTradeTf(v) {
+    if (!TF[v]) return;
+    try { localStorage.setItem("tradeTf", v); } catch (e) { /* ignore */ }
+    if ($("alertTf")) $("alertTf").value = v;
+    if (window.NativeHttp && window.NativeHttp.setScanMinutes) window.NativeHttp.setScanMinutes(TF[v].ms / 60000);
+  }
   function curTf() {
     var t = "15m";
     try { t = localStorage.getItem("tradeTf") || "15m"; } catch (e) { /* ignore */ }
@@ -2189,11 +2229,10 @@ a{color:var(--accent)}
   // ---- Main screen: a Binance-Futures look-alike that coaches every tap, sized from the user's own money ----
   var Simple = (function () {
     var lastScan = 0, timer = null, results = [], fx = 33, pick = 0, step = 0, live = null, liveSym = "", busyNow = false;
-    var MIN_NOTIONAL = { BTCUSDT: 100, ETHUSDT: 20 };
     function money() { return readNumber("pfCapital", 10000); }
     function signals() {
       var now = Date.now();
-      return results.filter(function (r) { return r.signal && now < r.signal.expires; })
+      return results.filter(function (r) { return r.signal && !r.signal.below_minimum && now < r.signal.expires; })
         .sort(function (a, b) { return (b.symbol === LOCK.symbol) - (a.symbol === LOCK.symbol); });
     }
     // Sizes scale linearly with the balance, so a new amount needs no rescan.
@@ -2250,35 +2289,39 @@ a{color:var(--accent)}
       var list = signals(), r = list[pick] || null, g = r && r.signal, z = g ? sized(g) : null;
       steps = g ? stepsFor(r, g, z) : [];
       var tf = curTf(), head = '<div class="sm-tf">' + ["1h", "15m", "5m"].map(function (k) {
-        return '<button type="button" data-tf="' + k + '" class="' + (k === tf ? "on" : "") + '">' + TF[k].name + (k === "1h" ? " (แนะนำ)" : " (ทดลอง)") + "</button>";
+        return '<button type="button" data-tf="' + k + '" class="' + (k === tf ? "on" : "") + '">' + TF[k].name + (k === "1h" ? " (สูตรเดิม)" : " (ทดลอง)") + "</button>";
       }).join("") + "</div>";
-      if (results.length) {
-        // What the same rule did on these coins over the data just downloaded, in baht at 0.25% risk per trade.
-        var n = 0, sumR = 0, wins = 0;
-        results.forEach(function (x) { if (x.hist && x.hist.trades) { n += x.hist.trades; sumR += x.hist.trades * x.hist.exp_r; wins += x.hist.trades * x.hist.win_rate / 100; } });
-        var baht = sumR * money() * LOCK.riskPct / 100, days = Math.round(TF[tf].days - 270 * TF[tf].ms / 86400000);
-        head += '<div class="sm-bt ' + (n ? (baht > 0 ? "good" : "bad") : "") + '">ย้อนหลัง ' + days + " วัน ถ้าเข้าทุกสัญญาณ (12 เหรียญ): " +
-          (n ? "<b>" + (baht >= 0 ? "ได้ +" : "เสีย ") + fmt(baht, 0) + " ฿</b> · " + n + " ไม้ · ชนะ " + fmt(wins / n * 100, 0) + "%" : "ยังไม่มีไม้") +
-          (tf === "1h" ? "" : "<br><small>โหมดทดลอง: ยังไม่ผ่านงานวิจัย · เด้งเตือนเฉพาะตอนเปิดแอปไว้" + (n && baht <= 0 ? " · ผลย้อนหลังขาดทุน ไม่ควรใช้เงินจริง" : "") + "</small>") + "</div>";
-      }
+      // Research evidence (2026, data the rule never saw) for the selected coins on this timeframe; never in-sample numbers.
+      var E = window.EVIDENCE, n = 0, sumR = 0, tp = 0, used = [];
+      selectedCoins().forEach(function (c) {
+        var o = E && E.rows && E.rows[c + "|" + tf] && E.rows[c + "|" + tf].oos;
+        if (o && o.n) { n += o.n; sumR += o.n * o.avgR; tp += o.n * o.tp5 / 100; used.push(c.replace("USDT", "")); }
+      });
+      var baht = sumR * money() * LOCK.riskPct / 100;
+      head += '<div class="sm-exp">โหมดทดลอง · Paper เท่านั้น · สัญญาณไม่ใช่คำสั่งซื้อขาย</div>' +
+        '<div class="sm-bt ' + (n >= 30 ? (sumR > 0 ? "good" : "bad") : "") + '">' + (n >= 30
+          ? "หลักฐาน " + E.periods.oos + " (" + used.join(", ") + " · " + TF[tf].name + "): " + n + " ไม้ · ถึง TP 5R " + fmt(tp / n * 100, 0) + "% · เฉลี่ย " +
+            fmt(sumR / n, 2, true) + "R/ไม้ = <b>" + (baht >= 0 ? "ได้ +" : "เสีย ") + fmt(baht, 0) + " ฿</b> ถ้าเสี่ยง 0.25%/ไม้" +
+            (sumR <= 0 ? "<br><small>ผลย้อนหลังขาดทุน: อย่าใช้เงินจริงกับกราฟนี้</small>" : "")
+          : "ยังไม่มีข้อมูลยืนยันสำหรับเหรียญ/กราฟที่เลือก") + "</div>";
       if (list.length) {
         head += '<div class="sm-pick">' + list.map(function (x, i) {
           var d = x.signal.dir > 0;
           return '<button type="button" class="' + (i === pick ? "on " : "") + (d ? "l" : "s") + '" data-pick="' + i + '">' + x.symbol.replace("USDT", "") + " " + (d ? "LONG" : "SHORT") + "</button>";
         }).join("") + "</div>" +
           '<div class="sm-sum">ลงเงิน <b>' + fmt(z.marginB, 0) + ' ฿</b> · โดน SL เสีย <b class="down">' + fmt(z.lossB, 0) + ' ฿</b> · ถึง TP ได้ <b class="up">' + fmt(z.winB, 0) + " ฿</b>" +
-          "<br><small>เข้าก่อน " + thai(g.expires).slice(9) + " น." + (r.symbol === LOCK.symbol ? "" : " · เหรียญนี้ยังไม่ผ่านงานวิจัย เสี่ยงกว่า BTC") +
-          (r.ai ? " · AI เช็กข่าว: " + esc(r.ai.verdict) : "") +
-          (z.notional < (MIN_NOTIONAL[r.symbol] || 5) ? " · ถ้า Binance แจ้งว่าต่ำกว่าขั้นต่ำ ให้ข้ามไม้นี้" : "") + "</small></div>";
+          "<br><small>สัญญาณ " + TF[tf].name + " · หมดอายุ " + thai(g.expires).slice(9) + " น." +
+          (r.ai ? " · AI เช็กข่าว: " + esc(r.ai.verdict) : "") + "</small>" +
+          (function (ev) { return '<div class="ev ' + (ev.ok && ev.avgR > 0 ? "good" : "bad") + '">' + esc(ev.text) + "</div>"; })(evidenceFor(r.symbol, tf)) + "</div>";
       } else {
-        head += '<div class="sm-wait"><b>' + (busyNow ? "กำลังเช็ก 12 เหรียญ…" : "ตอนนี้ยังไม่ต้องเทรด") + "</b><small>" +
-          (busyNow ? "ประมาณ 30 วินาที" : "แอปจะเด้งแจ้งเตือนเมื่อมีให้เทรด · เช็กรอบถัดไป " + thai(Math.floor(Date.now() / TF[tf].ms) * TF[tf].ms + TF[tf].ms).slice(9) + " น.") + "</small></div>";
+        head += '<div class="sm-wait"><b>' + (busyNow ? "กำลังเช็ก " + selectedCoins().length + " เหรียญ…" : "ยังไม่มีสัญญาณทดลอง") + "</b><small>" +
+          (busyNow ? "ประมาณ 30 วินาที" : "แอปจะเด้งแจ้งเตือนเมื่อมีสัญญาณ · เช็กรอบถัดไป " + thai(Math.floor(Date.now() / TF[tf].ms) * TF[tf].ms + TF[tf].ms).slice(9) + " น.") + "</small></div>";
       }
       $("smMain").innerHTML = head + screen(r, g, z) + '<p class="sm-note" style="text-align:center">ภาพจำลองหน้า Binance Futures (ไม่ใช่แอปจริง) · ราคาจริงจาก Binance</p>';
       Array.prototype.forEach.call(document.querySelectorAll("[data-tf]"), function (b) {
         if (!b.closest("#smMain")) return;
         b.onclick = function () {
-          try { localStorage.setItem("tradeTf", b.getAttribute("data-tf")); } catch (e) { /* ignore */ }
+          setTradeTf(b.getAttribute("data-tf"));
           results = []; pick = 0; step = 0; schedule(); scan();
         };
       });
@@ -2319,13 +2362,13 @@ a{color:var(--accent)}
       clearInterval(live); liveSym = sym;
       var pull = function () {
         if (document.hidden || !document.body.classList.contains("simple")) return;
-        binance("/api/v3/ticker/24hr?symbol=" + sym).then(function (t) {
+        futuresApi("/fapi/v1/ticker/24hr?symbol=" + sym).then(function (t) {
           if (!$("txPrice") || liveSym !== sym) return;
           var c = +t.priceChangePercent;
           $("txPrice").textContent = price(+t.lastPrice); $("txPrice").className = "bk-mid " + (c >= 0 ? "up" : "down");
           $("txChg").textContent = (c >= 0 ? "+" : "") + c.toFixed(2) + "%"; $("txChg").className = "tx-chg " + (c >= 0 ? "up" : "down");
         }).catch(function () { /* keep the last value */ });
-        binance("/api/v3/depth?symbol=" + sym + "&limit=5").then(function (d) {
+        futuresApi("/fapi/v1/depth?symbol=" + sym + "&limit=5").then(function (d) {
           if (!$("txAsks") || liveSym !== sym || !d.asks) return;
           var row = function (x, cls) { return '<div class="bk-r"><span class="' + cls + '">' + price(+x[0]) + "</span><span>" + (+x[1]).toFixed(3) + "</span></div>"; };
           $("txAsks").innerHTML = d.asks.slice(0, 5).reverse().map(function (x) { return row(x, "down"); }).join("");
@@ -2380,20 +2423,24 @@ a{color:var(--accent)}
   })();
 
   function futuresScan() {
-    var results = [], errors = [], done = 0, fxInfo, end, lev = Math.max(5, Math.min(50, readNumber("alertLev", 10)));
-    var coins = selectedCoins();  // user-selected coins; BTC/ETH study cannot validate other symbols
+    var results = [], errors = [], done = 0, fxInfo, end, rules, lev = Math.max(5, Math.min(50, readNumber("alertLev", 10)));
+    var coins = selectedCoins();  // user-selected coins; only BTC/ETH have research behind the rule
     var tf = curTf(), tfMs = TF[tf].ms;
-    scanStatus("กำลังดึงแท่ง " + TF[tf].name + " และอัตราแลกเปลี่ยน…");
+    scanStatus("กำลังดึงแท่ง " + TF[tf].name + " (Binance USDⓈ-M Futures)…");
     if (!coins.length) return Promise.reject(new Error("เลือกเหรียญอย่างน้อย 1 เหรียญก่อนสแกน"));
-    return Promise.all([futuresApi("/fapi/v1/time"), fetchFx().catch(function () { return { rate: 33 }; })]).then(function (res) {
-      fxInfo = res[1];
+    return Promise.all([futuresApi("/fapi/v1/time"), fetchFx().catch(function () { return { rate: 33, fallback: true }; }), futuresRules()]).then(function (res) {
+      fxInfo = res[1]; rules = res[2];
       end = Math.floor(res[0].serverTime / tfMs) * tfMs;
       var start = end - TF[tf].days * 86400000, queue = coins.slice();
       function worker() {
         var s = queue.shift();
         if (!s) return Promise.resolve();
         return fetchCandles(s, start, end, function () {}, tf, true).then(function (bars) {
-          results.push(futuresCard(s, bars, fxInfo.rate, lev, tf));
+          var last = bars[bars.length - 1], rule = rules[s];
+          // Only a fully closed candle that ends exactly at the latest boundary may produce a signal.
+          if (!last || last.close_time + 1 !== end) throw new Error("แท่งล่าสุดไม่สด (ไม่ใช่แท่งที่เพิ่งปิด)");
+          if (!rule || rule.status !== "TRADING") throw new Error("ไม่มีสัญญา Perpetual ที่เปิดเทรด");
+          results.push(futuresCard(s, bars, fxInfo.rate, lev, tf, rule));
         }).catch(function (e) { errors.push(s.replace("USDT", "") + ": " + e.message); }).then(function () {
           done++; scanStatus("สแกนแล้ว " + done + "/" + coins.length + " เหรียญ…");
           return worker();
@@ -2401,19 +2448,52 @@ a{color:var(--accent)}
       }
       return Promise.all([worker(), worker(), worker()]);
     }).then(function () {
+      if (!results.length) throw new Error("สแกนไม่สำเร็จทุกเหรียญ: " + errors.join(" · "));
+      // Mark price for every candidate: refuse the signal when it is missing or far from the candle close.
+      return Promise.all(results.filter(function (r) { return r.signal; }).map(function (r) {
+        return futuresApi("/fapi/v1/premiumIndex?symbol=" + r.symbol).then(function (m) {
+          var g = r.signal, mark = +m.markPrice;
+          g.mark = mark;
+          if (!(mark > 0)) rejectSignal(g, "ไม่มี mark price");
+          else if (Math.abs(mark - g.entry) / g.entry > 0.005) rejectSignal(g, "ราคา mark ห่างจากราคาปิดเกิน 0.5% (ตลาดวิ่งไปแล้ว)");
+        }).catch(function () { rejectSignal(r.signal, "ดึง mark price ไม่ได้"); });
+      }));
+    }).then(function () {
       renderFutures(results, fxInfo, lev, end);
       lastFutures = results;
       Simple.render(results, null, fxInfo.rate);
+      // Gemini runs only on demand in the open app, never inside background scans.
       return location.hash === "#bg" ? null : AI.auto(results);
     }).then(function () {
       Simple.render(results, null, fxInfo.rate);
-      reportScan(results, end, null);
-      scanStatus("สแกนล่าสุด " + thai(Date.now()) + " น. · แท่ง " + TF[tf].name + " ที่ปิดเมื่อ " + thai(end) + " น. · ราคา Binance USD-M Futures (ไม่ใช่ราคาเปิดคำสั่งจริง)" +
-        (errors.length ? "\nข้ามบางเหรียญ: " + errors.join(" · ") : ""), !results.length);
+      reportScan(results, end, null, { scanned: results.length, failed: errors });
+      scanStatus("สแกนล่าสุด " + thai(Date.now()) + " น. · แท่ง " + TF[tf].name + " ที่ปิดเมื่อ " + thai(end) + " น. · Binance USDⓈ-M Futures" +
+        (fxInfo.fallback ? " · ใช้อัตรา 33 ฿/USDT (ดึงอัตราจริงไม่ได้)" : "") +
+        (errors.length ? "\nข้ามบางเหรียญ: " + errors.join(" · ") : ""), false);
     });
   }
 
-  function futuresCard(symbol, bars, fx, lev, tf) {
+  function rejectSignal(g, reason) {
+    if (!g || g.below_minimum) return;
+    g.below_minimum = true;
+    g.reject = reason;
+  }
+
+  // Research evidence for the live rule (research/evidence, real USD-M bars). null-safe: no row -> no claim.
+  function evidenceFor(symbol, tf) {
+    var E = window.EVIDENCE, row = E && E.rows && E.rows[symbol + "|" + tf], o = row && row.oos;
+    var head = "ข้อมูลยืนยัน " + (E ? E.periods.oos : "") + ": ";
+    if (!o || !(o.n >= 30)) return { ok: false, n: o ? o.n : 0, text: "ยังไม่มีข้อมูลยืนยัน" + (o ? " (ช่วงทดสอบมีแค่ " + o.n + " ไม้)" : "") };
+    return { ok: true, n: o.n, win: o.win, tp5: o.tp5, avgR: o.avgR, pf: o.pf,
+      text: head + o.n + " ไม้ · ปิดกำไร " + o.win + "% (95% CI " + o.winCI[0] + "–" + o.winCI[1] + "%) · ถึง TP 5R " + o.tp5 + "% (CI " + o.tp5CI[0] + "–" + o.tp5CI[1] +
+        "%) · เฉลี่ย " + (o.avgR >= 0 ? "+" : "") + o.avgR + "R/ไม้" + (o.avgR <= 0 ? " (ขาดทุน)" : "") + " · ไม่ใช่โอกาสชนะของไม้นี้" };
+  }
+
+  function newsFilterLabel() {
+    return "ตัวกรองข่าว: งดเฉพาะวัน FOMC จากรายการที่ใส่เอง (ปี 2026 ยังไม่ยืนยัน) · CPI/NFP ไม่มีฟีดข่าว จึงไม่ได้กรอง";
+  }
+
+  function futuresCard(symbol, bars, fx, lev, tf, rule) {
     var tfMs = TF[tf || "1h"].ms;
     var opt = Object.assign({}, Swing.DEFAULTS, { fee: FUT.fee, slippage: FUT.slippage, fomcDates: locked() ? fomcDates() : [] }), n = bars.length;
     var ind = Swing.indicators(bars, opt), last = bars[n - 1];
@@ -2423,36 +2503,38 @@ a{color:var(--accent)}
     var out = { symbol: symbol, close: last.close, trend: e > e2 && last.close > e2 ? 1 : e < e2 && last.close < e2 ? -1 : 0, hist: hist, signal: null };
     var sig = Swing.signal(tech, bars, ind, n - 1, opt);
     if (!sig || !(sig.dist / last.close >= 0.0015)) return out;
-    var plan = Portfolio.plan(), dir = sig.dir, entry = last.close, dist = sig.dist, cost = 2 * (FUT.fee + FUT.slippage);
+    rule = rule || {};
+    var plan = Portfolio.plan(), dir = sig.dir, tick = rule.tick, cost = 2 * (FUT.fee + FUT.slippage);
+    // Reference entry is the close of the signal candle on the exchange's price grid; the stop is rounded
+    // away from the entry so the planned risk is never smaller than the rule says.
+    var entry = toGrid(last.close, tick), stop = toGrid(entry - dir * sig.dist, tick, dir > 0 ? "floor" : "ceil"), dist = Math.abs(entry - stop);
     var riskPct = locked() ? Math.min(LOCK.riskPct, plan.riskPct || LOCK.riskPct) : plan.riskPct;
     var balance = plan.balance / fx, riskUsdt = balance * riskPct / 100, stopFrac = dist / entry;
-    var qty = riskUsdt / (dist + cost * entry), notional = qty * entry;
-    // Leverage only sets margin. Pick the lowest x that keeps margin <= 25% of the balance, but never
-    // so high that liquidation sits closer than 1.5x the stop distance; cap at the user's maximum.
-    var levLiq = Math.max(1, Math.floor(1 / (1.5 * stopFrac + FUT.mmr))), levCap = Math.min(levLiq, lev), rec, sizeLimited = false;
-    if (locked()) {
-      // Experimental leverage cap from 5x to 50x; liquidation is only a rough safety proxy.
-      // No backtest in this app validates mark-price margin maintenance or funding tiers.
-      rec = Math.min(levCap, lev);
-      if (rec < 5 || stopFrac >= 1 / rec - 0.007) return out;
-      if (notional / rec > LOCK.marginShare * balance) {
-        sizeLimited = true;
-        qty = LOCK.marginShare * balance * rec / entry; notional = qty * entry; riskUsdt = qty * (dist + cost * entry);
-      }
-    } else {
-      var levMargin = Math.max(1, Math.ceil(notional / (FUT.marginShare * balance)));
-      rec = Math.min(levMargin, levCap);
-      if (levMargin > levCap) {
-        sizeLimited = true;
-        qty = FUT.marginShare * balance * rec / entry; notional = qty * entry; riskUsdt = qty * (dist + cost * entry);
-      }
+    var qty = riskUsdt / (dist + cost * entry), notional;
+    // Leverage is a cap chosen by the user (5/10/20/50x), never a target. Lower it until a conservative
+    // liquidation estimate stays 1.5x the stop distance away.
+    var levLiq = Math.max(1, Math.floor(1 / (1.5 * stopFrac + FUT.mmrSafe))), rec = Math.min(levLiq, lev), sizeLimited = false;
+    if (qty * entry / rec > LOCK.marginShare * balance) {
+      sizeLimited = true;
+      qty = LOCK.marginShare * balance * rec / entry;
     }
-    var liq = dir > 0 ? entry * (1 - 1 / rec + FUT.mmr) : entry * (1 + 1 / rec - FUT.mmr);
-    out.signal = { dir: dir, entry: entry, stop: entry - dir * dist, tps: [1, 2, 5].map(function (r) { return entry + dir * r * dist; }),
-      qty: +qty.toPrecision(4), notional: notional, margin: notional / rec, liq: liq, riskUsdt: riskUsdt, lev: rec, levLiq: levLiq,
-      sliderPct: notional / rec * (1 + FUT.fee * rec) / balance * 100, balanceUsdt: balance,
+    qty = toGrid(qty, rule.step, "floor");
+    notional = qty * entry; riskUsdt = qty * (dist + cost * entry);
+    // No bracket table without an API key, so liquidation uses a pessimistic maintenance margin and is only an estimate.
+    var liq = dir > 0 ? entry * (1 - 1 / rec + FUT.mmrSafe) : entry * (1 + 1 / rec - FUT.mmrSafe);
+    var volRatio = ind.v20[n - 1] > 0 ? last.volume / ind.v20[n - 1] : NaN;
+    out.signal = { dir: dir, entry: entry, stop: stop, tps: [1, 2, 5].map(function (r) { return toGrid(entry + dir * r * dist, tick); }),
+      qty: qty, notional: notional, margin: notional / rec, liq: liq, riskUsdt: riskUsdt, lev: rec, levCapUser: lev, levLiq: levLiq,
+      sliderPct: notional / rec * (1 + FUT.fee * rec) / balance * 100, balanceUsdt: balance, fx: fx, dp: decimalsOf(tick),
       sizeLimited: sizeLimited, expires: last.close_time + 1 + Math.min(FUT.enterWithinMin * 60000, tfMs), stopPct: stopFrac * 100,
-      trend: out.trend, hist: hist, stratName: spec.name, hold: spec.hold * tfMs / 3600000, tf: tf || "1h", stopAtr: spec.stopAtr || 2.5 };
+      candle: last.close_time + 1, trend: out.trend, hist: hist, stratName: spec.name, hold: spec.hold * tfMs / 3600000, tf: tf || "1h", stopAtr: spec.stopAtr || 2.5,
+      why: "แท่ง " + TF[tf].name + " ปิดแล้ว: โมเมนตัม 2 แท่ง" + (dir > 0 ? "ขึ้น" : "ลง") + " หลังบีบตัว (squeeze) ใน 3 แท่ง · Volume " + fmt(volRatio, 1) +
+        "x ค่าเฉลี่ย 20 แท่ง (เกณฑ์ ≥1.8x) · SL " + (spec.stopAtr || 1.8) + " ATR" };
+    var g = out.signal;
+    if (rec < 5) rejectSignal(g, "SL กว้างเกินไปสำหรับ Leverage ขั้นต่ำ 5x");
+    else if (dir > 0 ? liq >= stop : liq <= stop) rejectSignal(g, "Liquidation (ประมาณ) อาจมาก่อน SL");
+    else if (!(qty > 0) || qty < (rule.minQty || 0)) rejectSignal(g, "ขนาดไม้ต่ำกว่า minQty ของ Binance (" + (rule.minQty || "?") + ")");
+    else if (notional < (rule.minNotional || 0)) rejectSignal(g, "มูลค่าไม้ " + fmt(notional, 1) + " USDT ต่ำกว่าขั้นต่ำ Binance " + rule.minNotional + " USDT");
     return out;
   }
 
@@ -2505,22 +2587,29 @@ a{color:var(--accent)}
   }
 
   function renderFutures(results, fxInfo, lev, end) {
-    var fx = fxInfo.rate, sigs = results.filter(function (r) { return r.signal; });
-    results.sort(function (a, b) { return (b.signal ? 1 : 0) - (a.signal ? 1 : 0) || (b.hist.exp_r || -9) - (a.hist.exp_r || -9); });
-    $("scanSummary").innerHTML = sigs.length
-      ? '<div class="banner wait">พบ ' + sigs.length + " สัญญาณทดลอง (" + TF[curTf()].name + "): " + sigs.map(function (r) { return r.symbol.replace("USDT", "") + " " + (r.signal.dir > 0 ? "LONG" : "SHORT"); }).join(", ") + " · ยังไม่ผ่านการยืนยัน M5/M15</div>"
-      : '<div class="banner wait">ยังไม่มีสัญญาณ · สแกนอีกครั้งเมื่อแท่ง ' + TF[curTf()].name + ' ถัดไปปิด</div>';
+    var fx = fxInfo.rate, sigs = results.filter(function (r) { return r.signal; }), live = sigs.filter(function (r) { return !r.signal.below_minimum; });
+    results.sort(function (a, b) { return (b.signal ? 1 : 0) - (a.signal ? 1 : 0) || a.symbol.localeCompare(b.symbol); });
+    $("scanSummary").innerHTML = (live.length
+      ? '<div class="banner wait">พบ ' + live.length + " สัญญาณทดลอง (" + TF[curTf()].name + "): " + live.map(function (r) { return r.symbol.replace("USDT", "") + " " + (r.signal.dir > 0 ? "LONG" : "SHORT"); }).join(", ") + " · Paper เท่านั้น ไม่ใช่คำสั่งซื้อขาย</div>"
+      : '<div class="banner wait">ยังไม่มีสัญญาณที่ผ่านเงื่อนไข · สแกนอีกครั้งเมื่อแท่ง ' + TF[curTf()].name + ' ถัดไปปิด</div>') +
+      '<p class="muted" style="font-size:12px;margin:4px 2px 0">' + newsFilterLabel() + "</p>";
     // Coins with a signal get a full card; the rest are one-line rows.
     var cards = sigs.map(function (r) {
-      var name = r.symbol.replace("USDT", ""), g = r.signal, h = r.hist;
-      var pill = '<span class="pill ' + (g.dir > 0 ? "go" : "short") + '">' + (g.dir > 0 ? "LONG" : "SHORT") + " " + g.lev + "x</span>";
-      var detail = "TP1 = 1R · TP2 = 2R · TP3 = 5R · SL " + g.stopAtr + " ATR · ถือไม่เกิน " + g.hold + " ชม.<br>" +
-        "ขนาด " + g.qty + " " + name + " (≈ " + fmt(g.notional, 0) + " USDT) · Margin ≈ " + fmt(g.margin, 1) + " USDT · ราคา Liquidate ≈ " + price(g.liq) +
-        (locked() ? "" : "<br>Leverage ไม่ควรเกิน x" + g.levLiq) +
-        (h.trades ? "<br>สูตรนี้กับ " + name + " ข้อมูลย้อนหลัง " + TF[curTf()].days + " วัน: " + h.trades + " ไม้ · ชนะ " + fmt(h.win_rate, 0) + "% (ไม่ใช่โอกาสชนะไม้ใหม่) · เฉลี่ย " + fmt(h.exp_r, 2, true) + "R" : "");
+      var name = r.symbol.replace("USDT", ""), g = r.signal, ev = evidenceFor(r.symbol, curTf());
+      var pill = '<span class="pill ' + (g.dir > 0 ? "go" : "short") + '">' + (g.dir > 0 ? "LONG" : "SHORT") + " ≤" + g.lev + "x</span>";
+      if (g.below_minimum) {
+        return '<div class="coin"><div class="coin-head"><span><b>' + r.symbol + '</b> <small class="tag">Perp</small></span>' + pill + "</div>" +
+          '<div class="banner stop" style="margin:8px 0 0;font-size:13px">ไม่แจ้งเตือนไม้นี้: ' + esc(g.reject) + "</div></div>";
+      }
+      var detail = "เหตุผล: " + esc(g.why) + "<br>TP1 = 1R · TP2 = 2R · TP3 = 5R · ถือไม่เกิน " + fmt(g.hold, g.hold < 10 ? 1 : 0) + " ชม.<br>" +
+        "ขนาด " + g.qty + " " + name + " (≈ " + fmt(g.notional, 0) + " USDT) · Margin ≈ " + fmt(g.margin, 1) + " USDT · Leverage ≤" + g.lev + "x (เพดานที่เลือก " + g.levCapUser + "x)" +
+        "<br>Liquidation ประมาณ " + price(g.liq) + " (สมมติ maintenance margin 1% · ไม่มีตาราง bracket จริง จึงไม่ใช่ตัวเลขที่ปลอดภัยแน่นอน)" +
+        (g.mark ? "<br>Mark price ตอนสแกน " + price(g.mark) : "") +
+        "<br>ต้นทุนที่สมมติ: ค่าธรรมเนียม 0.05% + slippage 0.02% ต่อข้าง + funding 0.01%/8 ชม.";
       return '<div class="coin go"><div class="coin-head"><span><b>' + r.symbol + '</b> <small class="tag">Perp</small>' +
-        (r.symbol === LOCK.symbol ? "" : ' <small class="tag" style="color:var(--yel)">ยังไม่ผ่านงานวิจัย</small>') + "</span>" + pill + "</div>" +
-        '<div class="levels"><div><small>เข้า (Market)</small><b>' + price(g.entry) + '</b></div><div><small>SL</small><b class="down">' + price(g.stop) +
+        ' <small class="tag" style="color:var(--yel)">ทดลอง</small></span>' + pill + "</div>" +
+        '<div class="ev ' + (ev.ok && ev.avgR > 0 ? "good" : "bad") + '">' + esc(ev.text) + "</div>" +
+        '<div class="levels"><div><small>เข้าอ้างอิง</small><b>' + price(g.entry) + '</b></div><div><small>SL</small><b class="down">' + price(g.stop) +
         '</b></div><div><small>TP1 · TP2 · TP3</small><b class="up" style="font-size:13px">' + g.tps.map(price).join("<br>") + "</b></div></div>" +
         '<div class="slider-tip">ลากสไลเดอร์ไปที่ <b style="font-size:20px">' + fmt(Math.max(g.sliderPct, 0.1), g.sliderPct < 10 ? 1 : 0) +
           "%</b> · โดน SL เสีย ≈ " + fmt(g.riskUsdt * fx, 0) + " ฿ · เข้าก่อน " + thai(g.expires).slice(9) + " น.</div>" +
@@ -2601,18 +2690,31 @@ a{color:var(--accent)}
       .then(function () { scanning = false; $("scan").disabled = false; });
   }
 
-  // Background scans in the Android app hand their result to the native alert.
-  function reportScan(results, end, error) {
-    if (!window.NativeHttp || !window.NativeHttp.scanDone) return;
-    var plan = Portfolio.plan();
-    window.NativeHttp.scanDone(JSON.stringify({ candle: end, interval_minutes: TF[curTf()].ms / 60000, error: error,
-      note: plan.state === "ok" ? "" : plan.message,
-      signals: (plan.state === "ok" ? results : []).filter(function (r) { return r.signal && !r.signal.below_minimum; }).map(function (r) {
-        var g = r.signal, h = r.hist || {};
-        return { symbol: r.symbol, side: g.dir > 0 ? "LONG" : "SHORT", leverage: g.lev,
-          entry: price(g.entry), sl: price(g.stop), tp1: price(g.tps[0]), tp2: price(g.tps[1]), tp5: price(g.tps[2]),
-          samples: h.trades || 0, win_pct: h.trades >= 30 ? h.win_rate : -1, experimental: true };
-      }) }));
+  // Every scan (foreground or background) hands its result to the native alerts as one JSON packet.
+  // Contract (checked by tests/payload and SignalAlerts.java): see signalPayload().
+  var TF_LABEL = { "5m": "M5", "15m": "M15", "1h": "H1" };
+  function pxDp(v, dp) {
+    if (!isFinite(v)) return "";
+    return dp === undefined ? price(v) : v.toLocaleString("en-US", { minimumFractionDigits: dp, maximumFractionDigits: dp });
+  }
+  function signalPayload(r, tf) {
+    var g = r.signal, ev = evidenceFor(r.symbol, tf), fx = g.fx || 33;
+    return { symbol: r.symbol, side: g.dir > 0 ? "LONG" : "SHORT", tf: TF_LABEL[tf], strategy: "squeeze3_ls",
+      candle_close: g.candle, expires: g.expires, hold_hours: g.hold,
+      entry: pxDp(g.entry, g.dp), sl: pxDp(g.stop, g.dp), tp1: pxDp(g.tps[0], g.dp), tp2: pxDp(g.tps[1], g.dp), tp5: pxDp(g.tps[2], g.dp),
+      qty: String(g.qty), margin_usdt: g.margin.toFixed(2), margin_thb: String(Math.round(g.margin * fx)), risk_thb: String(Math.round(g.riskUsdt * fx)),
+      leverage: g.lev, leverage_cap: g.levCapUser, liq_est: pxDp(g.liq, g.dp), mark: g.mark ? pxDp(g.mark, g.dp) : "",
+      rationale: g.why, evidence: ev.text, evidence_ok: ev.ok, experimental: true };
+  }
+  function reportScan(results, end, error, extra) {
+    if (!window.NativeHttp || !window.NativeHttp.scanDone || $("sgMode").value !== "futures") return;
+    var plan = Portfolio.plan(), tf = curTf();
+    var sigs = (plan.state === "ok" ? results : []).filter(function (r) { return r.signal && !r.signal.below_minimum; });
+    window.NativeHttp.scanDone(JSON.stringify({ v: 2, candle: end, interval_minutes: TF[tf].ms / 60000, error: error || "",
+      scanned: extra && extra.scanned || 0, failed: extra && extra.failed || [],
+      rejected: results.filter(function (r) { return r.signal && r.signal.below_minimum; }).map(function (r) { return r.symbol + ": " + r.signal.reject; }),
+      note: plan.state === "ok" ? "" : plan.message, news_filter: newsFilterLabel(),
+      signals: sigs.map(function (r) { return signalPayload(r, tf); }) }));
   }
 
   function rank(r) { return r.signal ? 0 : r.trend_up && r.strategy ? 1 : r.trend_up ? 2 : 3; }
@@ -2664,6 +2766,12 @@ a{color:var(--accent)}
     try { $("autoScan").checked = window.NativeHttp.alertsEnabled(); } catch (e) { /* ignore */ }
   }
   function batteryCheck() {
+    // Last background scan as recorded by Android (time, outcome, reason) so failures are visible, not silent.
+    try {
+      var st = window.NativeHttp && window.NativeHttp.lastScanStatus ? JSON.parse(window.NativeHttp.lastScanStatus() || "{}") : {};
+      $("scanLog").textContent = st.at ? "สแกนเบื้องหลังล่าสุด " + thai(st.at) + " น.: " + (st.text || "") : (nativeAlerts ? "ยังไม่มีการสแกนเบื้องหลัง" : "");
+      $("scanLog").className = st.at && !st.ok ? "down" : "muted";
+    } catch (e) { /* ignore */ }
     var blocked = false;
     try { blocked = nativeAlerts && window.NativeHttp.notificationsAllowed && !window.NativeHttp.notificationsAllowed(); } catch (e) { /* ignore */ }
     $("notifBox").classList.toggle("hidden", !blocked);
@@ -2712,7 +2820,7 @@ a{color:var(--accent)}
   // ---- Realtime chart: EMA, Bollinger, RSI, auto Fibonacci, trendlines, plan ----
   var ChartView = (function () {
     var TF_MS = { "15m": 900000, "1h": 3600000, "4h": 14400000, "1d": 86400000 };
-    var STREAMS = ["wss://data-stream.binance.vision/ws/", "wss://stream.binance.com:9443/ws/"];
+    var STREAMS = ["wss://fstream.binance.com/ws/"];   // USD-M futures streams, same market as the signals
     var chart = null, rsiChart = null, series = {}, priceLines = [], bars = [], socket = null, pollTimer = null,
       symbol = "BTCUSDT", tf = "4h", lastDraw = 0, token = 0;
 
@@ -2774,7 +2882,7 @@ a{color:var(--accent)}
       clearInterval(pollTimer);
       $("cvLive").textContent = "● กำลังโหลด…";
       $("cvLive").className = "";
-      binance("/api/v3/klines?symbol=" + symbol + "&interval=" + tf + "&limit=500").then(function (rows) {
+      futuresApi("/fapi/v1/klines?symbol=" + symbol + "&interval=" + tf + "&limit=500").then(function (rows) {
         if (my !== token) return;
         bars = rows.map(function (k) { return { time: k[0], open: +k[1], high: +k[2], low: +k[3], close: +k[4], volume: +k[5], closed: true }; });
         if (bars.length) bars[bars.length - 1].closed = false;
@@ -2809,7 +2917,7 @@ a{color:var(--accent)}
       $("cvLive").textContent = "● อัปเดตทุก 10 วินาที";
       pollTimer = setInterval(function () {
         if (my !== token) return;
-        binance("/api/v3/klines?symbol=" + symbol + "&interval=" + tf + "&limit=2").then(function (rows) {
+        futuresApi("/fapi/v1/klines?symbol=" + symbol + "&interval=" + tf + "&limit=2").then(function (rows) {
           rows.forEach(function (k) { onKline({ t: k[0], o: k[1], h: k[2], l: k[3], c: k[4], v: k[5], x: k[6] < Date.now() }); });
         }).catch(function () { /* keep last chart */ });
       }, 10000);
@@ -3046,10 +3154,10 @@ a{color:var(--accent)}
       if (!coins.length) { $("swStatus").textContent = "เลือกอย่างน้อย 1 เหรียญ"; return; }
       var days = parseInt($("swDays").value, 10), data = {}, done = 0, tf = $("swTf").value, step = tf === "1h" ? 3600000 : 14400000;
       $("swRun").disabled = true; $("swStatus").className = "status-line"; $("swStatus").textContent = "กำลังดึงแท่ง " + tf + "…";
-      binance("/api/v3/time").then(function (t) {
+      futuresApi("/fapi/v1/time").then(function (t) {
         var end = Math.floor(t.serverTime / step) * step, start = end - days * 86400000;
         return Promise.all(coins.map(function (c) {
-          return fetchCandles(c, start, end, function () {}, tf).then(function (rows) {
+          return fetchCandles(c, start, end, function () {}, tf, true).then(function (rows) {
             data[c] = rows; done++; $("swStatus").textContent = "ดึงแล้ว " + done + "/" + coins.length + " เหรียญ";
           }).catch(function (e) { $("swStatus").textContent = c + ": " + e.message; });
         }));
