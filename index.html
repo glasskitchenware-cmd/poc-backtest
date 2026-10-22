@@ -204,6 +204,20 @@ a{color:var(--accent)}
 
 <div id="signalTab">
 <section>
+  <div style="background:#101820;border:1px solid #334155;border-radius:12px;padding:12px;margin-bottom:10px">
+    <b>Crypto Signal · เลือกเหรียญสำหรับแจ้งเตือน</b>
+    <div class="row" style="margin-top:8px">
+      <label>กราฟสัญญาณ
+        <select id="alertTf"><option value="5m">M5 · ทดลอง</option><option value="15m" selected>M15 · ทดลอง</option><option value="1h">H1 · สูตรเดิม</option></select>
+      </label>
+      <label>เพดาน Leverage (Isolated)
+        <select id="alertLev"><option value="5">5x</option><option value="10" selected>10x</option><option value="20">20x</option><option value="50">50x</option></select>
+      </label>
+    </div>
+    <div id="alertCoinList" class="checks" style="flex-wrap:wrap;gap:8px 12px;margin-top:10px"></div>
+    <div class="btnrow"><button class="mini ghost" id="alertAllCoins" type="button">เลือกทุกเหรียญ</button><button class="mini ghost" id="alertCoreCoins" type="button">เฉพาะ BTC · ETH · SOL</button></div>
+    <small>สัญญาณทดลอง 12 เหรียญจาก Binance USDⓈ-M Futures · วิเคราะห์แท่งที่ปิดแล้ว · ไม่ส่งคำสั่งซื้อขาย · Win rate ย้อนหลังไม่ใช่ความแม่นยำที่รับประกัน</small>
+  </div>
   <button id="scan" style="margin-top:0">สแกนหาสัญญาณตอนนี้</button>
   <p class="muted" style="margin:8px 0 0;font-size:12px" id="sgHelp"></p>
   <div id="scanStatus" class="status-line"></div>
@@ -1273,6 +1287,7 @@ a{color:var(--accent)}
   "use strict";
 
   var BASES = ["https://data-api.binance.vision", "https://api.binance.com"];
+  var FUTURES_BASES = ["https://fapi.binance.com", "https://fapi1.binance.com"];
   var THAI_OFFSET_S = 7 * 3600;
   var REASONS = { stop: "ชน stop", stop_gap: "เปิดกระโดดผ่าน stop", target: "ถึงเป้า", target_gap: "เปิดเหนือเป้า",
     trend_exit: "สัญญาณออก", time_exit: "ครบ 240 นาที", utc_day_end: "ปิดรอบวัน", evaluation_end: "จบช่วงทดสอบ",
@@ -1326,6 +1341,19 @@ a{color:var(--accent)}
     });
   }
 
+  function futuresApi(path) {
+    var errors = [];
+    return FUTURES_BASES.reduce(function (chain, base) {
+      return chain.catch(function (e) {
+        if (e) errors.push(String(e.message || e));
+        return httpGet(base + path).then(JSON.parse);
+      });
+    }, Promise.reject(null)).catch(function (e) {
+      errors.push(String(e.message || e));
+      throw new Error("เชื่อมต่อ Binance Futures ไม่ได้: " + errors.join(" | ").slice(0, 280));
+    });
+  }
+
   function status(text, isError) {
     var el = $("status");
     el.textContent = text;
@@ -1366,14 +1394,15 @@ a{color:var(--accent)}
     });
   }
 
-  function fetchCandles(symbol, start, end, progress, interval) {
+  function fetchCandles(symbol, start, end, progress, interval, perpetual) {
     interval = interval || "15m";
     var step = { "5m": 300000, "15m": 900000, "1h": 3600000, "4h": 14400000, "1d": 86400000 }[interval];
     var rows = [];
     function page(from) {
       if (from >= end) return Promise.resolve(rows);
-      return binance("/api/v3/klines?symbol=" + symbol + "&interval=" + interval + "&startTime=" + from +
-          "&endTime=" + (end - 1) + "&limit=1000").then(function (batch) {
+      return (perpetual ? futuresApi("/fapi/v1/klines?symbol=" + symbol + "&interval=" + interval + "&startTime=" + from +
+          "&endTime=" + (end - 1) + "&limit=1000") : binance("/api/v3/klines?symbol=" + symbol + "&interval=" + interval + "&startTime=" + from +
+          "&endTime=" + (end - 1) + "&limit=1000")).then(function (batch) {
         if (!Array.isArray(batch)) throw new Error(symbol + ": ข้อมูลแท่งผิดรูปแบบ");
         batch.forEach(function (k) {
           var row = { time: k[0], close_time: k[6], open: +k[1], high: +k[2], low: +k[3], close: +k[4], volume: +k[5] };
@@ -1759,6 +1788,46 @@ a{color:var(--accent)}
   // ---- Live signal scan ----
   var COINS = ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT", "DOGEUSDT", "ADAUSDT", "AVAXUSDT",
     "LINKUSDT", "DOTUSDT", "TRXUSDT", "LTCUSDT"];
+  function selectedCoins() {
+    try {
+      var stored = localStorage.getItem("alertCoins");
+      if (stored) {
+        var enabled = JSON.parse(stored);
+        if (Array.isArray(enabled)) return COINS.filter(function (x) { return enabled.indexOf(x) >= 0; });
+      }
+    } catch (e) { /* fallback */ }
+    return ["BTCUSDT", "ETHUSDT", "SOLUSDT"];
+  }
+  function initSignalSettings() {
+    var tf = $("alertTf"), lev = $("alertLev"), box = $("alertCoinList");
+    tf.value = curTf();
+    try { lev.value = localStorage.getItem("alertLeverage") || "10"; } catch (e) { lev.value = "10"; }
+    if (!/^(5|10|20|50)$/.test(lev.value)) lev.value = "10";
+    var active = selectedCoins();
+    box.innerHTML = COINS.map(function (symbol) {
+      return '<label style="display:flex;align-items:center;gap:4px;margin:0;min-width:74px;color:#eaecef"><input type="checkbox" data-coin="' + symbol + '" ' +
+        (active.indexOf(symbol) >= 0 ? "checked" : "") + ' style="width:auto">' + symbol.replace("USDT", "") + '</label>';
+    }).join("");
+    function saveCoins() {
+      var selected = Array.prototype.map.call(box.querySelectorAll("input:checked"), function (x) { return x.getAttribute("data-coin"); });
+      try { localStorage.setItem("alertCoins", JSON.stringify(selected)); } catch (e) {}
+    }
+    box.addEventListener("change", saveCoins);
+    $("alertAllCoins").onclick = function () { box.querySelectorAll("input").forEach(function (x) { x.checked = true; }); saveCoins(); };
+    $("alertCoreCoins").onclick = function () {
+      box.querySelectorAll("input").forEach(function (x) { x.checked = ["BTCUSDT", "ETHUSDT", "SOLUSDT"].indexOf(x.getAttribute("data-coin")) >= 0; });
+      saveCoins();
+    };
+    tf.onchange = function () {
+      try { localStorage.setItem("tradeTf", tf.value); } catch (e) {}
+      if (window.NativeHttp && window.NativeHttp.setScanMinutes) {
+        window.NativeHttp.setScanMinutes(TF[tf.value].ms / 60000);
+      }
+      modeHelp(); scheduleAuto();
+    };
+    lev.onchange = function () { try { localStorage.setItem("alertLeverage", lev.value); } catch (e) {} };
+    if (window.NativeHttp && window.NativeHttp.setScanMinutes) window.NativeHttp.setScanMinutes(TF[tf.value].ms / 60000);
+  }
   var scanning = false, autoTimer = null;
 
   function price(v) {
@@ -2107,13 +2176,12 @@ a{color:var(--accent)}
 
   // ---- Futures: ONE BEST COMBO (Momentum + Squeeze, 1H) long/short with leverage-aware sizing ----
   var FUT = { fee: 0.0005, slippage: 0.0002, mmr: 0.005, enterWithinMin: 15, marginShare: 0.25 };
-  // Timeframe of the main screen. Background alerts always use 1H (the researched setup); 5m/15m are a trial that runs while the app is open.
+  // The Android scanner and the visible scanner share persisted M5/M15/H1 settings.
   var TF = { "1h": { ms: 3600000, days: 100, name: "1 ชม." }, "15m": { ms: 900000, days: 30, name: "15 นาที" }, "5m": { ms: 300000, days: 14, name: "5 นาที" } };
   function curTf() {
-    if (location.hash === "#bg") return "1h";
-    var t = "1h";
-    try { t = localStorage.getItem("tradeTf") || "1h"; } catch (e) { /* ignore */ }
-    return TF[t] ? t : "1h";
+    var t = "15m";
+    try { t = localStorage.getItem("tradeTf") || "15m"; } catch (e) { /* ignore */ }
+    return TF[t] ? t : "15m";
   }
 
   var lastFutures = [];
@@ -2312,18 +2380,19 @@ a{color:var(--accent)}
   })();
 
   function futuresScan() {
-    var results = [], errors = [], done = 0, fxInfo, end, lev = locked() ? LOCK.lev : Math.max(1, Math.min(125, readNumber("sgLev", 10)));
-    var coins = COINS;   // every coin uses the same rules; only BTCUSDT was covered by the research
+    var results = [], errors = [], done = 0, fxInfo, end, lev = Math.max(5, Math.min(50, readNumber("alertLev", 10)));
+    var coins = selectedCoins();  // user-selected coins; BTC/ETH study cannot validate other symbols
     var tf = curTf(), tfMs = TF[tf].ms;
     scanStatus("กำลังดึงแท่ง " + TF[tf].name + " และอัตราแลกเปลี่ยน…");
-    return Promise.all([binance("/api/v3/time"), fetchFx()]).then(function (res) {
+    if (!coins.length) return Promise.reject(new Error("เลือกเหรียญอย่างน้อย 1 เหรียญก่อนสแกน"));
+    return Promise.all([futuresApi("/fapi/v1/time"), fetchFx().catch(function () { return { rate: 33 }; })]).then(function (res) {
       fxInfo = res[1];
       end = Math.floor(res[0].serverTime / tfMs) * tfMs;
       var start = end - TF[tf].days * 86400000, queue = coins.slice();
       function worker() {
         var s = queue.shift();
         if (!s) return Promise.resolve();
-        return fetchCandles(s, start, end, function () {}, tf).then(function (bars) {
+        return fetchCandles(s, start, end, function () {}, tf, true).then(function (bars) {
           results.push(futuresCard(s, bars, fxInfo.rate, lev, tf));
         }).catch(function (e) { errors.push(s.replace("USDT", "") + ": " + e.message); }).then(function () {
           done++; scanStatus("สแกนแล้ว " + done + "/" + coins.length + " เหรียญ…");
@@ -2335,11 +2404,11 @@ a{color:var(--accent)}
       renderFutures(results, fxInfo, lev, end);
       lastFutures = results;
       Simple.render(results, null, fxInfo.rate);
-      return AI.auto(results);
+      return location.hash === "#bg" ? null : AI.auto(results);
     }).then(function () {
       Simple.render(results, null, fxInfo.rate);
       reportScan(results, end, null);
-      scanStatus("สแกนล่าสุด " + thai(Date.now()) + " น. · แท่ง " + TF[tf].name + " ที่ปิดเมื่อ " + thai(end) + " น. · ราคาจาก Binance Spot ใช้แทน Futures (ต่างกันเล็กน้อย)" +
+      scanStatus("สแกนล่าสุด " + thai(Date.now()) + " น. · แท่ง " + TF[tf].name + " ที่ปิดเมื่อ " + thai(end) + " น. · ราคา Binance USD-M Futures (ไม่ใช่ราคาเปิดคำสั่งจริง)" +
         (errors.length ? "\nข้ามบางเหรียญ: " + errors.join(" · ") : ""), !results.length);
     });
   }
@@ -2362,9 +2431,10 @@ a{color:var(--accent)}
     // so high that liquidation sits closer than 1.5x the stop distance; cap at the user's maximum.
     var levLiq = Math.max(1, Math.floor(1 / (1.5 * stopFrac + FUT.mmr))), levCap = Math.min(levLiq, lev), rec, sizeLimited = false;
     if (locked()) {
-      // The chosen setup: fixed 10x isolated, margin at most 5% of the account (as in the research).
-      if (stopFrac >= 1 / LOCK.lev - 0.007) return out;   // stop too close to liquidation: the research skips it
-      rec = LOCK.lev;
+      // Experimental leverage cap from 5x to 50x; liquidation is only a rough safety proxy.
+      // No backtest in this app validates mark-price margin maintenance or funding tiers.
+      rec = Math.min(levCap, lev);
+      if (rec < 5 || stopFrac >= 1 / rec - 0.007) return out;
       if (notional / rec > LOCK.marginShare * balance) {
         sizeLimited = true;
         qty = LOCK.marginShare * balance * rec / entry; notional = qty * entry; riskUsdt = qty * (dist + cost * entry);
@@ -2438,8 +2508,8 @@ a{color:var(--accent)}
     var fx = fxInfo.rate, sigs = results.filter(function (r) { return r.signal; });
     results.sort(function (a, b) { return (b.signal ? 1 : 0) - (a.signal ? 1 : 0) || (b.hist.exp_r || -9) - (a.hist.exp_r || -9); });
     $("scanSummary").innerHTML = sigs.length
-      ? '<div class="banner go">มีสัญญาณ ' + sigs.length + " เหรียญ: " + sigs.map(function (r) { return r.symbol.replace("USDT", "") + " " + (r.signal.dir > 0 ? "LONG" : "SHORT"); }).join(", ") + "</div>"
-      : '<div class="banner wait">ตอนนี้ไม่มีสัญญาณ — รอแท่ง 1 ชม. ถัดไปปิด แล้วสแกนใหม่</div>';
+      ? '<div class="banner wait">พบ ' + sigs.length + " สัญญาณทดลอง (" + TF[curTf()].name + "): " + sigs.map(function (r) { return r.symbol.replace("USDT", "") + " " + (r.signal.dir > 0 ? "LONG" : "SHORT"); }).join(", ") + " · ยังไม่ผ่านการยืนยัน M5/M15</div>"
+      : '<div class="banner wait">ยังไม่มีสัญญาณ · สแกนอีกครั้งเมื่อแท่ง ' + TF[curTf()].name + ' ถัดไปปิด</div>';
     // Coins with a signal get a full card; the rest are one-line rows.
     var cards = sigs.map(function (r) {
       var name = r.symbol.replace("USDT", ""), g = r.signal, h = r.hist;
@@ -2447,7 +2517,7 @@ a{color:var(--accent)}
       var detail = "TP1 = 1R · TP2 = 2R · TP3 = 5R · SL " + g.stopAtr + " ATR · ถือไม่เกิน " + g.hold + " ชม.<br>" +
         "ขนาด " + g.qty + " " + name + " (≈ " + fmt(g.notional, 0) + " USDT) · Margin ≈ " + fmt(g.margin, 1) + " USDT · ราคา Liquidate ≈ " + price(g.liq) +
         (locked() ? "" : "<br>Leverage ไม่ควรเกิน x" + g.levLiq) +
-        (h.trades ? "<br>สูตรนี้กับ " + name + " 100 วันล่าสุด: " + h.trades + " ไม้ · win " + fmt(h.win_rate, 0) + "% · เฉลี่ย " + fmt(h.exp_r, 2, true) + "R" : "");
+        (h.trades ? "<br>สูตรนี้กับ " + name + " ข้อมูลย้อนหลัง " + TF[curTf()].days + " วัน: " + h.trades + " ไม้ · ชนะ " + fmt(h.win_rate, 0) + "% (ไม่ใช่โอกาสชนะไม้ใหม่) · เฉลี่ย " + fmt(h.exp_r, 2, true) + "R" : "");
       return '<div class="coin go"><div class="coin-head"><span><b>' + r.symbol + '</b> <small class="tag">Perp</small>' +
         (r.symbol === LOCK.symbol ? "" : ' <small class="tag" style="color:var(--yel)">ยังไม่ผ่านงานวิจัย</small>') + "</span>" + pill + "</div>" +
         '<div class="levels"><div><small>เข้า (Market)</small><b>' + price(g.entry) + '</b></div><div><small>SL</small><b class="down">' + price(g.stop) +
@@ -2535,12 +2605,13 @@ a{color:var(--accent)}
   function reportScan(results, end, error) {
     if (!window.NativeHttp || !window.NativeHttp.scanDone) return;
     var plan = Portfolio.plan();
-    window.NativeHttp.scanDone(JSON.stringify({ candle: end, error: error,
+    window.NativeHttp.scanDone(JSON.stringify({ candle: end, interval_minutes: TF[curTf()].ms / 60000, error: error,
       note: plan.state === "ok" ? "" : plan.message,
-      signals: results.filter(function (r) { return r.signal && !r.signal.below_minimum; }).map(function (r) {
-        var g = r.signal, side = g.dir ? (g.dir > 0 ? " LONG" : " SHORT") : "";
-        return { coin: r.symbol.replace("USDT", "") + side + (g.lev ? " x" + g.lev : "") + (r.ai ? " · AI: " + r.ai.verdict : ""),
-          entry: price(g.entry), stop: price(g.stop), target: g.tps ? g.tps.map(price).join(" / ") : price(g.target) };
+      signals: (plan.state === "ok" ? results : []).filter(function (r) { return r.signal && !r.signal.below_minimum; }).map(function (r) {
+        var g = r.signal, h = r.hist || {};
+        return { symbol: r.symbol, side: g.dir > 0 ? "LONG" : "SHORT", leverage: g.lev,
+          entry: price(g.entry), sl: price(g.stop), tp1: price(g.tps[0]), tp2: price(g.tps[1]), tp5: price(g.tps[2]),
+          samples: h.trades || 0, win_pct: h.trades >= 30 ? h.win_rate : -1, experimental: true };
       }) }));
   }
 
@@ -2584,12 +2655,12 @@ a{color:var(--accent)}
   function scheduleAuto() {
     clearTimeout(autoTimer);
     if (!$("autoScan").checked) return;
-    var bar = $("sgMode").value === "futures" ? 3600000 : Engine.BAR_MS, wait = bar - (Date.now() % bar) + 40000;
+    var bar = $("sgMode").value === "futures" ? TF[curTf()].ms : Engine.BAR_MS, wait = bar - (Date.now() % bar) + 25000;
     autoTimer = setTimeout(function () { scan(); scheduleAuto(); }, wait);
   }
   var nativeAlerts = !!(window.NativeHttp && window.NativeHttp.setAlerts);
   if (nativeAlerts) {
-    $("autoScanLabel").textContent = "เด้งเมื่อมีสัญญาณเข้าได้ (ทุกต้นชั่วโมง แม้ปิดแอป)";
+    $("autoScanLabel").textContent = "เด้งแยกเหรียญเมื่อมีสัญญาณ (M5/M15/H1 · Android อาจหน่วงแจ้งเตือนเมื่อประหยัดแบต)";
     try { $("autoScan").checked = window.NativeHttp.alertsEnabled(); } catch (e) { /* ignore */ }
   }
   function batteryCheck() {
@@ -2624,7 +2695,7 @@ a{color:var(--accent)}
         " · ขนาดไม้คิดจาก % เสี่ยงในแท็บพอร์ต ไม่ใช่จาก Leverage"
       : "Spot: สแกนแนวโน้ม 1 ชม. เลือกกลยุทธ์ที่ได้ผลดีสุดใน 90 วันล่าสุดของแต่ละเหรียญ แล้วดูแท่ง 15 นาทีที่เพิ่งปิด";
     if ($("sgMode").value !== "futures") $("sgLev").disabled = $("sgStrat").disabled = true;
-    if (lock && $("sgMode").value === "futures") $("sgHelp").textContent = "12 เหรียญ · Squeeze v2 · แท่ง 1 ชม. · 10x Isolated · เสี่ยง 0.25%/ไม้ · งดวัน FOMC";
+    if (lock && $("sgMode").value === "futures") $("sgHelp").textContent = "สูตร Squeeze v2 เดิมพัฒนาบน H1 · ใช้ M5/M15 เป็นสัญญาณทดลอง ยังไม่ผ่าน Backtest · เลือกเหรียญ/กราฟด้านบน · จำกัดเสี่ยงเป้าหมาย 0.25%/ไม้";
   }
   ["sgMode", "sgLev", "sgStrat"].forEach(function (id) {
     try { var v = localStorage.getItem(id); if (v !== null) $(id).value = v; } catch (e) { /* ignore */ }
@@ -2636,6 +2707,7 @@ a{color:var(--accent)}
   try { $("sgFomc").value = localStorage.getItem("sgFomc") || FOMC_DEFAULT.join("\n"); } catch (e) { $("sgFomc").value = FOMC_DEFAULT.join("\n"); }
   $("sgFomc").addEventListener("change", function () { try { localStorage.setItem("sgFomc", $("sgFomc").value); } catch (e) { /* ignore */ } });
   modeHelp();
+  initSignalSettings();
 
   // ---- Realtime chart: EMA, Bollinger, RSI, auto Fibonacci, trendlines, plan ----
   var ChartView = (function () {
