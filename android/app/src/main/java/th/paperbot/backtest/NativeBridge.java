@@ -31,7 +31,7 @@ final class NativeBridge {
     }
 
     private static final List<String> ALLOWED_HOSTS = Arrays.asList(
-            "data-api.binance.vision", "api.binance.com", "api.bitkub.com", "open.er-api.com");
+            "data-api.binance.vision", "api.binance.com", "fapi.binance.com", "fapi1.binance.com", "api.bitkub.com", "open.er-api.com");
     private static final List<String> POST_HOSTS = Arrays.asList("generativelanguage.googleapis.com");
 
     private final Context context;
@@ -180,7 +180,7 @@ final class NativeBridge {
     @JavascriptInterface
     public void testNotification() {
         main.post(() -> Alerts.show(context, "ทดสอบแจ้งเตือน ✓",
-                "ถ้าเห็นข้อความนี้ แปลว่าแจ้งเตือนสัญญาณเด้งได้ · ของจริงจะขึ้นว่า \"เข้าได้เลย: BTC LONG x10\""));
+                "นี่เป็นการทดสอบเสียง/แบนเนอร์ของมือถือ · สัญญาณจริงจะแจ้งแยกเหรียญ พร้อม Entry, SL, TP 5R และ Backtest ที่มีหลักฐาน"));
     }
 
     @JavascriptInterface
@@ -210,6 +210,17 @@ final class NativeBridge {
     @JavascriptInterface
     public void setAlerts(boolean enabled) {
         main.post(() -> host.onAlertsChanged(enabled));
+    }
+
+    /** Alert timeframe options are 5m, 15m, and 1h; synchronized with the Android alarm. */
+    @JavascriptInterface
+    public void setScanMinutes(int minutes) {
+        main.post(() -> Alerts.setScanMinutes(context, minutes));
+    }
+
+    @JavascriptInterface
+    public int scanMinutes() {
+        return Alerts.scanMinutes(context);
     }
 
     @JavascriptInterface
