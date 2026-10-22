@@ -246,12 +246,53 @@ console.log("\nper coin (walk-forward OOS):", COINS.map(c => { const s = stats(o
   for (const risk of [0.0025, 0.005, 0.01]) port[risk * 100] = portfolio(flat, risk, from, to);
   console.log("portfolio (P&L booked at exit, compounding):", JSON.stringify(port));
 
+  // Reach rates on the same trades: how often the best price before any stop bar got to +kR (what a take profit there
+  // would have filled), and how often the stop came before +1R.
+  const reach = tr => {
+    const n = tr.length || 1, o = { n: tr.length };
+    for (const k of [1, 2, 3, 5]) o[k] = +(100 * tr.filter(t => t.mfeR >= k).length / n).toFixed(1);
+    o.slFirst = +(100 * tr.filter(t => /^stop/.test(t.reason) && t.mfeR < 1).length / n).toFixed(1);
+    return o;
+  };
+  const reachRows = {};
+  for (const c of Object.keys(full)) reachRows[c] = reach(evApp.filter(t => t.coin === c));
+  console.log("reach (+1R/+2R/+3R/+5R, stop before +1R), evidence years:", JSON.stringify(reach(evApp)));
+
+  // Scale-out plans. Each keeps a runner, so entries and final exits are those of the rule; chosen by average R on
+  // 2020-2022 only (before every evidence year), then reported on the evidence years once.
+  const LADDERS = [
+    { id: "half2", name: "50% ที่ +2R", tps: [{ r: 2, frac: 0.5 }] },
+    { id: "half3", name: "50% ที่ +3R", tps: [{ r: 3, frac: 0.5 }] },
+    { id: "third12", name: "1/3 ที่ +1R · 1/3 ที่ +2R", tps: [{ r: 1, frac: 1 / 3 }, { r: 2, frac: 1 / 3 }] },
+    { id: "third13", name: "1/3 ที่ +1R · 1/3 ที่ +3R", tps: [{ r: 1, frac: 1 / 3 }, { r: 3, frac: 1 / 3 }] },
+    { id: "third24", name: "1/3 ที่ +2R · 1/3 ที่ +4R", tps: [{ r: 2, frac: 1 / 3 }, { r: 4, frac: 1 / 3 }] },
+    { id: "quarter123", name: "25% ที่ +1R · 25% ที่ +2R · 25% ที่ +3R", tps: [{ r: 1, frac: 0.25 }, { r: 2, frac: 0.25 }, { r: 3, frac: 0.25 }] }
+  ];
+  const TRAIN = [2020, 2021, 2022];
+  const ladderRuns = LADDERS.map(L => {
+    const tr = [].concat(...Object.keys(full).map(c => Trend.run(app(c), { tps: L.tps }).trades.map(t => Object.assign({ coin: c }, t)))).filter(t => levLiq(t) >= 5);
+    return { L, tr, train: summary(tr.filter(t => inYears(t, TRAIN))), test: summary(tr.filter(t => inYears(t, evYears))) };
+  });
+  const baseTrain = summary(all.filter(t => inYears(t, TRAIN) && levLiq(t) >= 5));
+  console.log("\n== SCALE-OUT (chosen on 2020-2022, tested on " + evYears.join("/") + ") ==");
+  console.log("no take profit (the rule)".padEnd(44), "train", JSON.stringify(baseTrain), "test", JSON.stringify(summary(evApp)));
+  for (const x of ladderRuns) console.log(x.L.name.padEnd(44), "train", JSON.stringify(x.train), "test", JSON.stringify(x.test));
+  const best = ladderRuns.slice().sort((a, b) => b.train.avgR - a.train.avgR)[0], ladderEv = best.tr.filter(t => inYears(t, evYears));
+  const lport = {}, lrows = {};
+  for (const risk of [0.0025, 0.005, 0.01]) lport[risk * 100] = portfolio(ladderEv.map(t => ({ t: t.entry_time, tx: t.exit_time, r: t.r })), risk, from, to);
+  for (const c of Object.keys(full)) lrows[c] = summary(ladderEv.filter(t => t.coin === c));
+  console.log("chosen on 2020-2022:", best.L.name, "· evidence years", JSON.stringify(best.test), "· portfolio", JSON.stringify(lport));
+
   const out = { strategy: "donchian4h", name: "Trend 4H · Donchian 20/10 · SL 3 ATR · EMA200 · Long/Short",
     period: contiguous ? `${evYears[0]}-01-01..2026-09-30` : evYears.join(", "), years_chosen: evYears,
     selection: "walk-forward: each year the rule was picked using only earlier years (24 candidates)",
     costs: "fee 0.05% + slippage 0.02% per side, funding 0.01%/8h", filter: "signals whose stop needs leverage below 5x are not sent",
     generated: "2026-10-22", all: summary(evApp), y2022: summary(y2022), years, rows, stress: summary(stress), stops: stopInfo, lev: levInfo, open: conc, portfolio: port,
-    parity: bad ? "FAIL" : "OK", replay: miss ? "FAIL" : "OK", replay_checked: checked };
+    parity: bad ? "FAIL" : "OK", replay: miss ? "FAIL" : "OK", replay_checked: checked,
+    reach: reach(evApp), reachRows, base_train: baseTrain,
+    ladder: { id: best.L.id, name: best.L.name, tps: best.L.tps, chosen_on: TRAIN, train: best.train, test: best.test, portfolio: lport, rows: lrows },
+    ladders: ladderRuns.map(x => ({ id: x.L.id, name: x.L.name, train: { n: x.train.n, win: x.train.win, avgR: x.train.avgR }, test: { n: x.test.n, win: x.test.win, avgR: x.test.avgR, pf: x.test.pf } })) };
   console.log("EVIDENCE_TREND=" + JSON.stringify(out));
+  fs.writeFileSync("evidence_trend.json", JSON.stringify(out, null, 1) + "\n");
   if (bad || miss) process.exitCode = 1;
 })();

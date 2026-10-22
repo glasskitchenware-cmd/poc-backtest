@@ -5,6 +5,9 @@
  * Stop: 3 x ATR(20) from the entry, never moved. Exit: a 4h close below the lowest low (above the highest high)
  * of the previous 10 bars. No fixed take profit. Signals on a closed bar fill at the next open; the stop is
  * checked inside the bar and a gap through it fills at the open. Costs: fee + slippage per side, funding always paid.
+ * Optional scale-out (opt.tps = [{r, frac}], fractions summing to less than 1): part of the position is sold at
+ * entry + r x risk; the rest still leaves by the stop or the channel, so entries are the same as without it. When a bar
+ * touches both the stop and a take profit, the stop is assumed to come first.
  */
 (function (root, factory) {
   if (typeof module === "object" && module.exports) module.exports = factory();
@@ -32,26 +35,43 @@
     var o = Object.assign({}, DEFAULTS, opt || {}), b = bars, n = b.length;
     var A = atr(b, o.atrN), C = b.map(function (x) { return x.close; }), Hh = b.map(function (x) { return x.high; }), Ll = b.map(function (x) { return x.low; });
     var e200 = ema(C, o.emaN), warm = Math.max(210, o.n + 2, o.m + 2), trades = [], pos = null, pend = null;
+    var tps = o.tps || [];
     function close(i, px, reason) {
-      var risk = pos.risk, hours = (b[i].time - pos.entry_time) / H;
-      var r = pos.dir * (px - pos.entry) / risk - (2 * (o.fee + o.slippage) * pos.entry + o.funding * pos.entry * hours / 8) / risk;
+      var risk = pos.risk, hours = (b[i].time - pos.entry_time) / H, r;
+      if (!pos.fills.length) r = pos.dir * (px - pos.entry) / risk - (2 * (o.fee + o.slippage) * pos.entry + o.funding * pos.entry * hours / 8) / risk;
+      else {
+        var gross = pos.left * pos.dir * (px - pos.entry) / risk, fundH = pos.left * hours;
+        pos.fills.forEach(function (f) { gross += f.frac * pos.dir * (f.px - pos.entry) / risk; fundH += f.frac * f.hours; });
+        r = gross - (2 * (o.fee + o.slippage) * pos.entry + o.funding * pos.entry * fundH / 8) / risk;
+      }
       trades.push({ dir: pos.dir, entry: pos.entry, stop: pos.stop, risk: risk, entry_time: pos.entry_time, entry_index: pos.entry_index,
-        exit: px, exit_time: b[i].time, exit_index: i, reason: reason, r: r });
+        exit: px, exit_time: b[i].time, exit_index: i, reason: reason, r: r, mfeR: pos.dir * (pos.best - pos.entry) / risk, tpHit: pos.fills.length });
       pos = null;
     }
     for (var i = warm; i < n; i++) {
       var x = b[i];
       if (pend) {
-        if (pend.exit && pos) close(i, x.open * (1 - pos.dir * o.slippage), "exit");
+        if (pend.exit && pos) { pos.best = pos.dir > 0 ? Math.max(pos.best, x.open) : Math.min(pos.best, x.open); close(i, x.open * (1 - pos.dir * o.slippage), "exit"); }
         if (pend.dir && !pos) {
           var entry = x.open * (1 + pend.dir * o.slippage), risk = o.k * A[i - 1];
-          if (risk > 0 && risk / entry >= o.minStopFrac) pos = { dir: pend.dir, entry: entry, risk: risk, stop: entry - pend.dir * risk, entry_time: x.time, entry_index: i };
+          if (risk > 0 && risk / entry >= o.minStopFrac) {
+            pos = { dir: pend.dir, entry: entry, risk: risk, stop: entry - pend.dir * risk, entry_time: x.time, entry_index: i, best: entry, left: 1, fills: [] };
+          }
         }
         pend = null;
       }
       if (pos) {
         if (pos.dir > 0 ? x.open <= pos.stop : x.open >= pos.stop) { close(i, x.open, "stop_gap"); continue; }
         if (pos.dir > 0 ? x.low <= pos.stop : x.high >= pos.stop) { close(i, pos.stop, "stop"); continue; }
+        // Not stopped in this bar: its best price counts (MFE), and take profits it reached are filled (a gap at the open).
+        pos.best = pos.dir > 0 ? Math.max(pos.best, x.high) : Math.min(pos.best, x.low);
+        while (pos.fills.length < tps.length) {
+          var t = tps[pos.fills.length], level = pos.entry + pos.dir * t.r * pos.risk;
+          if (pos.dir > 0 ? x.high < level : x.low > level) break;
+          var fill = (pos.dir > 0 ? x.open >= level : x.open <= level) ? x.open : level;
+          pos.fills.push({ px: fill, frac: t.frac, hours: (x.time - pos.entry_time) / H, time: x.time });
+          pos.left -= t.frac;
+        }
       }
       if (i + 1 >= n && !o.live) break;
       if (pos) {

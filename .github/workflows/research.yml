@@ -68,6 +68,8 @@ jobs:
     if: ${{ inputs.job == 'pro' }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -81,6 +83,13 @@ jobs:
         run: python fetch.py BTCUSDT,ETHUSDT,BNBUSDT,SOLUSDT,XRPUSDT,DOGEUSDT,ADAUSDT,AVAXUSDT,LINKUSDT,DOTUSDT,TRXUSDT,LTCUSDT 4h,1d 2020-01
       - working-directory: research/pro
         run: node --max-old-space-size=6000 pro.js BTCUSDT,ETHUSDT,BNBUSDT,SOLUSDT,XRPUSDT,DOGEUSDT,ADAUSDT,AVAXUSDT,LINKUSDT,DOTUSDT,TRXUSDT,LTCUSDT
+      - name: Publish the evidence JSON (release research-pro) for web/evidence_trend.js
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete research-pro --yes --cleanup-tag || true
+          gh release create research-pro research/pro/evidence_trend.json --target "$GITHUB_SHA" --prerelease \
+            --title "research/pro evidence" --notes "Run ${{ github.run_id }} on $GITHUB_SHA"
 
   mtf10000:
     if: ${{ inputs.job == 'mtf10000' }}

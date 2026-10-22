@@ -81,4 +81,21 @@ check(lastTrade(held).reason === "end" && Trend.run(held, { live: true }).trades
 
 // A stop narrower than 0.2% of the price is not traded.
 check(!Trend.run(nextBar(up, 127.1, 127.5), { live: true, k: 0.001 }).pos, "stop under 0.2% of the price -> no position");
+// Scale-out: 1/3 at +1R, 1/3 at +2R, the rest by the stop or the channel.
+const LADDER = [{ r: 1, frac: 1 / 3 }, { r: 2, frac: 1 / 3 }], tp1 = entry + risk, tp2 = entry + 2 * risk;
+let lad = Trend.run(nextBar(held, 127.5, tp1 + 0.1, 0), { live: true, tps: LADDER });
+check(lad.pos && lad.pos.fills.length === 1 && lad.pos.fills[0].px === tp1 && Math.abs(lad.pos.left - 2 / 3) < 1e-12, "bar reaching +1R sells 1/3 at TP1, 2/3 stay open");
+lad = Trend.run(nextBar(held, tp1 + 0.5, tp1 + 0.6, 0), { live: true, tps: LADDER });
+check(lad.pos.fills[0].px === tp1 + 0.5, "open gapping above TP1 fills at the open (better)");
+lad = Trend.run(nextBar(held, 127.5, 127.6, 0.0001).map((x, i, a) => i === a.length - 1 ? Object.assign({}, x, { high: tp2 + 1, low: stop - 1 }) : x), { live: true, tps: LADDER });
+check(!lad.pos && lad.trades.slice(-1)[0].reason === "stop" && lad.trades.slice(-1)[0].tpHit === 0, "bar touching both SL and TP: the stop is assumed first, no take profit");
+const twoBars = nextBar(nextBar(held, 127.5, tp1 + 0.1, 0), tp1 + 0.1, tp1 - 0.2, 0).concat([bar(held.length + 2, tp1 - 0.2, stop - 0.5, 0)]);
+lad = Trend.run(twoBars, { tps: LADDER });
+const lt = lad.trades.slice(-1)[0], hrs = (lt.exit_time - lt.entry_time) / 3600000, fh = (twoBars[held.length].time - lt.entry_time) / 3600000;
+const want = (1 / 3) * (tp1 - entry) / risk + (2 / 3) * (lt.exit - entry) / risk - (2 * 0.0007 * entry + 0.0001 * entry * ((1 / 3) * fh + (2 / 3) * hrs) / 8) / risk;
+check(lt.tpHit === 1 && Math.abs(lt.r - want) < 1e-9, "TP1 then the rest stopped: R = 1/3 x 1R + 2/3 x the stop, minus costs (" + lt.r.toFixed(3) + "R)");
+check(Math.abs(lt.mfeR - (tp1 + 0.1 - entry) / risk) < 1e-9, "MFE in R is the best price before the stop bar");
+const plain = Trend.run(twoBars).trades, laddered = Trend.run(twoBars, { tps: LADDER }).trades;
+check(plain.length === laddered.length && plain.every((t, i) => t.entry_time === laddered[i].entry_time && t.exit_time === laddered[i].exit_time),
+  "scale-out keeps a runner, so entries and final exits are the same as without it");
 console.log(`PASSED ${passed} checks`);
