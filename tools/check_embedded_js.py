@@ -6,12 +6,12 @@ import subprocess
 import tempfile
 
 html = Path(__file__).resolve().parents[1].joinpath("index.html").read_text(encoding="utf-8")
-scripts = re.findall(r"<script(?:\\s[^>]*)?>([\\s\\S]*?)</script>", html, re.IGNORECASE)
+scripts = re.findall(r"<script(?:\s[^>]*)?>([\s\S]*?)</script>", html, re.IGNORECASE)
 assert scripts, "No scripts in index.html"
 for marker in ['id="alertTf"', 'id="alertCoinList"', 'id="alertLev"', 'futuresApi("/fapi/v1/time")',
                "window.NativeHttp.scanDone", 'function selectedCoins()', 'function initSignalSettings()']:
     assert marker in html, f"Alert feature missing: {marker}"
-ids = re.findall(r'\\bid="([^"]+)"', html)
+ids = re.findall(r'\bid="([^"]+)"', html)
 assert len(ids) == len(set(ids)), "Duplicate id(s): " + repr([i for i in ids if ids.count(i)>1])
 count=0
 with tempfile.TemporaryDirectory() as dirname:
