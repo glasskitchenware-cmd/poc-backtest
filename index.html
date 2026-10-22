@@ -39,6 +39,12 @@ button:disabled{opacity:.5}
 .banner{border-radius:14px;padding:14px;margin:12px 0;font-weight:600}
 .banner.go{background:#123a31;border:1px solid var(--upText)}
 .banner.wait{background:var(--panel);border:1px solid var(--line)}
+.banner.stop{background:#3a1717;border:1px solid #7a3434;color:#ffd2d2}
+.bar{height:10px;background:var(--deep);border-radius:99px;overflow:hidden;margin:8px 0}
+.bar i{display:block;height:100%;background:var(--upText)}
+.mini{width:auto;margin:6px 0 0;padding:8px 12px;font-size:14px}
+.mini.ghost{background:var(--deep);color:var(--ink);border:1px solid var(--line)}
+.inline{display:flex;gap:8px;align-items:center;margin-top:8px}.inline input{flex:1;min-width:0}
 #status.err{color:var(--down)}
 .hero{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .stat{background:var(--deep);border-radius:12px;padding:10px 12px}.stat b{display:block;font-size:22px;font-variant-numeric:tabular-nums}.stat small{display:block}
@@ -63,7 +69,7 @@ a{color:var(--accent)}
 <h1>POC Signal</h1>
 <p class="muted" style="margin:0">สแกนเหรียญหลักจาก Binance หาเหรียญขาขึ้นที่มีจุดเข้า พร้อม backtest</p>
 
-<div class="tabs" id="mainTabs" style="margin-top:12px"><button data-tab="signalTab" class="on">สัญญาณ</button><button data-tab="backtestTab">Backtest</button></div>
+<div class="tabs" id="mainTabs" style="margin-top:12px"><button data-tab="signalTab" class="on">สัญญาณ</button><button data-tab="portTab">พอร์ต</button><button data-tab="backtestTab">Backtest</button></div>
 
 <div id="signalTab">
 <section>
@@ -85,6 +91,23 @@ a{color:var(--accent)}
     <li>สัญญาณมาจากกลยุทธ์ที่ยังไม่พิสูจน์ว่าทำกำไรได้ ฝึกกับเงินจำลองหรือเงินน้อยที่สุดที่ยอมเสียได้ทั้งหมด</li>
   </ul>
 </section>
+</div>
+
+<div id="portTab" class="hidden">
+<section>
+  <h2>เงินของฉัน</h2>
+  <div class="row">
+    <div><label for="pfCapital">ทุนเริ่มต้น (บาท)</label><input id="pfCapital" type="number" inputmode="decimal" value="10000"></div>
+    <div><label for="pfRisk">เสี่ยงต่อไม้ (% ของยอด)</label><input id="pfRisk" type="number" inputmode="decimal" step="0.05" value="0.5"></div>
+  </div>
+  <label for="pfTarget">เป้ากำไรต่อเดือน (%)</label><input id="pfTarget" type="number" inputmode="decimal" step="0.5" value="3">
+  <p class="muted" style="font-size:12px;margin:8px 0 0">แนะนำเสี่ยงไม่เกิน 1% ต่อไม้ ข้อมูลเก็บในมือถือเครื่องนี้เท่านั้น ถ้าล้างข้อมูลเบราว์เซอร์จะหาย</p>
+</section>
+<div id="pfState"></div>
+<section><h2>ยอดและความเสี่ยง</h2><div class="hero" id="pfHero"></div></section>
+<section><h2>เป้าเดือนนี้</h2><div id="pfGoal"></div></section>
+<section><h2>ถืออยู่</h2><div id="pfOpen"></div></section>
+<section><h2>ปิดแล้ว</h2><div id="pfClosed"></div></section>
 </div>
 
 <div id="backtestTab" class="hidden">
@@ -990,6 +1013,110 @@ a{color:var(--accent)}
     });
   });
 
+  // ---- My portfolio: balance, money management, monthly goal (stored on this device) ----
+  var Portfolio = (function () {
+    var KEY = "portfolio.v1", FEE = 0.001, DAILY_STOP = 2, HALF_RISK_DD = 4, HARD_STOP_DD = 8;
+    function load() {
+      try { var v = JSON.parse(localStorage.getItem(KEY) || "null"); if (v && v.trades) return v; } catch (e) { /* ignore */ }
+      return { trades: [], nextId: 1 };
+    }
+    var data = load();
+    function save() { try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) { /* storage optional */ } }
+    function settings() {
+      return { capital: readNumber("pfCapital", 10000), risk: readNumber("pfRisk", 0.5), target: readNumber("pfTarget", 3) };
+    }
+    function thaiDay(ms) { return new Date(ms + THAI_OFFSET_S * 1000).toISOString().slice(0, 10); }
+
+    function plan() {
+      var st = settings(), closed = data.trades.filter(function (t) { return t.closed; });
+      closed.sort(function (a, b) { return a.exit_time - b.exit_time; });
+      var balance = st.capital, peak = st.capital, today = thaiDay(Date.now()), dayStart = null, todayPnl = 0;
+      closed.forEach(function (t) {
+        if (thaiDay(t.exit_time) === today) { if (dayStart === null) dayStart = balance; todayPnl += t.pnl; }
+        balance += t.pnl; peak = Math.max(peak, balance);
+      });
+      if (dayStart === null) dayStart = balance;
+      var dd = peak > 0 ? (1 - balance / peak) * 100 : 0, riskPct = st.risk, state = "ok", message = "";
+      if (dd >= HARD_STOP_DD) { state = "stop"; riskPct = 0; message = "หยุดเทรด: ยอดลงจากจุดสูงสุด " + fmt(dd, 1) + "% (เกณฑ์ " + HARD_STOP_DD + "%) ทบทวนระบบก่อนเทรดต่อ"; }
+      else if (todayPnl <= -dayStart * DAILY_STOP / 100) { state = "day"; riskPct = 0; message = "หยุดวันนี้: ขาดทุนวันนี้ถึง " + DAILY_STOP + "% แล้ว พรุ่งนี้ค่อยเทรดใหม่"; }
+      else if (dd >= HALF_RISK_DD) { state = "half"; riskPct = st.risk / 2; message = "ยอดลง " + fmt(dd, 1) + "% จากจุดสูงสุด: ลดความเสี่ยงเหลือครึ่งหนึ่ง (" + fmt(riskPct, 2) + "% ต่อไม้) จนกว่าจะกลับมา"; }
+      return { settings: st, balance: balance, peak: peak, dd: dd, riskPct: riskPct, riskThb: balance * riskPct / 100,
+        state: state, message: message, closed: closed, todayPnl: todayPnl };
+    }
+
+    function open(sig) {
+      data.trades.push({ id: data.nextId++, symbol: sig.symbol, entry: sig.entry, stop: sig.stop, target: sig.target,
+        qty: sig.qty, fx: sig.fx, risk: sig.risk, entry_time: Date.now(), closed: false });
+      save(); render();
+    }
+    function close(id, exitPrice) {
+      var t = data.trades.filter(function (x) { return x.id === id; })[0];
+      if (!t || !(exitPrice > 0)) return;
+      var usdt = (exitPrice * (1 - FEE) - t.entry * (1 + FEE)) * t.qty;
+      t.exit = exitPrice; t.exit_time = Date.now(); t.pnl = usdt * t.fx; t.r = t.risk > 0 ? t.pnl / t.risk : null; t.closed = true;
+      save(); render();
+    }
+    function remove(id) { data.trades = data.trades.filter(function (x) { return x.id !== id; }); save(); render(); }
+
+    function render() {
+      var p = plan(), st = p.settings, now = Date.now(), month = thaiDay(now).slice(0, 7);
+      $("pfState").innerHTML = p.state === "ok" ? "" : '<div class="banner stop">' + esc(p.message) + "</div>";
+      var wins = p.closed.filter(function (t) { return t.pnl > 0; }).length;
+      $("pfHero").innerHTML = [
+        ["ยอดคงเหลือ", fmt(p.balance, 0) + " ฿", '<span class="' + tone(p.balance - st.capital) + '">' + fmt(p.balance - st.capital, 0, true) + " ฿ (" + fmt((p.balance / st.capital - 1) * 100, 2, true) + "%)</span>"],
+        ["เสี่ยงไม้ถัดไป", fmt(p.riskThb, 0) + " ฿", fmt(p.riskPct, 2) + "% ของยอด" + (p.state === "half" ? " (ลดครึ่ง)" : "")],
+        ["Win rate ของฉัน", p.closed.length ? fmt(wins / p.closed.length * 100, 0) + "%" : "—", p.closed.length + " ไม้ที่ปิดแล้ว"],
+        ["ลงจากจุดสูงสุด", fmt(p.dd, 1) + "%", "ลดเสี่ยงที่ " + HALF_RISK_DD + "% · หยุดที่ " + HARD_STOP_DD + "%"]
+      ].map(function (c) { return '<div class="stat"><small>' + c[0] + "</small><b>" + c[1] + "</b><small>" + c[2] + "</small></div>"; }).join("");
+
+      // Monthly goal: what it takes in R, and what the record so far projects.
+      var monthTrades = p.closed.filter(function (t) { return thaiDay(t.exit_time).slice(0, 7) === month; });
+      var monthPnl = monthTrades.reduce(function (a, t) { return a + t.pnl; }, 0);
+      var monthStart = p.balance - monthPnl, goal = monthStart * st.target / 100;
+      var progress = goal > 0 ? Math.max(0, Math.min(100, monthPnl / goal * 100)) : 0;
+      var needR = st.risk > 0 ? st.target / st.risk : Infinity;
+      var rs = p.closed.filter(function (t) { return t.r !== null && isFinite(t.r); }).map(function (t) { return t.r; });
+      var avgR = rs.length ? rs.reduce(function (a, b) { return a + b; }, 0) / rs.length : null;
+      var firstMs = p.closed.length ? p.closed[0].entry_time : now, months = Math.max((now - firstMs) / (30 * 86400000), 0.25);
+      var perMonth = p.closed.length / months;
+      var projection = avgR === null || p.closed.length < 10
+        ? "ยังคาดการณ์ไม่ได้: ต้องมีไม้ที่ปิดแล้วอย่างน้อย 10 ไม้ (ตอนนี้ " + p.closed.length + ")"
+        : "ถ้าผลเหมือนที่ผ่านมา (เฉลี่ย " + fmt(avgR, 2, true) + "R/ไม้, ~" + fmt(perMonth, 0) + " ไม้/เดือน) เดือนหน้าคาดว่า ≈ " +
+          fmt(avgR * perMonth * st.risk, 1, true) + "% (" + fmt(avgR * perMonth * p.riskThb, 0, true) + " ฿) — ค่าเฉลี่ย ไม่ใช่สัญญา ช่วงจริงกว้างกว่านี้มาก";
+      $("pfGoal").innerHTML = "<div>เดือนนี้ " + '<b class="' + tone(monthPnl) + '">' + fmt(monthPnl, 0, true) + " ฿</b> จากเป้า " + fmt(goal, 0) + " ฿ (" + st.target + "%)</div>" +
+        '<div class="bar"><i style="width:' + progress.toFixed(1) + '%"></i></div>' +
+        "<small>เป้า " + st.target + "% ที่เสี่ยง " + st.risk + "%/ไม้ = ต้องได้สุทธิ +" + fmt(needR, 1) + "R ต่อเดือน เช่น " + fmt(needR / 0.2, 0) +
+        " ไม้ที่เฉลี่ย +0.2R หรือ " + fmt(needR / 0.5, 0) + " ไม้ที่เฉลี่ย +0.5R" + (needR > 15 ? " — สูงเกินจริงสำหรับระบบนี้ ลดเป้าลง" : "") + "</small>" +
+        "<p class=\"muted\" style=\"font-size:13px;margin:8px 0 0\">" + projection + "</p>";
+
+      var openTrades = data.trades.filter(function (t) { return !t.closed; });
+      $("pfOpen").innerHTML = openTrades.map(function (t) {
+        return '<div class="trade" style="display:block"><b>' + t.symbol.replace("USDT", "") + "</b> " + t.qty + " เหรียญ · เข้า " + price(t.entry) +
+          '<br><small>Stop <span class="down">' + price(t.stop) + '</span> · เป้า <span class="up">' + price(t.target) + "</span> · เสี่ยง " + fmt(t.risk, 0) +
+          " ฿ · ปิดภายใน " + thai(t.entry_time + 4 * 3600000).slice(9) + ' น.</small><div class="inline"><input type="number" inputmode="decimal" step="any" placeholder="ราคาที่ขาย" id="exit' + t.id +
+          '"><button class="mini" data-close="' + t.id + '">ปิดไม้</button><button class="mini ghost" data-del="' + t.id + '">ลบ</button></div></div>';
+      }).join("") || '<p class="muted">ไม่มีไม้ที่ถืออยู่ กด "ซื้อแล้ว · บันทึกลงพอร์ต" ที่การ์ดสัญญาณเพื่อเพิ่ม</p>';
+      $("pfClosed").innerHTML = p.closed.slice(-20).reverse().map(function (t) {
+        return '<div class="trade"><div><b>' + t.symbol.replace("USDT", "") + "</b> " + price(t.entry) + " → " + price(t.exit) + "<br><small>" + thai(t.exit_time) +
+          (t.r !== null ? " · " + fmt(t.r, 2, true) + "R" : "") + '</small></div><div class="' + tone(t.pnl) + '">' + fmt(t.pnl, 0, true) + " ฿</div></div>";
+      }).join("") || '<p class="muted">ยังไม่มีไม้ที่ปิด</p>';
+      Array.prototype.forEach.call(document.querySelectorAll("[data-close]"), function (b) {
+        b.onclick = function () { var id = +b.getAttribute("data-close"); close(id, parseFloat($("exit" + id).value)); };
+      });
+      Array.prototype.forEach.call(document.querySelectorAll("[data-del]"), function (b) {
+        b.onclick = function () {
+          if (b.textContent === "ยืนยันลบ") remove(+b.getAttribute("data-del")); else b.textContent = "ยืนยันลบ";
+        };
+      });
+    }
+
+    ["pfCapital", "pfRisk", "pfTarget"].forEach(function (id) {
+      try { var v = localStorage.getItem(id); if (v !== null) $(id).value = v; } catch (e) { /* ignore */ }
+      $(id).addEventListener("input", function () { try { localStorage.setItem(id, $(id).value); } catch (e) { /* ignore */ } render(); });
+    });
+    return { plan: plan, open: open, render: render };
+  })();
+
   // ---- Live signal scan ----
   var COINS = ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT", "DOGEUSDT", "ADAUSDT", "AVAXUSDT",
     "LINKUSDT", "DOTUSDT", "TRXUSDT", "LTCUSDT"];
@@ -1015,8 +1142,10 @@ a{color:var(--accent)}
         var s = queue.shift();
         if (!s) return Promise.resolve();
         return Promise.all([fetchRules(s), fetchCandles(s, start, end, function () {})]).then(function (r) {
-          results.push(Engine.scanSymbol(s, r[1], r[0], { usdt_thb: fxInfo.rate, initial_thb: readNumber("capital", 10000),
-            fee: readNumber("fee", 0.1) / 100, slippage: readNumber("slip", 0.05) / 100, risk_fraction: readNumber("risk", 0.25) / 100 }));
+          var plan = Portfolio.plan();
+          results.push(Engine.scanSymbol(s, r[1], r[0], { usdt_thb: fxInfo.rate, initial_thb: Math.max(plan.balance, 1),
+            fee: readNumber("fee", 0.1) / 100, slippage: readNumber("slip", 0.05) / 100,
+            risk_fraction: Math.max(plan.riskPct, 0.0001) / 100 }));
         }).catch(function (e) { errors.push(s.replace("USDT", "") + ": " + e.message); }).then(function () {
           done++; scanStatus("สแกนแล้ว " + done + "/" + COINS.length + " เหรียญ…");
           return worker();
@@ -1050,13 +1179,20 @@ a{color:var(--accent)}
         body = '<div class="levels"><div><small>ซื้อประมาณ</small><b>' + price(g.entry) + '</b></div><div><small>Stop</small><b class="down">' + price(g.stop) +
           '</b></div><div><small>เป้า ' + g.take_profit_r + 'R</small><b class="up">' + price(g.target) + "</b></div></div>" +
           "<small>จำนวน " + g.qty + " " + name + " (≈ " + fmt(g.notional * fx, 0) + " ฿) · ถ้าโดน stop เสีย ≈ " + fmt(g.risk * fx, 0) +
-          " ฿ · ซื้อก่อน " + thai(g.expires).slice(9) + " น.</small>";
+          " ฿ · ซื้อก่อน " + thai(g.expires).slice(9) + " น.</small>" +
+          (g.below_minimum ? "" : '<br><button class="mini" data-record="' + esc(JSON.stringify({ symbol: r.symbol, entry: g.entry, stop: g.stop,
+            target: g.target, qty: g.qty, fx: fx, risk: g.risk * fx })) + '">ซื้อแล้ว · บันทึกลงพอร์ต</button>');
       }
       var stats = r.stats ? "<br><small>กลยุทธ์: " + esc(VARIANT_NAMES[r.strategy]) + " · 90 วันล่าสุด " + r.stats.trade_count + " ไม้ win " +
         fmt(r.stats.win_rate_pct, 0) + "% PF " + fmt(r.stats.profit_factor, 2) + "</small>" : "";
       return '<div class="coin' + (r.signal && !r.signal.below_minimum ? " go" : "") + '"><div class="coin-head"><b>' + name + "</b>" + pill + "</div>" +
         "<small>ราคา " + price(r.close) + " USDT</small>" + stats + body + "</div>";
     }).join("");
+    Array.prototype.forEach.call(document.querySelectorAll("[data-record]"), function (b) {
+      b.onclick = function () { Portfolio.open(JSON.parse(b.getAttribute("data-record"))); b.textContent = "บันทึกแล้ว ✓"; b.disabled = true; };
+    });
+    var plan = Portfolio.plan();
+    if (plan.state !== "ok") $("scanSummary").innerHTML = '<div class="banner stop">' + esc(plan.message) + "</div>" + $("scanSummary").innerHTML;
     if (signals.length && window.Notification && Notification.permission === "granted") {
       try { new Notification("POC Signal: " + signals.map(function (r) { return r.symbol.replace("USDT", ""); }).join(", ")); } catch (e) { /* optional */ }
     }
@@ -1087,6 +1223,7 @@ a{color:var(--accent)}
   });
 
   loadSettings();
+  Portfolio.render();
   $("run").onclick = run;
 })();
 

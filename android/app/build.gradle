@@ -1,0 +1,42 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'th.paperbot.backtest'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'th.paperbot.backtest'
+        minSdk 24
+        targetSdk 34
+        versionCode 1
+        versionName '1.0'
+    }
+
+    signingConfigs {
+        // A fixed, non-secret key so a newer APK installs over an older one.
+        // It identifies this sideloaded app only; never use it for a store listing.
+        sideload {
+            storeFile file('sideload.keystore')
+            storePassword 'android'
+            keyAlias 'sideload'
+            keyPassword 'android'
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.sideload
+        }
+        debug {
+            signingConfig signingConfigs.sideload
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
