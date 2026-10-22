@@ -2,9 +2,33 @@ name: Research backtest (MTF 10,000)
 
 on:
   workflow_dispatch:
+    inputs:
+      job:
+        description: "mtf10000 or skills"
+        default: "skills"
 
 jobs:
+  skills:
+    if: ${{ inputs.job == 'skills' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    defaults:
+      run:
+        working-directory: research/skills
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: python -m pip install requests
+      - run: python fetch.py
+      - run: node --max-old-space-size=6000 run_skills.js
+
   mtf10000:
+    if: ${{ inputs.job == 'mtf10000' }}
     runs-on: ubuntu-latest
     timeout-minutes: 150
     defaults:
