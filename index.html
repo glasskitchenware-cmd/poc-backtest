@@ -131,7 +131,16 @@ a{color:var(--accent)}
 <section>
   <h2>AI วิเคราะห์ (Google Gemini)</h2>
   <p class="muted" style="margin:0;font-size:13px">ใส่ API key จาก Google AI Studio (aistudio.google.com → Get API key) คีย์เก็บในมือถือเครื่องนี้เท่านั้น และส่งไปที่ Google โดยตรง ห้ามแชร์คีย์ให้ใคร</p>
-  <label for="aiKey">Gemini API key</label><input id="aiKey" type="password" autocomplete="off" placeholder="AIza…">
+  <a class="mini" id="aiGetKey" href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener"
+     style="display:block;text-align:center;text-decoration:none;margin-top:10px;padding:12px;font-size:15px">① เปิดหน้าเอาคีย์ (Google AI Studio) ↗</a>
+  <ol class="how" style="padding-left:30px;margin-top:8px">
+    <li>ล็อกอินด้วยบัญชี Google</li>
+    <li>กดปุ่ม <b>Create API key</b> (ถ้าถามเรื่องโปรเจกต์ ให้กดสร้างใหม่ได้เลย)</li>
+    <li>กดไอคอน <b>คัดลอก</b> ข้างคีย์ที่ขึ้นต้นด้วย <b>AIza</b></li>
+    <li>กลับมาที่แอปนี้ แล้วกด ② วางคีย์</li>
+  </ol>
+  <label for="aiKey">Gemini API key</label>
+  <div class="inline" style="margin-top:0"><input id="aiKey" type="password" autocomplete="off" placeholder="AIza…"><button class="mini" id="aiPaste" type="button" style="margin:0">② วางคีย์</button></div>
   <div class="row">
     <div><label for="aiModel">Model</label><input id="aiModel" value="gemini-2.5-flash"></div>
     <div><label>&nbsp;</label><button class="mini" id="aiTest" style="width:100%;margin:0;padding:10px">ทดสอบคีย์</button></div>
@@ -1780,6 +1789,19 @@ a{color:var(--accent)}
         try { localStorage.setItem(id, id === "aiAuto" ? ($(id).checked ? "1" : "0") : $(id).value.trim()); } catch (e) { /* ignore */ }
       });
     });
+    $("aiPaste").onclick = function () {
+      var done = function (text) {
+        var k = (text || "").trim();
+        if (!/^AIza/.test(k)) { status("ในคลิปบอร์ดยังไม่มีคีย์ที่ขึ้นต้นด้วย AIza — กดค้างในช่องคีย์แล้วเลือก \"วาง\" แทนได้", true); $("aiKey").focus(); return; }
+        $("aiKey").value = k;
+        try { localStorage.setItem("aiKey", k); } catch (e) { /* ignore */ }
+        $("aiKey").dispatchEvent(new Event("change"));
+        status("วางคีย์แล้ว · กดปุ่ม ทดสอบคีย์ ได้เลย");
+      };
+      if (window.NativeHttp && window.NativeHttp.clipboard) { done(window.NativeHttp.clipboard()); return; }
+      if (navigator.clipboard && navigator.clipboard.readText) navigator.clipboard.readText().then(done, function () { done(""); });
+      else done("");
+    };
     $("aiTest").onclick = function () {
       status("กำลังทดสอบ…");
       ask("ตอบคำเดียวว่า พร้อม", false).then(function (r) { status("ใช้งานได้ · " + model() + " ตอบ: " + r.text.slice(0, 40)); })
@@ -2433,8 +2455,8 @@ a{color:var(--accent)}
         tab: "portTab", target: "ppStart", done: function () { return has("paper.v2"); } },
       { id: "alerts", title: "เปิดแจ้งเตือนสัญญาณ", how: "แท็บสัญญาณ → ติ๊ก \"แจ้งเตือนทุก 15 นาที\" แล้วกดอนุญาตการแจ้งเตือน (ในแอป Android ตั้งแบตเตอรี่เป็น \"ไม่จำกัด\" ด้วย)",
         tab: "signalTab", target: "autoScan", done: function () { return $("autoScan").checked; } },
-      { id: "ai", title: "(ไม่บังคับ) ใส่ Gemini API key ให้ AI ช่วยเช็กข่าว", how: "aistudio.google.com → Get API key → คัดลอก → แท็บสัญญาณ ช่อง \"Gemini API key\" → กดทดสอบคีย์",
-        tab: "signalTab", target: "aiKey", done: function () { return !!$("aiKey").value.trim(); }, optional: true },
+      { id: "ai", title: "(ไม่บังคับ) ใส่ Gemini API key ให้ AI ช่วยเช็กข่าว", how: "แตะ \"พาไป\" → กดปุ่ม ① เปิดหน้าเอาคีย์ → Create API key → คัดลอก → กลับมากด ② วางคีย์ → ทดสอบคีย์",
+        tab: "signalTab", target: "aiGetKey", done: function () { return !!$("aiKey").value.trim(); }, optional: true },
       { id: "wait", title: "รอแจ้งเตือน แล้วเปิดดูการ์ดสัญญาณ", how: "สูตรนี้มีสัญญาณประมาณ 5 ครั้งต่อเดือน ช่วง Paper แค่เปิดแท็บพอร์ตดูผลเป็นระยะ ไม่ต้องเปิดไม้จริง",
         tab: "portTab", target: "ppHero", done: function () { return false; }, info: true }
     ];

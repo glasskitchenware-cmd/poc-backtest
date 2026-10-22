@@ -5,8 +5,12 @@ import android.app.Activity;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.content.Intent;
+import android.net.Uri;
+import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
+import android.webkit.WebViewClient;
 
 /** Hosts the offline web UI; native help is limited to read-only HTTPS GET and alerts. */
 public class MainActivity extends Activity {
@@ -38,6 +42,22 @@ public class MainActivity extends Activity {
             }
         });
         web.addJavascriptInterface(bridge, "NativeHttp");
+        // Links to other sites (e.g. Google AI Studio for the API key) open in the phone's browser.
+        web.setWebViewClient(new WebViewClient() {
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                Uri uri = request.getUrl();
+                if ("file".equals(uri.getScheme())) {
+                    return false;
+                }
+                try {
+                    startActivity(new Intent(Intent.ACTION_VIEW, uri));
+                } catch (Exception ignored) {
+                    // No browser available: stay in the app.
+                }
+                return true;
+            }
+        });
         setContentView(web);
         if (savedInstanceState != null) {
             web.restoreState(savedInstanceState);

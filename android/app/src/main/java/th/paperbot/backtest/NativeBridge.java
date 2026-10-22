@@ -1,5 +1,7 @@
 package th.paperbot.backtest;
 
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
@@ -114,6 +116,22 @@ final class NativeBridge {
                     + JSONObject.quote(body) + ")";
             main.post(() -> web.evaluateJavascript(script, null));
         });
+    }
+
+    /** Text on the clipboard, so the user can paste the API key with one tap. */
+    @JavascriptInterface
+    public String clipboard() {
+        try {
+            ClipboardManager manager = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+            ClipData clip = manager == null ? null : manager.getPrimaryClip();
+            if (clip == null || clip.getItemCount() == 0) {
+                return "";
+            }
+            CharSequence text = clip.getItemAt(0).coerceToText(context);
+            return text == null ? "" : text.toString();
+        } catch (Exception error) {
+            return "";
+        }
     }
 
     @JavascriptInterface
