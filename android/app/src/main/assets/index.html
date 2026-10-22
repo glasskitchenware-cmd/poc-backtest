@@ -62,6 +62,9 @@ body.has-guide main{padding-bottom:110px}
 .guide-step{cursor:pointer}
 .verdict{border-radius:16px;padding:16px;text-align:center}.verdict.good{background:#123a31;border:1px solid var(--upText)}.verdict.bad{background:#3a1717;border:1px solid #7a3434}.verdict.wait{background:var(--deep);border:1px solid var(--line)}
 .verdict .big{font-size:30px;font-weight:700;margin:4px 0;font-variant-numeric:tabular-nums}.verdict p{margin:6px 0 0;font-size:14px}
+.mmrow{margin:10px 0}.mmrow .lbl{display:flex;justify-content:space-between;font-size:14px;gap:8px}.mmrow .track{height:14px;background:var(--deep);border-radius:99px;overflow:hidden;margin-top:4px}
+.mmrow .track i{display:block;height:100%;border-radius:99px}.mmrow.app .lbl b{color:var(--upText)}
+.slider-tip{background:#2a2515;border:1px solid #6b5830;border-radius:12px;padding:10px 12px;margin-top:8px;font-size:15px}
 .inline{display:flex;gap:8px;align-items:center;margin-top:8px}.inline input{flex:1;min-width:0}
 #status.err{color:var(--down)}
 .hero{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
@@ -203,6 +206,15 @@ a{color:var(--accent)}
     <p class="muted" style="font-size:12px;margin:8px 0 0">เทียบงานวิจัยปี 2025 (10x): 61 ไม้ · win 32.8% · ถึง TP5R 21.3% · เฉลี่ย +0.38R · PF 1.50 · +5.83% · Max DD 2.52% — ต้องมีอย่างน้อย 30 ไม้ก่อนสรุป</p>
   </details>
 </section>
+<section>
+  <h2>คุมเงินแบบไม่ต้องคำนวณ</h2>
+  <p style="margin:0;font-size:14px">กฎมีข้อเดียว: <b>ลากสไลเดอร์ใน Binance ไปตามตัวเลขที่แอปบอกในการ์ดสัญญาณเท่านั้น</b> แอปคิดให้แล้วว่าถ้าโดน Stop จะเสียแค่ไม้ละ <b id="mmLoss">—</b> ไม่ว่าจะ Leverage เท่าไหร่</p>
+  <h2 style="margin-top:14px">ถ้าแพ้ติดกัน <span id="mmNLabel">10</span> ไม้ เงินจะเหลือเท่าไหร่</h2>
+  <input id="mmN" type="range" min="1" max="20" value="10" style="width:100%">
+  <div id="mmCompare"></div>
+  <p class="muted" style="font-size:12px;margin:8px 0 0">สมมติ Stop ห่างจากจุดเข้า 1.2% และค่าธรรมเนียม 0.14% ไป-กลับ · สูตรนี้ชนะประมาณ 1 ใน 3 ไม้ จึงแพ้ติดกัน 5–10 ไม้ได้เป็นเรื่องปกติ · "ไม่ตั้ง Stop" คือโดน Liquidate เสีย Margin ทั้งก้อน</p>
+</section>
+
 <section>
   <h2>เงินของฉัน</h2>
   <div class="row">
@@ -1617,8 +1629,29 @@ a{color:var(--accent)}
     }
     function remove(id) { data.trades = data.trades.filter(function (x) { return x.id !== id; }); save(); render(); }
 
+    // Side-by-side: "drag 10% every trade" habits vs the app's fixed-risk sizing over a losing streak.
+    function renderMM(p) {
+      var n = parseInt($("mmN").value, 10), cap = p.balance, stop = 0.012, cost = 0.0014;
+      var appRisk = (locked() ? Math.min(LOCK.riskPct, p.settings.risk) : p.settings.risk) / 100;
+      $("mmNLabel").textContent = n;
+      $("mmLoss").textContent = fmt(cap * appRisk, 0) + " บาท (" + fmt(appRisk * 100, 2) + "% ของทุน)";
+      var ways = [
+        ["ตามแอป (เสี่ยงไม้ละ " + fmt(appRisk * 100, 2) + "%)", appRisk, "app"],
+        ["ลาก 10% ทุกไม้ · x10", 0.10 * 10 * (stop + cost), ""],
+        ["ลาก 10% ทุกไม้ · x20", 0.10 * 20 * (stop + cost), ""],
+        ["ลาก 10% ทุกไม้ · x50", 0.10 * 50 * (stop + cost), ""],
+        ["ลาก 10% ทุกไม้ · ไม่ตั้ง Stop (โดน Liquidate)", 0.10, ""]
+      ];
+      $("mmCompare").innerHTML = ways.map(function (w) {
+        var left = Math.max(0, Math.pow(1 - Math.min(w[1], 1), n)), color = left > 0.9 ? "#56d6b4" : left > 0.7 ? "#f0c46a" : "#ff8a8a";
+        return '<div class="mmrow ' + w[2] + '"><div class="lbl"><span>' + esc(w[0]) + "</span><b>เหลือ " + fmt(cap * left, 0) + " ฿ (" + fmt((left - 1) * 100, 0) + "%)</b></div>" +
+          '<div class="track"><i style="width:' + (left * 100).toFixed(1) + "%;background:" + color + '"></i></div></div>';
+      }).join("");
+    }
+
     function render() {
       var p = plan(), st = p.settings, now = Date.now(), month = thaiDay(now).slice(0, 7);
+      renderMM(p);
       $("pfState").innerHTML = p.state === "ok" ? "" : '<div class="banner stop">' + esc(p.message) + "</div>";
       var wins = p.closed.filter(function (t) { return t.pnl > 0; }).length;
       $("pfHero").innerHTML = [
@@ -1670,6 +1703,7 @@ a{color:var(--accent)}
       });
     }
 
+    $("mmN").addEventListener("input", function () { renderMM(plan()); });
     ["pfCapital", "pfRisk", "pfTarget"].forEach(function (id) {
       try { var v = localStorage.getItem(id); if (v !== null) $(id).value = v; } catch (e) { /* ignore */ }
       $(id).addEventListener("input", function () { try { localStorage.setItem(id, $(id).value); } catch (e) { /* ignore */ } render(); });
@@ -2010,6 +2044,7 @@ a{color:var(--accent)}
     var liq = dir > 0 ? entry * (1 - 1 / rec + FUT.mmr) : entry * (1 + 1 / rec - FUT.mmr);
     out.signal = { dir: dir, entry: entry, stop: entry - dir * dist, tps: [1, 2, 5].map(function (r) { return entry + dir * r * dist; }),
       qty: +qty.toPrecision(4), notional: notional, margin: notional / rec, liq: liq, riskUsdt: riskUsdt, lev: rec, levLiq: levLiq,
+      sliderPct: notional / rec * (1 + FUT.fee * rec) / balance * 100, balanceUsdt: balance,
       sizeLimited: sizeLimited, expires: last.close_time + 1 + FUT.enterWithinMin * 60000, stopPct: stopFrac * 100,
       trend: out.trend, hist: hist, stratName: spec.name, hold: spec.hold, stopAtr: spec.stopAtr || 2.5 };
     return out;
@@ -2023,7 +2058,8 @@ a{color:var(--accent)}
       '<b>ช่วง Paper Trading ยังไม่ต้องทำ</b> แอปจดผลให้เอง ใช้ขั้นตอนนี้เมื่อพร้อมใช้เงินจริง<ol>' +
       "<li>เปิดแอป Binance → แท็บ <b>Futures</b> → <b>USDⓈ-M</b> → เลือก <b>" + r.symbol + " Perpetual</b></li>" +
       "<li>กดปุ่มโหมด Margin เลือก <b>Isolated</b> และกดปุ่ม Leverage ตั้งเป็น <b>" + g.lev + "x</b></li>" +
-      "<li>ประเภทคำสั่งเลือก <b>Market</b> ใส่จำนวน <b>" + g.qty + " " + coin + "</b> (≈ " + fmt(g.notional, 0) + " USDT · Margin ≈ " + fmt(g.margin, 1) + " USDT)</li>" +
+      "<li>ประเภทคำสั่งเลือก <b>Market</b> แล้ว<b>ลากสไลเดอร์ไปที่ " + fmt(Math.max(g.sliderPct, 0.1), g.sliderPct < 10 ? 1 : 0) + "%</b> หรือพิมพ์จำนวน <b>" + g.qty + " " + coin +
+        "</b> (≈ " + fmt(g.notional, 0) + " USDT · Margin ≈ " + fmt(g.margin, 1) + " USDT) — ถ้าเงินใน Futures wallet ไม่เท่ากับทุนในแอป ให้ใช้วิธีพิมพ์จำนวน</li>" +
       "<li>ติ๊ก <b>TP/SL</b>: Take Profit <b>" + price(g.tps[2]) + "</b> (TP3 = 5R ตามสูตร) · Stop Loss <b>" + price(g.stop) + "</b> · Trigger เลือก <b>Mark Price</b></li>" +
       "<li>กด <b>" + (long ? "Buy/Long (สีเขียว)" : "Sell/Short (สีแดง)") + "</b> แล้วตรวจในแท็บ Positions ว่า TP/SL ขึ้นครบ</li>" +
       "<li>กลับมาแอปนี้ กด <b>เข้าแล้ว · บันทึกลงพอร์ต</b></li>" +
@@ -2050,6 +2086,8 @@ a{color:var(--accent)}
             : '<b style="font-size:16px">Leverage แนะนำ x' + g.lev + "</b> · ไม่ควรเกิน x" + g.levLiq + " (Liquidate ต้องไกลกว่า SL 1.5 เท่า)<br>") +
           "ขนาด " + g.qty + " " + name + " (≈ " + fmt(g.notional, 0) + " USDT) · Margin ≈ " + fmt(g.margin, 1) + " USDT · ถ้าโดน SL เสีย ≈ " +
           fmt(g.riskUsdt * fx, 0) + " ฿<br>ราคา Liquidate ≈ " + price(g.liq) + "</small>" +
+          '<div class="slider-tip">ใน Binance ลากสไลเดอร์ขนาดไปที่ <b style="font-size:20px">' + fmt(Math.max(g.sliderPct, 0.1), g.sliderPct < 10 ? 1 : 0) +
+            "%</b> (ของเงินใน Futures wallet " + fmt(g.balanceUsdt, 0) + " USDT) · ห้ามลากเกินนี้</div>" +
           (g.sizeLimited ? '<div class="banner wait" style="margin:8px 0 0;font-size:13px">ลดขนาดลงให้ Margin ไม่เกิน ' + (locked() ? "5" : "25") + '% ของทุน (เสี่ยงน้อยกว่าที่ตั้งไว้)</div>' : "") +
           '<div id="ai-' + r.symbol + '"></div>' + binanceHowTo(r, g) +
           '<br><button class="mini" data-record="' + esc(JSON.stringify({ symbol: r.symbol, dir: g.dir, entry: g.entry, stop: g.stop, target: g.tps[2], tps: g.tps,
