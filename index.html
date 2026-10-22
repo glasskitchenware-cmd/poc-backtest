@@ -69,7 +69,7 @@ a{color:var(--accent)}
 <h1>POC Signal</h1>
 <p class="muted" style="margin:0">สแกนเหรียญหลักจาก Binance หาเหรียญขาขึ้นที่มีจุดเข้า พร้อม backtest</p>
 
-<div class="tabs" id="mainTabs" style="margin-top:12px"><button data-tab="signalTab" class="on">สัญญาณ</button><button data-tab="portTab">พอร์ต</button><button data-tab="backtestTab">Backtest</button></div>
+<div class="tabs" id="mainTabs" style="margin-top:12px"><button data-tab="signalTab" class="on">สัญญาณ</button><button data-tab="chartTab">กราฟ</button><button data-tab="portTab">พอร์ต</button><button data-tab="backtestTab">Backtest</button></div>
 
 <div id="signalTab">
 <section>
@@ -90,6 +90,30 @@ a{color:var(--accent)}
     <li>ถือไม่เกิน 4 ชั่วโมง และปิดก่อน 06:45 น. เวลาไทย</li>
     <li>สัญญาณมาจากกลยุทธ์ที่ยังไม่พิสูจน์ว่าทำกำไรได้ ฝึกกับเงินจำลองหรือเงินน้อยที่สุดที่ยอมเสียได้ทั้งหมด</li>
   </ul>
+</section>
+</div>
+
+<div id="chartTab" class="hidden">
+<section style="padding:10px">
+  <div class="row">
+    <div><label for="cvSymbol">เหรียญ</label><select id="cvSymbol"></select></div>
+    <div><label for="cvTf">Timeframe</label><select id="cvTf"><option value="15m">15 นาที</option><option value="1h">1 ชม.</option><option value="4h" selected>4 ชม.</option><option value="1d">1 วัน</option></select></div>
+  </div>
+  <div class="checks" style="flex-wrap:wrap;gap:10px;margin-top:8px;font-size:13px">
+    <label><input type="checkbox" id="cvEma" checked> EMA 20/50/200</label>
+    <label><input type="checkbox" id="cvFib" checked> Fibonacci</label>
+    <label><input type="checkbox" id="cvTrend" checked> เทรนด์ไลน์</label>
+    <label><input type="checkbox" id="cvBb"> Bollinger</label>
+  </div>
+  <div class="legend" style="margin-top:8px"><span id="cvLive">● กำลังเชื่อมต่อ…</span><span><i style="background:#ffb74d"></i>EMA20</span><span><i style="background:#ba68c8"></i>EMA50</span><span><i style="background:#90a4ae"></i>EMA200</span><span><i style="background:#4dd0e1"></i>เทรนด์ไลน์</span></div>
+  <div id="cvChart" class="chart" style="height:420px"></div>
+  <div class="legend" style="margin:6px 0 0"><span>RSI 14</span><span>เส้นประ 70 / 30</span></div>
+  <div id="cvRsi" class="chart" style="height:110px"></div>
+</section>
+<section>
+  <h2>วิเคราะห์ <small id="cvTime" class="muted"></small></h2>
+  <div id="cvAnalysis"><p class="muted">เลือกเหรียญเพื่อดูการวิเคราะห์</p></div>
+  <p class="muted" style="font-size:12px;margin:10px 0 0">เส้น Fibonacci และเทรนด์ไลน์ตีอัตโนมัติจากจุดสูง–ต่ำล่าสุด เป็นเครื่องมือช่วยดู ยังไม่ได้ backtest และไม่ใช่คำแนะนำการลงทุน</p>
 </section>
 </div>
 
@@ -1316,8 +1340,11 @@ a{color:var(--accent)}
       var stats = r.stats ? "<br><small>กลยุทธ์: " + esc(VARIANT_NAMES[r.strategy]) + " · 90 วันล่าสุด " + r.stats.trade_count + " ไม้ win " +
         fmt(r.stats.win_rate_pct, 0) + "% PF " + fmt(r.stats.profit_factor, 2) + "</small>" : "";
       return '<div class="coin' + (r.signal && !r.signal.below_minimum ? " go" : "") + '"><div class="coin-head"><b>' + name + "</b>" + pill + "</div>" +
-        "<small>ราคา " + price(r.close) + " USDT</small>" + stats + body + "</div>";
+        "<small>ราคา " + price(r.close) + ' USDT</small> <button class="mini ghost" data-chart="' + r.symbol + '">ดูกราฟ</button>' + stats + body + "</div>";
     }).join("");
+    Array.prototype.forEach.call(document.querySelectorAll("[data-chart]"), function (b) {
+      b.onclick = function () { $("cvSymbol").value = b.getAttribute("data-chart"); document.querySelector('[data-tab="chartTab"]').click(); ChartView.open(b.getAttribute("data-chart")); };
+    });
     Array.prototype.forEach.call(document.querySelectorAll("[data-record]"), function (b) {
       b.onclick = function () { Portfolio.open(JSON.parse(b.getAttribute("data-record"))); b.textContent = "บันทึกแล้ว ✓"; b.disabled = true; };
     });
@@ -1348,6 +1375,214 @@ a{color:var(--accent)}
   };
   $("scan").onclick = scan;
 
+  // ---- Realtime chart: EMA, Bollinger, RSI, auto Fibonacci, trendlines, plan ----
+  var ChartView = (function () {
+    var TF_MS = { "15m": 900000, "1h": 3600000, "4h": 14400000, "1d": 86400000 };
+    var STREAMS = ["wss://data-stream.binance.vision/ws/", "wss://stream.binance.com:9443/ws/"];
+    var chart = null, rsiChart = null, series = {}, priceLines = [], bars = [], socket = null, pollTimer = null,
+      symbol = "BTCUSDT", tf = "4h", lastDraw = 0, token = 0;
+
+    function emaArr(values, n) { var a = 2 / (n + 1), y = NaN, out = []; values.forEach(function (x, i) { y = i ? y + a * (x - y) : x; out.push(i >= n - 1 ? y : NaN); }); return out; }
+    function rsiArr(values, n) {
+      var up = NaN, dn = NaN, out = [NaN];
+      for (var i = 1; i < values.length; i++) {
+        var d = values[i] - values[i - 1], u = Math.max(d, 0), w = Math.max(-d, 0);
+        up = i === 1 ? u : up + (u - up) / n; dn = i === 1 ? w : dn + (w - dn) / n;
+        out.push(i >= n ? (dn === 0 ? 100 : 100 - 100 / (1 + up / dn)) : NaN);
+      }
+      return out;
+    }
+    function bbArr(values, n) {
+      return values.map(function (_, i) {
+        if (i < n - 1) return null;
+        var w = values.slice(i - n + 1, i + 1), m = w.reduce(function (a, b) { return a + b; }, 0) / n;
+        var sd = Math.sqrt(w.reduce(function (a, b) { return a + (b - m) * (b - m); }, 0) / n);
+        return [m + 2 * sd, m, m - 2 * sd];
+      });
+    }
+    function pivots(k) {
+      var highs = [], lows = [];
+      for (var i = k; i < bars.length - k; i++) {
+        var h = bars[i].high, l = bars[i].low, isH = true, isL = true;
+        for (var j = i - k; j <= i + k; j++) {
+          if (j === i) continue;
+          if (bars[j].high >= h) isH = false;
+          if (bars[j].low <= l) isL = false;
+        }
+        if (isH) highs.push(i);
+        if (isL) lows.push(i);
+      }
+      return { highs: highs, lows: lows };
+    }
+    function t(ms) { return Math.floor(ms / 1000) + THAI_OFFSET_S; }
+
+    function build() {
+      if (chart) { chart.remove(); rsiChart.remove(); }
+      var el = $("cvChart"), re = $("cvRsi");
+      chart = LightweightCharts.createChart(el, baseOptions(el));
+      rsiChart = LightweightCharts.createChart(re, Object.assign(baseOptions(re), { timeScale: { visible: false } }));
+      series.candle = chart.addCandlestickSeries({ upColor: "#26a69a", downColor: "#ef5350", borderVisible: false, wickUpColor: "#26a69a", wickDownColor: "#ef5350" });
+      series.volume = chart.addHistogramSeries({ priceScaleId: "vol", priceFormat: { type: "volume" }, lastValueVisible: false, priceLineVisible: false });
+      chart.priceScale("vol").applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
+      var line = function (c, w, style) { return chart.addLineSeries({ color: c, lineWidth: w || 1, lineStyle: style || 0, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false }); };
+      series.e20 = line("#ffb74d"); series.e50 = line("#ba68c8"); series.e200 = line("#90a4ae", 2);
+      series.bbU = line("#5c6bc0", 1, 2); series.bbM = line("#5c6bc0", 1, 1); series.bbL = line("#5c6bc0", 1, 2);
+      series.sup = line("#4dd0e1", 2); series.res = line("#ff8a65", 2);
+      series.rsi = rsiChart.addLineSeries({ color: "#86a9ff", lineWidth: 1, priceLineVisible: false });
+      series.rsi.createPriceLine({ price: 70, color: "#ff8a8a", lineStyle: 2, lineWidth: 1, axisLabelVisible: false });
+      series.rsi.createPriceLine({ price: 30, color: "#56d6b4", lineStyle: 2, lineWidth: 1, axisLabelVisible: false });
+      chart.timeScale().subscribeVisibleLogicalRangeChange(function (r) { if (r) rsiChart.timeScale().setVisibleLogicalRange(r); });
+    }
+
+    function load() {
+      var my = ++token;
+      if (socket) { try { socket.close(); } catch (e) { /* ignore */ } socket = null; }
+      clearInterval(pollTimer);
+      $("cvLive").textContent = "● กำลังโหลด…";
+      $("cvLive").className = "";
+      binance("/api/v3/klines?symbol=" + symbol + "&interval=" + tf + "&limit=500").then(function (rows) {
+        if (my !== token) return;
+        bars = rows.map(function (k) { return { time: k[0], open: +k[1], high: +k[2], low: +k[3], close: +k[4], volume: +k[5], closed: true }; });
+        if (bars.length) bars[bars.length - 1].closed = false;
+        draw(true);
+        connect(my, 0);
+      }).catch(function (e) { $("cvLive").textContent = "● " + e.message; $("cvLive").className = "down"; });
+    }
+
+    function onKline(k) {
+      var bar = { time: k.t, open: +k.o, high: +k.h, low: +k.l, close: +k.c, volume: +k.v, closed: k.x };
+      var last = bars[bars.length - 1];
+      if (last && last.time === bar.time) bars[bars.length - 1] = bar;
+      else if (!last || bar.time > last.time) { bars.push(bar); if (bars.length > 600) bars.shift(); }
+      var now = Date.now();
+      if (bar.closed || now - lastDraw > 3000) draw(false);
+      else series.candle.update({ time: t(bar.time), open: bar.open, high: bar.high, low: bar.low, close: bar.close });
+    }
+
+    function connect(my, attempt) {
+      if (!window.WebSocket || attempt >= STREAMS.length) return poll(my);
+      var ws;
+      try { ws = new WebSocket(STREAMS[attempt] + symbol.toLowerCase() + "@kline_" + tf); } catch (e) { return connect(my, attempt + 1); }
+      socket = ws;
+      var opened = false;
+      ws.onopen = function () { opened = true; if (my === token) { $("cvLive").textContent = "● Realtime"; $("cvLive").className = "up"; } };
+      ws.onmessage = function (m) { if (my !== token) return; try { onKline(JSON.parse(m.data).k); } catch (e) { /* ignore bad frame */ } };
+      ws.onclose = function () { if (my !== token) return; if (!opened) connect(my, attempt + 1); else setTimeout(function () { if (my === token) connect(my, 0); }, 3000); };
+      ws.onerror = function () { try { ws.close(); } catch (e) { /* ignore */ } };
+    }
+
+    function poll(my) {
+      $("cvLive").textContent = "● อัปเดตทุก 10 วินาที";
+      pollTimer = setInterval(function () {
+        if (my !== token) return;
+        binance("/api/v3/klines?symbol=" + symbol + "&interval=" + tf + "&limit=2").then(function (rows) {
+          rows.forEach(function (k) { onKline({ t: k[0], o: k[1], h: k[2], l: k[3], c: k[4], v: k[5], x: k[6] < Date.now() }); });
+        }).catch(function () { /* keep last chart */ });
+      }, 10000);
+    }
+
+    function draw(fit) {
+      lastDraw = Date.now();
+      var closes = bars.map(function (b) { return b.close; });
+      series.candle.setData(bars.map(function (b) { return { time: t(b.time), open: b.open, high: b.high, low: b.low, close: b.close }; }));
+      series.volume.setData(bars.map(function (b) { return { time: t(b.time), value: b.volume, color: b.close >= b.open ? "rgba(38,166,154,.35)" : "rgba(239,83,80,.35)" }; }));
+      var e20 = emaArr(closes, 20), e50 = emaArr(closes, 50), e200 = emaArr(closes, 200), rsi = rsiArr(closes, 14), bb = bbArr(closes, 20);
+      var put = function (s, arr, on) {
+        s.setData(on ? bars.map(function (b, i) { return { time: t(b.time), value: arr[i] }; }).filter(function (p) { return isFinite(p.value); }) : []);
+      };
+      var showEma = $("cvEma").checked, showBb = $("cvBb").checked;
+      put(series.e20, e20, showEma); put(series.e50, e50, showEma); put(series.e200, e200, showEma);
+      put(series.bbU, bb.map(function (x) { return x ? x[0] : NaN; }), showBb);
+      put(series.bbM, bb.map(function (x) { return x ? x[1] : NaN; }), showBb);
+      put(series.bbL, bb.map(function (x) { return x ? x[2] : NaN; }), showBb);
+      series.rsi.setData(bars.map(function (b, i) { return { time: t(b.time), value: rsi[i] }; }).filter(function (p) { return isFinite(p.value); }));
+
+      priceLines.forEach(function (l) { series.candle.removePriceLine(l); });
+      priceLines = [];
+      var n = bars.length, look = Math.min(150, n), lo = Infinity, hi = -Infinity, loI = 0, hiI = 0;
+      for (var i = n - look; i < n; i++) {
+        if (bars[i].low < lo) { lo = bars[i].low; loI = i; }
+        if (bars[i].high > hi) { hi = bars[i].high; hiI = i; }
+      }
+      var upSwing = loI < hiI, range = hi - lo, fib = {};
+      [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1].forEach(function (r) { fib[r] = upSwing ? hi - r * range : lo + r * range; });
+      var ext = { 1.272: upSwing ? lo + 1.272 * range : hi - 1.272 * range, 1.618: upSwing ? lo + 1.618 * range : hi - 1.618 * range };
+      var pl = function (price, color, title, style) {
+        priceLines.push(series.candle.createPriceLine({ price: price, color: color, lineWidth: 1, lineStyle: style === undefined ? 2 : style, axisLabelVisible: true, title: title }));
+      };
+      if ($("cvFib").checked && range > 0) {
+        Object.keys(fib).forEach(function (r) { pl(fib[r], r === "0.618" || r === "0.5" ? "#f0c46a" : "#6b7c93", "Fib " + r); });
+        pl(ext[1.272], "#56d6b4", "Ext 1.272"); pl(ext[1.618], "#56d6b4", "Ext 1.618");
+      }
+
+      // Trendlines through the last two confirmed pivots (5 bars each side).
+      var pv = pivots(5), sup = null, res = null, L = pv.lows, H = pv.highs;
+      if (L.length >= 2 && bars[L[L.length - 1]].low > bars[L[L.length - 2]].low) sup = [L[L.length - 2], L[L.length - 1], "low"];
+      if (H.length >= 2 && bars[H[H.length - 1]].high < bars[H[H.length - 2]].high) res = [H[H.length - 2], H[H.length - 1], "high"];
+      var lineData = function (tl) {
+        if (!tl || !$("cvTrend").checked) return [];
+        var a = tl[0], b = tl[1], va = bars[a][tl[2]], slope = (bars[b][tl[2]] - va) / (b - a);
+        return [a, n - 1].map(function (k) { return { time: t(bars[k].time), value: va + slope * (k - a) }; });
+      };
+      series.sup.setData(lineData(sup)); series.res.setData(lineData(res));
+      var lineAt = function (tl) { if (!tl) return null; var a = tl[0], b = tl[1], va = bars[a][tl[2]]; return va + (bars[b][tl[2]] - va) / (b - a) * (n - 1 - a); };
+
+      analyse({ price: bars[n - 1].close, e20: e20[n - 1], e50: e50[n - 1], e200: e200[n - 1], rsi: rsi[n - 1], upSwing: upSwing,
+        hi: hi, lo: lo, fib: fib, ext: ext, sup: lineAt(sup), res: lineAt(res), bb: bb[n - 1] });
+      if (fit) chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, n - 120), to: n + 3 });
+    }
+
+    function analyse(a) {
+      var trendUp = a.e50 > a.e200 && a.price > a.e200, trendDown = a.e50 < a.e200 && a.price < a.e200, plan = "", pos;
+      var trend = trendUp ? '<b class="up">ขาขึ้น</b> (ราคาเหนือ EMA200 และ EMA50 > EMA200)' :
+        trendDown ? '<b class="down">ขาลง</b> (ราคาใต้ EMA200 และ EMA50 < EMA200)' : "<b>ไซด์เวย์/ไม่ชัด</b> (EMA ยังไม่เรียงตัว)";
+      var rsiText = !isFinite(a.rsi) ? "—" : a.rsi >= 70 ? fmt(a.rsi, 0) + " ร้อนแรง/ซื้อมากเกิน ระวังย่อ" : a.rsi <= 30 ? fmt(a.rsi, 0) + " ขายมากเกิน อาจเด้ง" :
+        fmt(a.rsi, 0) + (a.rsi >= 50 ? " ฝั่งซื้อคุม" : " ฝั่งขายคุม");
+      var levels = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1].map(function (r) { return [r, a.fib[r]]; });
+      levels.sort(function (x, y) { return x[1] - y[1]; });
+      var below = levels.filter(function (l) { return l[1] <= a.price; }).pop(), above = levels.filter(function (l) { return l[1] > a.price; })[0];
+      pos = "ราคา " + price(a.price) + " อยู่ระหว่าง " + (below ? "Fib " + below[0] + " (" + price(below[1]) + ")" : "ใต้กรอบ") + " และ " + (above ? "Fib " + above[0] + " (" + price(above[1]) + ")" : "เหนือกรอบ");
+      if (trendUp && a.upSwing) {
+        var zoneHi = a.fib[0.5], zoneLo = a.fib[0.618], entry = (zoneHi + zoneLo) / 2, sl = a.fib[0.786] - (a.fib[0.618] - a.fib[0.786]) * 0.25;
+        var tps = [a.hi, a.ext[1.272], a.ext[1.618]], rr = tps.map(function (tp) { return (tp - entry) / (entry - sl); });
+        var inZone = a.price <= zoneHi && a.price >= zoneLo;
+        plan = '<div class="levels"><div><small>โซนรอซื้อ (Fib 0.5–0.618)</small><b>' + price(zoneLo) + " – " + price(zoneHi) + '</b></div><div><small>Stop (ใต้ 0.786)</small><b class="down">' +
+          price(sl) + '</b></div><div><small>TP1 · TP2 · TP3</small><b class="up" style="font-size:13px">' + tps.map(price).join("<br>") + "</b></div></div>" +
+          "<small>R:R ถ้าเข้ากลางโซน: TP1 " + fmt(rr[0], 1) + " · TP2 " + fmt(rr[1], 1) + " · TP3 " + fmt(rr[2], 1) + "</small><br>" +
+          (inZone ? '<b class="up">ราคาอยู่ในโซนรอซื้อแล้ว</b> — รอแท่งยืนยัน (แท่งเขียวกลืน/ไส้ล่างยาว) ก่อนเข้า' :
+            a.price > zoneHi ? "ราคายังสูงกว่าโซน รอย่อลงมาก่อน ไม่ไล่ราคา" : '<span class="down">ราคาหลุดโซนแล้ว</span> ถ้าปิดใต้ ' + price(a.fib[0.786]) + " ถือว่าโครงสร้างขาขึ้นเสีย");
+      } else if (trendUp) {
+        plan = "ขาขึ้นแต่รอบล่าสุดเป็นการย่อจากจุดสูง รอให้ทำจุดต่ำใหม่ยืนได้และกลับขึ้นก่อน ค่อยตี Fibonacci รอบใหม่";
+      } else if (trendDown) {
+        plan = "ขาลง: Spot ไม่ซื้อ ถือ USDT รอราคากลับขึ้นเหนือ EMA200 · แนวรับถัดไปตาม Fib " + price(a.fib[1]) + (a.ext ? " และ Ext 1.272 ที่ " + price(a.ext[1.272]) : "");
+      } else {
+        plan = "ยังไม่มีแนวโน้มชัด รอ EMA50 ตัดขึ้นเหนือ EMA200 หรือราคายืนเหนือเทรนด์ไลน์แนวต้าน";
+      }
+      var tl = [];
+      if (a.sup !== null) tl.push("แนวรับเทรนด์ไลน์ ≈ " + price(a.sup) + (a.price < a.sup ? ' <span class="down">(หลุดแล้ว)</span>' : ""));
+      if (a.res !== null) tl.push("แนวต้านเทรนด์ไลน์ ≈ " + price(a.res) + (a.price > a.res ? ' <span class="up">(ทะลุแล้ว)</span>' : ""));
+      $("cvAnalysis").innerHTML = '<ul style="margin:0;padding-left:18px;font-size:14px"><li>แนวโน้ม: ' + trend + "</li><li>RSI: " + rsiText + "</li><li>" + pos + "</li>" +
+        (tl.length ? "<li>" + tl.join("<br>") + "</li>" : "") + '</ul><div style="margin-top:10px">' + plan + "</div>";
+      $("cvTime").textContent = "อัปเดต " + thai(Date.now()).slice(9) + " น.";
+    }
+
+    function open(sym) {
+      if (sym) { symbol = sym; $("cvSymbol").value = sym; }
+      if (!chart) build();
+      load();
+    }
+    function stop() { token++; if (socket) { try { socket.close(); } catch (e) { /* ignore */ } socket = null; } clearInterval(pollTimer); }
+
+    $("cvSymbol").innerHTML = COINS.map(function (c) { return '<option value="' + c + '">' + c.replace("USDT", "/USDT") + "</option>"; }).join("");
+    $("cvSymbol").onchange = function () { symbol = $("cvSymbol").value; load(); };
+    $("cvTf").onchange = function () { tf = $("cvTf").value; load(); };
+    ["cvEma", "cvFib", "cvTrend", "cvBb"].forEach(function (id) { $(id).onchange = function () { if (bars.length) draw(false); }; });
+    window.addEventListener("resize", function () {
+      if (chart) { chart.applyOptions({ width: $("cvChart").clientWidth }); rsiChart.applyOptions({ width: $("cvRsi").clientWidth }); }
+    });
+    return { open: open, stop: stop };
+  })();
+
   Array.prototype.forEach.call($("mainTabs").children, function (b) {
     b.onclick = function () {
       Array.prototype.forEach.call($("mainTabs").children, function (x) {
@@ -1355,6 +1590,7 @@ a{color:var(--accent)}
         $(x.getAttribute("data-tab")).classList.toggle("hidden", x !== b);
       });
       if (last && b.getAttribute("data-tab") === "backtestTab") render();
+      if (b.getAttribute("data-tab") === "chartTab") ChartView.open(); else ChartView.stop();
     };
   });
 
