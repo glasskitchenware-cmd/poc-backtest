@@ -157,16 +157,22 @@ a{color:var(--accent)}
 </section>
 
 <section>
-  <h2>เทคนิคของฉัน · กราฟ 4 ชม.</h2>
-  <p class="muted" style="margin:0;font-size:13px">ทดสอบ 5 เทคนิคจากคลังความรู้ของคุณ (เทรนด์ไลน์, Inside Bar, Fibo, Breakout+Pullback, Double Bottom) เป็นกฎตายตัว ซื้ออย่างเดียว ใช้ค่าธรรมเนียมจากช่องด้านบน ผลเป็น R (หน่วยความเสี่ยงต่อไม้) หลังหักต้นทุน</p>
+  <h2>เทคนิคของฉัน</h2>
+  <p class="muted" style="margin:0;font-size:13px">ทดสอบ 5 เทคนิคจากคลังความรู้ของคุณ (เทรนด์ไลน์, Inside Bar, Fibo, Breakout+Pullback, Double Bottom) และสูตร Momentum + Squeeze จาก ONE BEST COMBO เป็นกฎตายตัว ใช้ค่าธรรมเนียมจากช่องด้านบน ผลเป็น R (หน่วยความเสี่ยงต่อไม้) หลังหักต้นทุน</p>
   <label>เหรียญ</label><div class="checks" id="swCoins" style="flex-wrap:wrap;gap:10px;font-size:13px"></div>
-  <label for="swDays">ช่วงข้อมูล</label>
-  <select id="swDays"><option value="730">2 ปี</option><option value="1095" selected>3 ปี</option><option value="1460">4 ปี</option></select>
+  <div class="row">
+    <div><label for="swTf">กรอบเวลา</label><select id="swTf"><option value="1h">1 ชม. (Squeeze ออกแบบมาที่นี่)</option><option value="4h" selected>4 ชม.</option></select></div>
+    <div><label for="swDays">ช่วงข้อมูล</label><select id="swDays"><option value="730">2 ปี</option><option value="1095" selected>3 ปี</option><option value="1460">4 ปี</option></select></div>
+  </div>
+  <p class="muted" style="margin:6px 0 0;font-size:12px">ค่าธรรมเนียมใช้ช่องด้านบน: Spot ปกติ 0.10%/ข้าง · Futures taker ประมาณ 0.05%/ข้าง (สคริปต์ ONE BEST COMBO ใช้รวม 0.14% ไป-กลับ)</p>
   <button id="swRun">Backtest เทคนิคของฉัน</button>
   <div id="swStatus" class="status-line">แต่ละเทคนิคแบ่งข้อมูล 60/20/20 เลือกผู้ชนะจากช่วง Valid แล้วตรวจกับ Holdout ครั้งเดียว</div>
   <div id="swResults" class="hidden" style="margin-top:12px">
     <div id="swBest"></div>
     <div style="overflow-x:auto;margin-top:10px"><table><thead><tr><th>เทคนิค</th><th>Dev ไม้·win·R</th><th>Valid ไม้·win·R</th><th>Valid PF</th></tr></thead><tbody id="swTable"></tbody></table></div>
+    <h2 style="margin-top:14px">ผลรายปี <small class="muted">(R เฉลี่ยต่อไม้ หลังหักต้นทุน)</small></h2>
+    <div style="overflow-x:auto"><table><thead id="swYearHead"></thead><tbody id="swYears"></tbody></table></div>
+    <p class="muted" style="font-size:12px;margin:6px 0 0">ONE BEST COMBO ถูกเลือกจาก 4,104 แบบโดยดูข้อมูล BTC ปี 2024–2025 แล้ว ปี 2026 และเหรียญอื่นจึงเป็นข้อมูลใหม่ที่ใช้ตัดสินได้จริง</p>
     <p class="muted" style="font-size:12px;margin:8px 0 0">เป็นกฎจำลองจากหลักการในคลิป ไม่ใช่สูตรตรงของผู้สอนทุกข้อ · ผลในอดีตไม่รับประกันอนาคต</p>
   </div>
 </section>
@@ -843,9 +849,17 @@ a{color:var(--accent)}
     { id: "inside_bar", name: "Inside Bar 4H ทะลุตามเทรนด์", source: "หัวข้อ 17 (ภาพยืนยัน)" },
     { id: "fibo", name: "ย่อ Fibo 38.2–61.8% + แท่งปฏิเสธ", source: "หัวข้อ 13 (ภาพยืนยัน)" },
     { id: "retest", name: "Breakout แล้ว Pullback กลับมาทดสอบ", source: "TL-06 (ถอดเสียงยืนยัน)" },
-    { id: "double_bottom", name: "Double Bottom ทะลุ Neckline", source: "หัวข้อ 16 (ภาพยืนยัน)" }
+    { id: "double_bottom", name: "Double Bottom ทะลุ Neckline", source: "หัวข้อ 16 (ภาพยืนยัน)" },
+    // CRYPTO_ONE_BEST_COMBO_20261022: locked formula from the user's research package, designed for 1H.
+    { id: "squeeze_long", name: "Momentum + Squeeze Breakout (ซื้ออย่างเดียว · Spot)", source: "ONE BEST COMBO 22/10/2569",
+      hold: 24, minStopFrac: 0.0015 },
+    { id: "squeeze_ls", name: "Momentum + Squeeze Breakout (ซื้อ+ขาย · Futures)", source: "ONE BEST COMBO 22/10/2569",
+      hold: 24, minStopFrac: 0.0015 }
   ];
+  var byId = {};
   var DEFAULTS = { fee: 0.001, slippage: 0.0005, risk: 0.01, maxHoldBars: 30, pivotK: 3, takeR: 2 };
+
+  TECHNIQUES.forEach(function (t) { byId[t.id] = t; });
 
   function ema(values, n) {
     var a = 2 / (n + 1), y = NaN, out = [];
@@ -878,17 +892,54 @@ a{color:var(--accent)}
       if (isL) lows.push({ i: i, price: bars[i].low, known: i + k });
       if (isH) highs.push({ i: i, price: bars[i].high, known: i + k });
     }
-    return { e50: e50, e200: e200, atr: atr, lows: lows, highs: highs };
+    var sq = squeezeMomentum(bars);
+    return { e50: e50, e200: e200, atr: atr, lows: lows, highs: highs, squeeze: sq.squeeze, momentum: sq.momentum, atrEma: sq.atr };
+  }
+
+  // Exactly as crypto_best_combo_reproduce_20261022.py: unmasked EMAs seeded at the first bar,
+  // ATR = EMA14 of true range, signals from bar 260 on.
+  function squeezeMomentum(bars) {
+    var n = bars.length, full = function (values, p) {
+      var a = 2 / (p + 1), out = [values[0]];
+      for (var i = 1; i < values.length; i++) out.push(out[i - 1] + a * (values[i] - out[i - 1]));
+      return out;
+    };
+    var C = bars.map(function (b) { return b.close; }), O = bars.map(function (b) { return b.open; });
+    var H = bars.map(function (b) { return b.high; }), L = bars.map(function (b) { return b.low; });
+    var V = bars.map(function (b) { return b.volume || 0; });
+    var e20 = full(C, 20), e50 = full(C, 50), e200 = full(C, 200), v20 = full(V, 20);
+    var tr = bars.map(function (b, i) { return i ? Math.max(H[i] - L[i], Math.abs(H[i] - C[i - 1]), Math.abs(L[i] - C[i - 1])) : H[i] - L[i]; });
+    var atr = full(tr, 14), squeeze = new Array(n).fill(0), momentum = new Array(n).fill(0);
+    for (var i = 260; i < n; i++) {
+      var hi = -Infinity, lo = Infinity;
+      for (var k = i - 12; k < i; k++) { hi = Math.max(hi, H[k]); lo = Math.min(lo, L[k]); }
+      var up = e20[i] > e50[i] && e50[i] > e200[i], down = e20[i] < e50[i] && e50[i] < e200[i];
+      if (hi - lo < 3 * atr[i] && V[i] > 1.4 * v20[i]) squeeze[i] = up && C[i] > hi ? 1 : down && C[i] < lo ? -1 : 0;
+      if (Math.abs(C[i] - O[i]) > 0.7 * atr[i])
+        momentum[i] = up && C[i] > O[i] && C[i - 1] > O[i - 1] ? 1 : down && C[i] < O[i] && C[i - 1] < O[i - 1] ? -1 : 0;
+    }
+    return { squeeze: squeeze, momentum: momentum, atr: atr };
   }
 
   function rejection(b) {
     var range = b.high - b.low;
     return range > 0 && (Math.min(b.open, b.close) - b.low) >= 0.3 * range && b.close >= b.low + 0.6 * range;
   }
-  function knownBefore(list, i) { return list.filter(function (p) { return p.known <= i; }); }
+  // Pivots confirmed by bar i (lists are sorted by `known`), via binary search.
+  function knownBefore(list, i) {
+    var lo = 0, hi = list.length;
+    while (lo < hi) { var m = (lo + hi) >> 1; if (list[m].known <= i) lo = m + 1; else hi = m; }
+    return list.slice(Math.max(0, lo - 2), lo);
+  }
 
   /* Returns null or {stop, target} for an entry at the next open, using bars up to i only. */
   function signal(id, bars, ind, i, opt) {
+    if (id === "squeeze_long" || id === "squeeze_ls") {
+      var dir = ind.momentum[i];
+      if (!dir || (id === "squeeze_long" && dir !== 1)) return null;
+      for (var j = Math.max(260, i - 8); j <= i; j++) if (ind.squeeze[j] === dir) return { dir: dir, dist: 2.5 * ind.atrEma[i], rr: 5 };
+      return null;
+    }
     var b = bars[i], atr = ind.atr[i];
     if (!(atr > 0) || isNaN(ind.e200[i])) return null;
     var up = ind.e50[i] > ind.e200[i] && b.close > ind.e200[i];
@@ -959,30 +1010,41 @@ a{color:var(--accent)}
    * exits are checked from the entry bar on, stop before target, with no same-bar re-entry.
    * R uses the risk at entry and includes round-trip costs. */
   function runTechnique(id, bars, ind, from, to, opt) {
-    var trades = [], pos = null, cost = 2 * (opt.fee + opt.slippage);
+    var trades = [], pos = null, cost = 2 * (opt.fee + opt.slippage), spec = byId[id] || {};
+    var hold = spec.hold || opt.maxHoldBars;
     function close(i, exit, reason) {
-      var risk = pos.entry - pos.stop;
-      trades.push({ technique: id, entry_time: bars[pos.bar].time, exit_time: bars[i].time, entry: pos.entry, stop: pos.stop,
-        target: pos.target, exit: exit, r: (exit - pos.entry) / risk - cost * pos.entry / risk, reason: reason });
+      var risk = Math.abs(pos.entry - pos.stop);
+      trades.push({ technique: id, side: pos.dir > 0 ? "long" : "short", entry_time: bars[pos.bar].time, exit_time: bars[i].time,
+        entry: pos.entry, stop: pos.stop, target: pos.target, exit: exit,
+        r: pos.dir * (exit - pos.entry) / risk - cost * pos.entry / risk, reason: reason });
       pos = null;
     }
     for (var i = from; i < to; i++) {
       var b = bars[i];
       if (pos) {
-        if (b.open <= pos.stop) close(i, b.open, "stop_gap");
-        else if (b.low <= pos.stop) close(i, pos.stop, "stop");
-        else if (b.open >= pos.target) close(i, pos.target, "target_gap");
-        else if (b.high >= pos.target) close(i, pos.target, "target");
-        else if (i - pos.bar + 1 >= opt.maxHoldBars) close(i, b.close, "time");
+        var d = pos.dir, open = d * b.open, low = d > 0 ? b.low : -b.high, high = d > 0 ? b.high : -b.low;
+        var stop = d * pos.stop, target = d * pos.target;
+        if (open <= stop) close(i, b.open, "stop_gap");
+        else if (low <= stop) close(i, pos.stop, "stop");
+        else if (open >= target) close(i, pos.target, "target_gap");
+        else if (high >= target) close(i, pos.target, "target");
+        else if (i - pos.bar + 1 >= hold) close(i, b.close, "time");
         continue;
       }
       if (i + 1 >= to) break;
       var sig = signal(id, bars, ind, i, opt);
       if (!sig) continue;
-      var entry = bars[i + 1].open * (1 + opt.slippage);
-      if (!(sig.stop < entry)) continue;
-      var target = sig.target !== undefined ? sig.target : entry + sig.rr * (entry - sig.stop);
-      if (target > entry) pos = { bar: i + 1, entry: entry, stop: sig.stop, target: target };
+      var dir = sig.dir || 1, entry = bars[i + 1].open * (1 + dir * opt.slippage), stopPx, targetPx;
+      if (sig.dist !== undefined) {
+        if (!(sig.dist > 0) || sig.dist / entry < (spec.minStopFrac || 0)) continue;
+        stopPx = entry - dir * sig.dist; targetPx = entry + dir * sig.rr * sig.dist;
+      } else {
+        stopPx = sig.stop;
+        if (!(stopPx < entry)) continue;
+        targetPx = sig.target !== undefined ? sig.target : entry + sig.rr * (entry - stopPx);
+        if (!(targetPx > entry)) continue;
+      }
+      pos = { bar: i + 1, dir: dir, entry: entry, stop: stopPx, target: targetPx };
     }
     if (pos) close(to - 1, bars[to - 1].close, "end");
     return trades;
@@ -1021,7 +1083,10 @@ a{color:var(--accent)}
         parts.validation = parts.validation.concat(runTechnique(tq.id, bars, prepared[s], a, b, opt).map(tag(s)));
         parts.holdout = parts.holdout.concat(runTechnique(tq.id, bars, prepared[s], b, n, opt).map(tag(s)));
       });
-      return { id: tq.id, name: tq.name, source: tq.source, trades: parts,
+      var all = parts.development.concat(parts.validation, parts.holdout), years = {};
+      all.forEach(function (t) { var y = new Date(t.entry_time).getUTCFullYear(); (years[y] = years[y] || []).push(t); });
+      var yearly = Object.keys(years).sort().map(function (y) { return { year: +y, stats: stats(years[y], opt.risk) }; });
+      return { id: tq.id, name: tq.name, source: tq.source, trades: parts, yearly: yearly,
         development: stats(parts.development, opt.risk), validation: stats(parts.validation, opt.risk) };
     });
     var chosen = null;
@@ -1834,19 +1899,19 @@ a{color:var(--accent)}
     $("swRun").onclick = function () {
       var coins = Array.prototype.filter.call(box.querySelectorAll("input"), function (x) { return x.checked; }).map(function (x) { return x.value; });
       if (!coins.length) { $("swStatus").textContent = "เลือกอย่างน้อย 1 เหรียญ"; return; }
-      var days = parseInt($("swDays").value, 10), data = {}, done = 0;
-      $("swRun").disabled = true; $("swStatus").className = "status-line"; $("swStatus").textContent = "กำลังดึงแท่ง 4 ชม.…";
+      var days = parseInt($("swDays").value, 10), data = {}, done = 0, tf = $("swTf").value, step = tf === "1h" ? 3600000 : 14400000;
+      $("swRun").disabled = true; $("swStatus").className = "status-line"; $("swStatus").textContent = "กำลังดึงแท่ง " + tf + "…";
       binance("/api/v3/time").then(function (t) {
-        var end = Math.floor(t.serverTime / 14400000) * 14400000, start = end - days * 86400000;
+        var end = Math.floor(t.serverTime / step) * step, start = end - days * 86400000;
         return Promise.all(coins.map(function (c) {
-          return fetchCandles(c, start, end, function () {}, "4h").then(function (rows) {
+          return fetchCandles(c, start, end, function () {}, tf).then(function (rows) {
             data[c] = rows; done++; $("swStatus").textContent = "ดึงแล้ว " + done + "/" + coins.length + " เหรียญ";
           }).catch(function (e) { $("swStatus").textContent = c + ": " + e.message; });
         }));
       }).then(function () {
         var r = Swing.evaluate(data, { fee: readNumber("fee", 0.1) / 100, slippage: readNumber("slip", 0.05) / 100, risk: 0.01 });
         renderSwing(r, Object.keys(data));
-        $("swStatus").textContent = "เสร็จ · " + Object.keys(data).length + " เหรียญ · " + days + " วัน · กราฟ 4 ชม.";
+        $("swStatus").textContent = "เสร็จ · " + Object.keys(data).length + " เหรียญ · " + days + " วัน · กราฟ " + tf;
       }).catch(function (e) { $("swStatus").className = "status-line err"; $("swStatus").textContent = e.message; })
         .then(function () { $("swRun").disabled = false; });
     };
@@ -1867,6 +1932,18 @@ a{color:var(--accent)}
         var d = t.development, v = t.validation;
         return "<tr><td>" + esc(t.name) + (t.id === r.chosen ? " ✓" : "") + '<br><small class="muted">' + esc(t.source) + "</small></td><td>" + d.trades + " · " + fmt(d.win_rate, 0) +
           "%<br>" + fmt(d.exp_r, 2, true) + "R</td><td>" + v.trades + " · " + fmt(v.win_rate, 0) + "%<br>" + fmt(v.exp_r, 2, true) + "R</td><td>" + fmt(v.pf, 2) + "</td></tr>";
+      }).join("");
+      var years = {};
+      r.techniques.forEach(function (t) { t.yearly.forEach(function (y) { years[y.year] = 1; }); });
+      years = Object.keys(years).sort();
+      $("swYearHead").innerHTML = "<tr><th>เทคนิค</th>" + years.map(function (y) { return "<th>" + y + "</th>"; }).join("") + "</tr>";
+      $("swYears").innerHTML = r.techniques.map(function (t) {
+        var map = {};
+        t.yearly.forEach(function (y) { map[y.year] = y.stats; });
+        return "<tr><td>" + esc(t.name) + "</td>" + years.map(function (y) {
+          var st = map[y];
+          return st ? '<td class="' + tone(st.exp_r) + '">' + fmt(st.exp_r, 2, true) + "R<br><small>" + st.trades + " · " + fmt(st.win_rate, 0) + "%</small></td>" : "<td>—</td>";
+        }).join("") + "</tr>";
       }).join("");
       $("swResults").classList.remove("hidden");
     }
