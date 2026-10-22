@@ -54,10 +54,17 @@ adb shell pm grant "$PKG" android.permission.POST_NOTIFICATIONS 2>/dev/null
 adb shell cmd notification allow_listener com.android.systemui 2>/dev/null || true
 
 # First launch: alerts switch on by default and the alarm is armed.
+adb logcat -c
 adb shell am start -W -n "$PKG/.MainActivity" >> "$LOG"
 sleep 25
-hook DEBUG_CONFIG --es base "http://10.0.2.2:8765"
 adb exec-out screencap -p > "$OUT/01_app_main.png"
+FOCUS=$(adb shell dumpsys window | grep -m1 -E 'mCurrentFocus|mFocusedApp' | tr -d '\r')
+log "focus after first launch: $FOCUS"
+adb logcat -d -b crash > "$OUT/crash_first_launch.txt"
+adb logcat -d | grep -E "AndroidRuntime|th.paperbot|ActivityTaskManager|chromium" | tail -80 > "$OUT/logcat_first_launch.txt"
+check "$( [ -s "$OUT/crash_first_launch.txt" ] && echo 0 || echo 1)" "no crash on first launch"
+check "$(echo "$FOCUS" | grep -q "$PKG" && echo 1 || echo 0)" "app is in the foreground 25 s after first launch"
+hook DEBUG_CONFIG --es base "http://10.0.2.2:8765"
 check "$(adb shell dumpsys alarm | grep -c "$PKG" | awk '{print ($1>0)}')" "alarm armed after first launch"
 check "$(prefs | grep -c 'name="enabled" value="true"' | awk '{print ($1>0)}')" "alerts enabled by default"
 adb shell input keyevent KEYCODE_HOME
