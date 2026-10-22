@@ -10,6 +10,7 @@ import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -28,6 +29,7 @@ final class NativeBridge {
 
     private static final List<String> ALLOWED_HOSTS = Arrays.asList(
             "data-api.binance.vision", "api.binance.com", "api.bitkub.com", "open.er-api.com");
+    private static final List<String> POST_HOSTS = Arrays.asList("generativelanguage.googleapis.com");
 
     private final Context context;
     private final WebView web;
@@ -60,6 +62,43 @@ final class NativeBridge {
                 connection.setReadTimeout(30000);
                 connection.setRequestProperty("Accept", "application/json");
                 connection.setRequestProperty("User-Agent", "POC-Signal-Android/1.1");
+                int status = connection.getResponseCode();
+                InputStream stream = status >= 400 ? connection.getErrorStream() : connection.getInputStream();
+                body = stream == null ? "" : read(stream);
+                connection.disconnect();
+                ok = status >= 200 && status < 300;
+                if (!ok) {
+                    body = "HTTP " + status + " " + body;
+                }
+            } catch (Exception error) {
+                body = error.getClass().getSimpleName() + ": " + error.getMessage();
+            }
+            final String script = "window.__nativeDone(" + JSONObject.quote(id) + "," + ok + ","
+                    + JSONObject.quote(body) + ")";
+            main.post(() -> web.evaluateJavascript(script, null));
+        });
+    }
+
+    /** JSON POST, only to Google's Gemini API, with the user's own key in the URL. */
+    @JavascriptInterface
+    public void post(final String id, final String address, final String json) {
+        pool.execute(() -> {
+            boolean ok = false;
+            String body;
+            try {
+                URL url = new URL(address);
+                if (!"https".equals(url.getProtocol()) || !POST_HOSTS.contains(url.getHost())) {
+                    throw new IllegalArgumentException("host not allowed: " + url.getHost());
+                }
+                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                connection.setConnectTimeout(15000);
+                connection.setReadTimeout(90000);
+                connection.setRequestMethod("POST");
+                connection.setDoOutput(true);
+                connection.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+                try (OutputStream out = connection.getOutputStream()) {
+                    out.write(json.getBytes(StandardCharsets.UTF_8));
+                }
                 int status = connection.getResponseCode();
                 InputStream stream = status >= 400 ? connection.getErrorStream() : connection.getInputStream();
                 body = stream == null ? "" : read(stream);
