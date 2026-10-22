@@ -596,6 +596,13 @@ a{color:var(--accent)}
       if (!(rate > 0)) throw new Error("bad");
       return { rate: rate, source: "Bitkub ล่าสุด" };
     }).catch(function () {
+      // Fallback: USD/THB reference rate; USDT usually trades near USD but is not guaranteed to.
+      return httpGet("https://open.er-api.com/v6/latest/USD").then(JSON.parse).then(function (d) {
+        var rate = d && d.result === "success" && d.rates ? parseFloat(d.rates.THB) : NaN;
+        if (!(rate > 0)) throw new Error("bad");
+        return { rate: rate, source: "USD/THB จาก open.er-api.com ใช้แทน USDT/THB" };
+      });
+    }).catch(function () {
       throw new Error("ดึงอัตรา USDT/THB ไม่ได้ กรุณากรอกอัตราที่ตรวจสอบแล้วในช่อง USDT/THB");
     });
   }
