@@ -60,6 +60,8 @@ button:disabled{opacity:.5}
 #guideBar.hidden{display:none}#guideBar span{font-size:12px;font-weight:500}#guideBar b{font-size:16px}#guideBar .go{align-self:flex-end;margin-top:-20px;font-weight:700;font-size:14px}
 body.has-guide main{padding-bottom:110px}
 .guide-step{cursor:pointer}
+.verdict{border-radius:16px;padding:16px;text-align:center}.verdict.good{background:#123a31;border:1px solid var(--upText)}.verdict.bad{background:#3a1717;border:1px solid #7a3434}.verdict.wait{background:var(--deep);border:1px solid var(--line)}
+.verdict .big{font-size:30px;font-weight:700;margin:4px 0;font-variant-numeric:tabular-nums}.verdict p{margin:6px 0 0;font-size:14px}
 .inline{display:flex;gap:8px;align-items:center;margin-top:8px}.inline input{flex:1;min-width:0}
 #status.err{color:var(--down)}
 .hero{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
@@ -184,9 +186,13 @@ a{color:var(--accent)}
     <button class="mini ghost" id="pp2026" style="width:100%;margin:0">ดูผลปี 2026 (ข้อมูลใหม่)</button>
   </div>
   <div id="ppStatus" class="status-line"></div>
-  <div class="hero" id="ppHero" style="margin-top:8px"></div>
-  <p class="muted" style="font-size:12px;margin:8px 0 0">เทียบงานวิจัยปี 2025 (10x): 61 ไม้ · win 32.8% · ถึง TP5R 21.3% · เฉลี่ย +0.38R · PF 1.50 · +5.83% · Max DD 2.52% — ต้องมีอย่างน้อย 30 ไม้ก่อนสรุป</p>
+  <div id="ppSimple" style="margin-top:10px"></div>
+  <div id="ppChart" class="chart small hidden" style="height:180px;margin-top:8px"></div>
   <div id="ppTrades"></div>
+  <details style="margin-top:10px"><summary class="muted" style="font-size:13px">รายละเอียดสำหรับคนอยากรู้ (ตัวเลขเทคนิค)</summary>
+    <div class="hero" id="ppHero" style="margin-top:8px"></div>
+    <p class="muted" style="font-size:12px;margin:8px 0 0">เทียบงานวิจัยปี 2025 (10x): 61 ไม้ · win 32.8% · ถึง TP5R 21.3% · เฉลี่ย +0.38R · PF 1.50 · +5.83% · Max DD 2.52% — ต้องมีอย่างน้อย 30 ไม้ก่อนสรุป</p>
+  </details>
 </section>
 <section>
   <h2>เงินของฉัน</h2>
@@ -1796,7 +1802,7 @@ a{color:var(--accent)}
   }
 
   var Paper = (function () {
-    var KEY = "paper.v2";
+    var KEY = "paper.v2", lastFx = 33, chart = null;
     function load() { try { return JSON.parse(localStorage.getItem(KEY) || "null"); } catch (e) { return null; } }
     function status(t, err) { $("ppStatus").textContent = t; $("ppStatus").className = "status-line" + (err ? " err" : ""); }
 
@@ -1805,10 +1811,13 @@ a{color:var(--accent)}
     function run(startMs, label) {
       var opt = Object.assign({}, Swing.DEFAULTS, { fee: 0.0007, slippage: 0, fomcDates: fomcDates() });
       status("กำลังดึงแท่ง 1 ชม. ของ BTCUSDT…");
-      return binance("/api/v3/time").then(function (t) {
-        var end = Math.floor(t.serverTime / 3600000) * 3600000, from = Math.floor(startMs / 3600000) * 3600000 - 2000 * 3600000;
+      var fx = 33;
+      return Promise.all([binance("/api/v3/time"), fetchFx().catch(function () { return { rate: 33 }; })]).then(function (res) {
+        fx = res[1].rate;
+        var end = Math.floor(res[0].serverTime / 3600000) * 3600000, from = Math.floor(startMs / 3600000) * 3600000 - 2000 * 3600000;
         return fetchCandles(LOCK.symbol, from, end, function (k) { status("ดึงแล้ว " + k + " แท่ง…"); }, "1h");
       }).then(function (bars) {
+        lastFx = fx;
         var ind = Swing.indicators(bars, opt), first = 0;
         while (first < bars.length && bars[first].time < startMs) first++;
         var trades = Swing.runTechnique(LOCK.tech, bars, ind, Math.max(first, 260), bars.length, opt);
@@ -1841,15 +1850,58 @@ a{color:var(--accent)}
       if (open) {
         var now = bars[bars.length - 1].close, side = open.side === "long" ? 1 : -1, risk = Math.abs(open.entry - open.stop);
         var tps3 = [1, 2, 5].map(function (k) { return open.entry + side * k * risk; });
-        openHtml = '<div class="coin go"><div class="coin-head"><b>ถืออยู่ (Paper)</b><span class="pill go">' + open.side.toUpperCase() + " 10x</span></div>" +
+        openHtml = '<div class="coin go"><div class="coin-head"><b>ไม้ที่ถืออยู่ตอนนี้ (จำลอง)</b><span class="pill go">' + (open.side === "long" ? "ซื้อ" : "ขาย") + " 10x</span></div>" +
           '<div class="levels"><div><small>เข้า</small><b>' + price(open.entry) + '</b></div><div><small>SL</small><b class="down">' + price(open.stop) +
           '</b></div><div><small>TP1 · TP2 · TP3</small><b class="up" style="font-size:13px">' + tps3.map(price).join("<br>") + "</b></div></div>" +
           "<small>เข้าเมื่อ " + thai(open.entry_time) + " · ปิดภายใน " + thai(open.entry_time + 47 * 3600000) + " · ตอนนี้ " + price(now) + " (" +
           fmt(side * (now - open.entry) / risk, 2, true) + "R ยังไม่รวมต้นทุน)</small></div>";
       }
-      $("ppTrades").innerHTML = openHtml + closed.slice(-30).reverse().map(function (t) {
-        return '<div class="trade"><div><b>' + t.side.toUpperCase() + "</b> " + price(t.entry) + " → " + price(t.exit) + "<br><small>" + thai(t.entry_time) +
-          " · " + (reason[t.reason] || t.reason) + '</small></div><div class="' + tone(t.r) + '">' + fmt(t.r, 2, true) + "R</div></div>";
+      // Plain-language view in baht: what the user's own capital would be now.
+      var capital = readNumber("pfCapital", 10000), money = capital, curve = [{ time: Math.floor(startMs / 1000) + THAI_OFFSET_S, value: capital }];
+      var rows = closed.map(function (t) {
+        var frac = Math.abs(t.entry - t.stop) / t.entry, risk = Math.min(LOCK.riskPct / 100, LOCK.marginShare * LOCK.lev * frac);
+        var baht = money * risk * t.r;
+        money += baht;
+        curve.push({ time: Math.floor(t.exit_time / 1000) + THAI_OFFSET_S, value: money });
+        return { t: t, baht: baht };
+      });
+      var profit = money - capital, losses = n - wins, pf = gl > 0 ? gp / gl : (gp > 0 ? Infinity : 0), cls, headline, advice;
+      if (!n) {
+        cls = "wait"; headline = "ยังไม่มีไม้"; advice = "รอสัญญาณก่อน สูตรนี้มีประมาณ 5 ไม้ต่อเดือน แอปจะจดให้เองเมื่อมีไม้";
+      } else if (n < 30) {
+        cls = "wait"; headline = (profit >= 0 ? "กำไร " : "ขาดทุน ") + fmt(Math.abs(profit), 0) + " บาท";
+        advice = "ยังเร็วไปที่จะสรุป มีแค่ " + n + " ไม้ ต้องรอให้ครบ 30 ไม้ก่อน (อีก " + (30 - n) + " ไม้) ระหว่างนี้ยังไม่ควรใช้เงินจริง";
+      } else if (profit > 0 && pf > 1) {
+        cls = "good"; headline = "กำไร " + fmt(profit, 0) + " บาท ✅";
+        advice = "ครบ " + n + " ไม้แล้ว และยังได้กำไร สูตรนี้ใช้ได้ในช่วงนี้ ถ้าจะลองเงินจริง เริ่มน้อยๆ และตามกฎเดิมเท่านั้น";
+      } else {
+        cls = "bad"; headline = "ขาดทุน " + fmt(Math.abs(profit), 0) + " บาท ❌";
+        advice = "ครบ " + n + " ไม้แล้วแต่ขาดทุน สูตรนี้ใช้ไม่ได้ในช่วงนี้ อย่าใช้เงินจริง";
+      }
+      $("ppSimple").innerHTML = '<div class="verdict ' + cls + '"><small>' + esc(label) + " · ใช้ทุนสมมติ " + fmt(capital, 0) + " บาท</small>" +
+        '<div class="big ' + (n ? tone(profit) : "") + '">' + headline + "</div>" +
+        "<div>ตอนนี้จะมีเงิน <b>" + fmt(money, 0) + " บาท</b>" + (n ? " (" + fmt((money / capital - 1) * 100, 1, true) + "%)" : "") + "</div>" +
+        (n ? "<div>เทรด " + n + " ไม้ · ชนะ " + wins + " · แพ้ " + losses + "</div>" : "") +
+        "<p>" + esc(advice) + "</p>" +
+        '<p class="muted" style="font-size:12px">สูตรนี้แพ้บ่อยเป็นเรื่องปกติ (ชนะราว 1 ใน 3) แต่ไม้ที่ชนะได้มากกว่าไม้ที่แพ้หลายเท่า ให้ดูยอดเงินรวม ไม่ใช่จำนวนครั้งที่ชนะ</p></div>';
+      var el = $("ppChart");
+      el.classList.toggle("hidden", rows.length < 2);
+      if (chart) { chart.remove(); chart = null; }
+      if (rows.length >= 2) {
+        chart = LightweightCharts.createChart(el, baseOptions(el));
+        var line = chart.addAreaSeries({ lineColor: profit >= 0 ? "#56d6b4" : "#ff8a8a", topColor: profit >= 0 ? "rgba(86,214,180,.35)" : "rgba(255,138,138,.3)",
+          bottomColor: "rgba(0,0,0,0)", lineWidth: 2, priceFormat: { type: "price", precision: 0, minMove: 1 } });
+        var seen = {}, data = [];
+        curve.forEach(function (pt) { if (seen[pt.time]) data[data.length - 1].value = pt.value; else { seen[pt.time] = 1; data.push(pt); } });
+        line.setData(data);
+        line.createPriceLine({ price: capital, color: "#a8b8cb", lineStyle: 2, lineWidth: 1, axisLabelVisible: true, title: "ทุน" });
+        chart.timeScale().fitContent();
+      }
+      var sideTh = function (side) { return side === "long" ? "ซื้อ (Long)" : "ขาย (Short)"; };
+      var why = { stop: "โดนตัดขาดทุน", stop_gap: "โดนตัดขาดทุน", target: "ถึงเป้ากำไร", target_gap: "ถึงเป้ากำไร", time: "ครบ 48 ชม. ปิดเอง" };
+      $("ppTrades").innerHTML = openHtml + rows.slice(-30).reverse().map(function (x) {
+        return '<div class="trade"><div><b>' + sideTh(x.t.side) + "</b><br><small>" + thai(x.t.entry_time).slice(0, 8) + " · " + (why[x.t.reason] || x.t.reason) +
+          '</small></div><div class="' + tone(x.baht) + '" style="font-weight:600">' + (x.baht >= 0 ? "ได้ +" : "เสีย ") + fmt(x.baht, 0) + " ฿</div></div>";
       }).join("") || (openHtml ? "" : '<p class="muted">ยังไม่มีไม้ตั้งแต่วันเริ่ม</p>');
     }
 
