@@ -1060,9 +1060,9 @@
 
   var lastFutures = [];
 
-  // ---- Main screen: a Binance-Futures look-alike that coaches every tap, sized from the user's own money ----
+  // ---- Main screen: what to trade now and every number of the trade, sized from the user's own money ----
   var Simple = (function () {
-    var lastScan = 0, timer = null, results = [], fx = 33, pick = 0, step = 0, live = null, liveSym = "", busyNow = false, chartSym = "";
+    var lastScan = 0, timer = null, results = [], fx = 33, pick = 0, live = null, liveSym = "", busyNow = false, chartSym = "";
     function money() { return readNumber("pfCapital", 10000); }
     function signals() {
       var now = Date.now();
@@ -1077,50 +1077,6 @@
         winB: hasTp(g) ? (qty * Math.abs(g.tps[2] - g.entry) - cost) * fx : NaN, avbl: money() / fx };
     }
     function qtyTxt(q) { return q >= 1 ? fmt(q, 3) : q.toPrecision(3); }
-    function stepsFor(r, g, z) {
-      var coin = r.symbol.replace("USDT", ""), long = g.dir > 0, pct = Math.max(0.1, g.sliderPct), pctTxt = fmt(pct, pct < 10 ? 1 : 0) + "%";
-      return [
-        { t: "nav", text: "เปิดแอป Binance แตะ <b>Futures</b> ที่แถบล่าง (ไม่ใช่ Spot)" },
-        { t: "sym", text: "แตะชื่อเหรียญด้านบน พิมพ์ค้นหา <b>" + r.symbol + "</b> แล้วเลือกตัวที่มีคำว่า <b>Perp</b>" },
-        { t: "mode", text: "แตะ <b>Cross</b> → เลือก <b>Isolated</b> → กด Confirm" },
-        { t: "lev", text: "แตะตัวเลข Leverage → ตั้งเป็น <b>" + g.lev + "x</b> → กด Confirm" },
-        { t: "type", text: "แตะแท็บ <b>Open</b> แล้วเลือกชนิดคำสั่ง <b>Market</b>" },
-        { t: "size", text: "ลากสไลเดอร์ไปที่ <b>" + pctTxt + "</b> หรือพิมพ์ Size <b>" + qtyTxt(z.qty) + " " + coin + "</b><br>= ลงเงิน (Margin) ประมาณ <b>" + fmt(z.marginB, 0) + " บาท</b>" },
-        { t: "tpsl", text: hasTp(g) ? "ติ๊ก <b>TP/SL</b> แล้วใส่ Take Profit <b class=\"up\">" + price(g.tps[2]) + "</b> และ Stop Loss <b class=\"down\">" + price(g.stop) + "</b>"
-          : "ติ๊ก <b>TP/SL</b> เว้น Take Profit ว่าง ใส่เฉพาะ Stop Loss <b class=\"down\">" + price(g.stop) + "</b> (สูตรนี้ไม่มีเป้ากำไรตายตัว)" },
-        { t: "buy", text: "กด <b class=\"" + (long ? "up" : "down") + "\">" + (long ? "Buy/Long" : "Sell/Short") + "</b> ถ้ามีหน้ายืนยัน กด <b>Confirm</b>" },
-        hasTp(g) ? { t: "done", text: "เสร็จแล้ว! ถ้าโดน SL เสียประมาณ <b class=\"down\">" + fmt(z.lossB, 0) + " ฿</b> · ถ้าถึง TP ได้ประมาณ <b class=\"up\">" + fmt(z.winB, 0) +
-          " ฿</b><br>ถ้าครบ " + fmt(g.hold, g.hold < 10 ? 1 : 0) + " ชม. ยังไม่ชน ให้ไปที่ Positions กด Close" }
-          : { t: "done", text: "เสร็จแล้ว! ถ้าโดน SL เสียประมาณ <b class=\"down\">" + fmt(z.lossB, 0) + " ฿</b> · ไม่มีเป้ากำไรตายตัว ไม้ที่ชนะมักวิ่งหลายวัน" +
-          "<br>ถือไว้จนแอปเด้ง <b>ปิดไม้</b> แล้วไปที่ Positions กด Close · ห้ามเลื่อน SL" }
-      ];
-    }
-    function screen(r, g, z) {
-      var sym = r ? r.symbol : LOCK.symbol, coin = sym.replace("USDT", ""), on = function (k) { return g && steps[step] && steps[step].t === k ? " coach-on" : ""; };
-      var past = function (k) { if (!g) return false; for (var i = 0; i < step; i++) if (steps[i].t === k) return true; return steps[step] && steps[step].t === "done"; };
-      var long = g ? g.dir > 0 : true, pct = g ? Math.max(0.1, Math.min(100, g.sliderPct)) : 0, slid = past("size") ? pct : 0;
-      var ticks = [0, 25, 50, 75, 100].map(function (x) { return '<span class="tick" style="left:' + x + '%"></span>'; }).join("");
-      return '<div class="tx' + (g ? "" : " idle") + '">' +
-        '<div class="tx-top"><div class="tx-seg"><span>Spot</span><span class="on' + on("nav") + '" data-k="nav">Futures</span></div></div>' +
-        '<div class="tx-hd' + on("sym") + '" data-k="sym"><b>' + sym + '</b> <small>Perp ▾</small> <span id="txChg" class="tx-chg">—</span></div>' +
-        '<div class="tx-body"><div class="tx-form">' +
-          '<div class="tx-chips"><span class="' + on("mode") + '" data-k="mode">' + (past("mode") ? "Isolated" : "Cross") + '</span><span class="' + on("lev") + '" data-k="lev">' + (past("lev") ? g.lev : 20) + "x</span></div>" +
-          '<div class="tx-tabs' + on("type") + '" data-k="type"><span class="on">Open</span><span>Close</span></div>' +
-          '<div class="tx-avbl"><small>Avbl</small><span>' + fmt(z ? z.avbl : money() / fx, 2) + " USDT</span></div>" +
-          '<div class="tx-fld' + on("type") + '" data-k="type"><span>' + (past("type") ? "Market" : "Limit") + "</span><small>▾</small></div>" +
-          '<div class="tx-fld' + on("size") + '" data-k="size"><small>Size</small><span>' + (past("size") ? qtyTxt(z.qty) : "") + " <small>" + coin + "</small></span></div>" +
-          '<div class="tx-sl' + on("size") + '" data-k="size"><span class="ln"></span><span class="fill" style="width:' + slid + '%"></span>' + ticks + '<span class="kb" style="left:' + slid + '%"></span></div>' +
-          (g ? '<div class="tx-pct">' + (past("size") ? fmt(pct, pct < 10 ? 1 : 0) + "%" : "&nbsp;") + "</div>" : "") +
-          '<div class="tx-ck' + on("tpsl") + '" data-k="tpsl"><i>' + (past("tpsl") ? "✓" : "") + "</i>TP/SL</div>" +
-          (past("tpsl") ? '<div class="tx-fld sm"><small>Take Profit</small><span class="up">' + (hasTp(g) ? price(g.tps[2]) : "") + '</span></div><div class="tx-fld sm"><small>Stop Loss</small><span class="down">' + price(g.stop) + "</span></div>" : "") +
-          '<div class="tx-btn buy' + (long ? on("buy") : " dim") + '"' + (long ? ' data-k="buy"' : "") + ">Buy/Long</div>" +
-          '<div class="tx-btn sell' + (long ? " dim" : on("buy")) + '"' + (long ? "" : ' data-k="buy"') + ">Sell/Short</div>" +
-        '</div><div class="tx-book" id="txBook"><div class="bk-h"><span>Price</span><span>Amount</span></div><div id="txAsks"></div><div class="bk-mid" id="txPrice">' +
-          (r ? price(r.close) : "—") + '</div><div id="txBids"></div></div></div>' +
-        '<div class="tx-pos"><span class="on">Positions (0)</span><span>Open Orders (0)</span></div>' +
-        '<div class="tx-nav"><span>Home</span><span>Markets</span><span>Trade</span><span class="on' + on("nav") + '" data-k="nav">Futures</span><span>Assets</span></div>' +
-        "</div>";
-    }
     // Squeeze evidence (2026, data the rule never saw) for the selected coins on this timeframe; never in-sample numbers.
     function squeezeHead(tf) {
       var E = window.EVIDENCE, n = 0, sumR = 0, tp = 0, used = [];
@@ -1219,24 +1175,49 @@
       }
       return { top: top, bottom: bottom };
     }
-    // What to do in the Binance app, in one box: side, margin, leverage, size, SL and TP with their baht amounts, deadline.
-    function orderBox(r, g, z, tf) {
-      var coin = r.symbol.replace("USDT", ""), long = g.dir > 0, row = function (k, v) { return "<div><span>" + k + "</span><b>" + v + "</b></div>"; };
-      var ev = evidenceFor(r.symbol, tf);
-      return '<div class="sm-sum"><div class="sm-order">' +
-        row("ทำอะไร", '<span class="' + (long ? "up" : "down") + '">เปิด ' + (long ? "LONG (Buy)" : "SHORT (Sell)") + " " + coin + "</span>") +
-        row("ใส่เงิน (Margin)", fmt(z.marginB, 0) + " ฿") + row("Leverage", "Isolated " + g.lev + "x") +
-        row("ขนาด", qtyTxt(z.qty) + " " + coin + " (≈ " + fmt(z.notional, 0) + " USDT)") + row("ราคาเข้า", "Market ≈ " + price(g.entry)) +
-        row("SL", '<span class="down">' + price(g.stop) + "</span> · โดนแล้วเสีย ≈ " + fmt(z.lossB, 0) + " ฿") +
-        row("TP", hasTp(g) ? '<span class="up">' + price(g.tps[2]) + "</span> · ถึงแล้วได้ ≈ " + fmt(z.winB, 0) + " ฿" : 'ไม่ตั้ง · ออกเมื่อแอปเด้ง "ปิดไม้"') +
-        row("เข้าก่อน", thai(g.expires).slice(9) + " น. (เลยเวลาให้ข้าม)") + "</div>" +
-        (r.ai ? "<small>AI เช็กข่าว: " + esc(r.ai.verdict) + "</small>" : "") +
-        '<div class="ev ' + (ev.ok && ev.avgR > 0 ? "good" : "bad") + '">' + esc(ev.text) + "</div></div>";
+    // Everything about the trade on one sheet: the signal, the price levels, the size in coins / USDT / baht at the user's
+    // balance and risk, and the rule's record on this coin.
+    function tradeSheet(r, g, z, tf) {
+      var coin = r.symbol.replace("USDT", ""), long = g.dir > 0, cap = money(), usd = function (v) { return fmt(v, v < 10 ? 2 : 1) + " USDT"; };
+      var row = function (k, v) { return "<div><span>" + k + "</span><b>" + v + "</b></div>"; }, sec = function (t) { return '<div class="sm-sec">' + t + "</div>"; };
+      var dist = function (v) { return fmt((v / g.entry - 1) * 100, 2, true) + "%"; }, left = Math.max(0, Math.round((g.expires - Date.now()) / 60000));
+      var marginU = z.notional / g.lev, feeB = z.notional * 2 * (FUT.fee + FUT.slippage) * fx, ev = evidenceFor(r.symbol, tf);
+      var risk = isTrend(tf) ? Math.min(TREND.maxRiskPct, Portfolio.plan().riskPct || LOCK.riskPct) : null;
+      return '<div class="sm-sum sm-sheet"><div class="sm-sheet-hd"><b>' + r.symbol + ' <small>Perp</small></b><span class="pill ' + (long ? "go" : "short") + '">' +
+          (long ? "LONG" : "SHORT") + "</span></div><div class=\"sm-order\">" +
+        sec("สัญญาณ") +
+        row("ฝั่ง", '<span class="' + (long ? "up" : "down") + '">' + (long ? "LONG (Buy)" : "SHORT (Sell)") + "</span>") +
+        row("สูตร", esc(g.stratName)) + row("กรอบเวลา", TF[tf].name) +
+        row("แท่งสัญญาณปิด", thai(g.candle) + " น.") +
+        row("เข้าภายใน", thai(g.expires).slice(9) + " น. (เหลือ " + left + " นาที)") +
+        row("เหตุผล", esc(g.why)) +
+        sec("ราคา") +
+        row("ราคาตอนนี้", '<span id="smNow">' + price(r.close) + "</span>") +
+        row("ราคาเข้าอ้างอิง", price(g.entry) + " (ปิดแท่ง" + (g.mark ? " · Mark " + price(g.mark) : "") + ")") +
+        row("Stop Loss", '<span class="down">' + price(g.stop) + "</span> (" + dist(g.stop) + " · " + g.stopAtr + " ATR)") +
+        (hasTp(g) ? row("Take Profit", '<span class="up">TP1 ' + price(g.tps[0]) + " (1R) · TP2 " + price(g.tps[1]) + " (2R) · TP3 " + price(g.tps[2]) + " (5R)</span>") +
+            row("ถือไม่เกิน", fmt(g.hold, g.hold < 10 ? 1 : 0) + " ชม.")
+          : row("Take Profit", "ไม่มีราคาตายตัว") +
+            row("จุดออก", "แท่ง 4 ชม. ปิด" + (long ? "ต่ำกว่า " : "สูงกว่า ") + price(g.exitLevel) + " (" + dist(g.exitLevel) + ") · ระดับนี้เลื่อนตามราคาทุกแท่ง · แอปเด้ง \"ปิดไม้\"")) +
+        row("Liquidation (ประมาณ)", price(g.liq) + " (" + dist(g.liq) + ")") +
+        sec("ขนาดไม้ · ทุน " + fmt(cap, 0) + " ฿" + (risk ? " · เสี่ยง " + risk + "%/ไม้" : "")) +
+        row("Margin mode", "Isolated") +
+        row("Leverage", g.lev + "x (เพดานที่เลือก " + g.levCapUser + "x · SL นี้ยอมได้ถึง " + g.levLiq + "x)") +
+        row("ขนาด (Size)", qtyTxt(z.qty) + " " + coin) +
+        row("มูลค่าสัญญา", usd(z.notional) + " ≈ " + fmt(z.notional * fx, 0) + " ฿") +
+        row("Margin ที่ใช้", usd(marginU) + " ≈ " + fmt(z.marginB, 0) + " ฿ (" + fmt(z.marginB / cap * 100, 1) + "% ของทุน)") +
+        row("ถ้าโดน SL", '<span class="down">−' + usd(z.lossB / fx) + " ≈ −" + fmt(z.lossB, 0) + " ฿</span> (" + fmt(z.lossB / cap * 100, 2) + "% ของทุน · รวมค่าธรรมเนียม)") +
+        (hasTp(g) ? row("ถ้าถึง TP3", '<span class="up">+' + fmt(z.winB, 0) + " ฿</span>") : "") +
+        row("ค่าธรรมเนียม+slippage", "≈ " + fmt(feeB, 1) + " ฿ ไป-กลับ") +
+        row("ราคาขยับ 1%", "≈ ±" + fmt(z.notional * 0.01 * fx, 1) + " ฿") +
+        (g.sizeLimited ? row("หมายเหตุ", "ลดขนาดให้ Margin ไม่เกิน " + LOCK.marginShare * 100 + "% ของทุน") : "") +
+        sec("สถิติสูตร · " + coin) + "</div>" +
+        '<div class="ev ' + (ev.ok && ev.avgR > 0 ? "good" : "bad") + '" style="margin-top:4px">' + esc(ev.text) + "</div>" +
+        (r.ai ? '<div class="ev">AI เช็กข่าว: ' + esc(r.ai.verdict) + "</div>" : "") +
+        '<button type="button" class="mini" id="smSave" style="width:100%;margin-top:8px">เข้าแล้ว · บันทึกลงพอร์ต</button></div>';
     }
-    var steps = [];
     function draw() {
       var list = signals(), r = list[pick] || null, g = r && r.signal, z = g ? sized(g) : null;
-      steps = g ? stepsFor(r, g, z) : [];
       var tf = curTf(), head = '<div class="sm-tf">' + ["4h", "1h", "15m", "5m"].map(function (k) {
         return '<button type="button" data-tf="' + k + '" class="' + (k === tf ? "on" : "") + '">' + TF[k].name + (k === "4h" ? " Trend" : "") + "</button>";
       }).join("") + "</div>";
@@ -1246,7 +1227,7 @@
         head += '<div class="sm-pick">' + list.map(function (x, i) {
           var d = x.signal.dir > 0;
           return '<button type="button" class="' + (i === pick ? "on " : "") + (d ? "l" : "s") + '" data-pick="' + i + '">' + x.symbol.replace("USDT", "") + " " + (d ? "LONG" : "SHORT") + "</button>";
-        }).join("") + "</div>" + orderBox(r, g, z, tf);
+        }).join("") + "</div>" + tradeSheet(r, g, z, tf);
       } else {
         head += '<div class="sm-wait"><b>' + (busyNow ? "กำลังเช็ก " + selectedCoins().length + " เหรียญ…" : isTrend(tf) ? "ยังไม่มีสัญญาณเข้าใหม่" : "ยังไม่มีสัญญาณทดลอง") + "</b><small>" +
           (busyNow ? "ประมาณ 30 วินาที" : "แอปจะเด้งแจ้งเตือนเมื่อมีสัญญาณ · เช็กรอบถัดไป " + thai(Math.floor(Date.now() / TF[tf].ms) * TF[tf].ms + TF[tf].ms).slice(9) + " น.") + "</small></div>";
@@ -1254,7 +1235,11 @@
       var plan = items.filter(function (it) { return it.symbol === chartSym; })[0] || (r && items.filter(function (it) { return it.symbol === r.symbol; })[0]) || items[0];
       if (plan) head += '<div class="sm-chartbox"><div class="sm-chart-hd">กราฟ 4 ชม. · ' + plan.symbol.replace("USDT", "") + '</div><div id="smChart" class="sm-chart"></div>' + planLegend(plan) + "</div>";
       head += parts.bottom;
-      $("smMain").innerHTML = head + screen(r, g, z) + '<p class="sm-note" style="text-align:center">ภาพจำลองหน้า Binance Futures (ไม่ใช่แอปจริง) · ราคาจริงจาก Binance</p>';
+      $("smMain").innerHTML = head;
+      if (g && $("smSave")) $("smSave").onclick = function () {
+        Portfolio.open(Object.assign(recordOf(r, g, fx), { qty: z.qty, risk: z.lossB }));
+        $("smSave").textContent = "บันทึกแล้ว ✓"; $("smSave").disabled = true;
+      };
       try { drawPlan($("smChart"), plan); } catch (e) { /* the chart is a convenience; the numbers above are complete */ }
       Array.prototype.forEach.call(document.querySelectorAll("#smMain [data-plan]"), function (el) {
         el.onclick = function () { chartSym = el.getAttribute("data-plan"); draw(); var c = $("smChart"); if (c) c.scrollIntoView({ behavior: "smooth", block: "center" }); };
@@ -1263,56 +1248,24 @@
         if (!b.closest("#smMain")) return;
         b.onclick = function () {
           setTradeTf(b.getAttribute("data-tf"));
-          results = []; pick = 0; step = 0; schedule(); scan();
+          results = []; pick = 0; schedule(); scan();
         };
       });
       Array.prototype.forEach.call(document.querySelectorAll("[data-pick]"), function (b) {
-        b.onclick = function () { pick = +b.getAttribute("data-pick"); step = 0; chartSym = ""; draw(); };
+        b.onclick = function () { pick = +b.getAttribute("data-pick"); chartSym = ""; draw(); };
       });
-      Array.prototype.forEach.call(document.querySelectorAll("#smMain [data-k]"), function (el) {
-        el.onclick = function () { if (steps[step] && steps[step].t === el.getAttribute("data-k")) go(step + 1); };
-      });
-      coach(r, g);
       watch(r ? r.symbol : LOCK.symbol);
     }
-    function coach(r, g) {
-      var box = $("coach");
-      document.body.classList.toggle("coaching", !!g);
-      if (!g) { box.classList.add("hidden"); return; }
-      var st = steps[step], last = step === steps.length - 1;
-      box.classList.remove("hidden");
-      box.innerHTML = '<div class="co-n">ขั้นที่ ' + (step + 1) + "/" + steps.length + '</div><div class="co-t">' + st.text + "</div>" +
-        '<div class="co-b"><button type="button" class="mini ghost" id="coBack"' + (step ? "" : " disabled") + '>◀ ย้อน</button>' +
-        (last ? '<button type="button" class="mini" id="coSave">เข้าแล้ว · บันทึก</button>' : '<button type="button" class="mini" id="coNext">ทำแล้ว ▶</button>') + "</div>";
-      $("coBack").onclick = function () { go(step - 1); };
-      if (last) {
-        $("coSave").onclick = function () {
-          var z = sized(g);
-          Portfolio.open(Object.assign(recordOf(r, g, fx), { qty: z.qty, risk: z.lossB }));
-          $("coSave").textContent = "บันทึกแล้ว ✓"; $("coSave").disabled = true;
-        };
-      } else $("coNext").onclick = function () { go(step + 1); };
-      var hl = document.querySelector("#smMain .coach-on");
-      if (hl && step > 0) setTimeout(function () { hl.scrollIntoView({ behavior: "smooth", block: "center" }); }, 50);
-    }
-    function go(n) { step = Math.max(0, Math.min(steps.length - 1, n)); draw(); }
-    // Real price, 24h change and order book from Binance while the screen is open.
+    // Live price and 24h change of the coin on the trade sheet while the screen is open.
     function watch(sym) {
       if (liveSym === sym && live) return;
       clearInterval(live); liveSym = sym;
       var pull = function () {
-        if (document.hidden || !document.body.classList.contains("simple")) return;
+        if (document.hidden || !document.body.classList.contains("simple") || !$("smNow")) return;
         futuresApi("/fapi/v1/ticker/24hr?symbol=" + sym).then(function (t) {
-          if (!$("txPrice") || liveSym !== sym) return;
+          if (!$("smNow") || liveSym !== sym) return;
           var c = +t.priceChangePercent;
-          $("txPrice").textContent = price(+t.lastPrice); $("txPrice").className = "bk-mid " + (c >= 0 ? "up" : "down");
-          $("txChg").textContent = (c >= 0 ? "+" : "") + c.toFixed(2) + "%"; $("txChg").className = "tx-chg " + (c >= 0 ? "up" : "down");
-        }).catch(function () { /* keep the last value */ });
-        futuresApi("/fapi/v1/depth?symbol=" + sym + "&limit=5").then(function (d) {
-          if (!$("txAsks") || liveSym !== sym || !d.asks) return;
-          var row = function (x, cls) { return '<div class="bk-r"><span class="' + cls + '">' + price(+x[0]) + "</span><span>" + (+x[1]).toFixed(3) + "</span></div>"; };
-          $("txAsks").innerHTML = d.asks.slice(0, 5).reverse().map(function (x) { return row(x, "down"); }).join("");
-          $("txBids").innerHTML = d.bids.slice(0, 5).map(function (x) { return row(x, "up"); }).join("");
+          $("smNow").textContent = price(+t.lastPrice) + " (24 ชม. " + (c >= 0 ? "+" : "") + c.toFixed(2) + "%)"; $("smNow").className = c >= 0 ? "up" : "down";
         }).catch(function () { /* keep the last value */ });
       };
       pull(); live = setInterval(pull, 4000);
@@ -1321,10 +1274,8 @@
       document.body.classList.toggle("simple", simple);
       $("simpleView").classList.toggle("hidden", !simple);
       $("fullView").classList.toggle("hidden", simple);
-      $("coach").classList.toggle("hidden", !simple || !steps.length);
-      document.body.classList.toggle("coaching", simple && steps.length > 0);
       $("menuBtn").textContent = simple ? "☰ เมนู" : "← กลับ";
-      if (!simple && !Guide.render()) document.querySelector('[data-tab="guideTab"]').click();
+      if (!simple) Guide.render();
       if (simple) { $("smCap").value = money(); draw(); }
       window.scrollTo(0, 0);
     }
@@ -1338,7 +1289,7 @@
       var prev = signals()[pick];
       results = res; fx = rate || fx;
       var list = signals(), keep = prev ? list.map(function (x) { return x.symbol; }).indexOf(prev.symbol) : -1;
-      if (keep < 0) { pick = 0; step = 0; } else pick = keep;
+      if (keep < 0) pick = 0; else pick = keep;
       draw();
     }
     function schedule() {
@@ -1544,57 +1495,6 @@
     return out;
   }
 
-  // A look-alike of the Binance Futures order panel with every field filled in and numbered.
-  function orderPanel(r, g) {
-    var coin = r.symbol.replace("USDT", ""), long = g.dir > 0, pct = Math.max(0.1, Math.min(100, g.sliderPct));
-    var pctTxt = fmt(pct, pct < 10 ? 1 : 0) + "%";
-    var ticks = [0, 25, 50, 75, 100].map(function (x) { return '<span class="tick" style="left:' + x + '%"></span>'; }).join("");
-    return '<div class="bx">' +
-      '<div class="hd"><span class="sym">' + r.symbol + ' <small style="color:#848e9c;font-weight:400">Perp</small></span><small style="color:#848e9c">Futures · USDⓈ-M</small></div>' +
-      '<div class="row2"><div class="chip hl">Isolated<span class="n">1</span></div><div class="chip hl">' + g.lev + 'x<span class="n">2</span></div></div>' +
-      '<div class="tabs2"><div class="on">Open</div><div>Close</div></div>' +
-      '<div class="fld hl"><span>Market</span><small>▾</small><span class="n">3</span></div>' +
-      '<div class="fld hl"><small>Size</small><span class="val">' + g.qty + " " + coin + '</span><span class="n">4</span></div>' +
-      '<div class="sl">' + '<span class="ln"></span><span class="fill" style="width:' + pct + '%"></span>' + ticks + '<span class="kb" style="left:' + pct + '%"></span></div>' +
-      '<div style="text-align:center;margin:-4px 0 8px;color:#f0b90b;font-weight:700">ลากไปที่ ' + pctTxt + "</div>" +
-      '<div class="ck"><i>✓</i><span>TP/SL</span><span class="n" style="position:static;margin-left:auto">5</span></div>' +
-      '<div class="fld"><small>Take Profit</small><span class="val" style="color:#2ebd85">' + (hasTp(g) ? price(g.tps[2]) : "เว้นว่าง") + "</span></div>" +
-      '<div class="fld"><small>Stop Loss</small><span class="val" style="color:#f6465d">' + price(g.stop) + '</span></div>' +
-      '<div class="row2" style="margin-top:4px"><div class="btn2 buy ' + (long ? "hl" : "dim") + '">Buy/Long' + (long ? '<span class="n">6</span>' : "") + "</div>" +
-      '<div class="btn2 sell ' + (long ? "dim" : "hl") + '">Sell/Short' + (long ? "" : '<span class="n">6</span>') + "</div></div></div>" +
-      '<ul class="bx-steps">' +
-      '<li><b class="k">1</b><span>แตะ <b>Cross</b> แล้วเปลี่ยนเป็น <b>Isolated</b></span></li>' +
-      '<li><b class="k">2</b><span>แตะตัวเลข Leverage แล้วตั้งเป็น <b>' + g.lev + 'x</b> กดยืนยัน</span></li>' +
-      '<li><b class="k">3</b><span>ประเภทคำสั่งเลือก <b>Market</b> (อยู่แท็บ <b>Open</b>)</span></li>' +
-      '<li><b class="k">4</b><span>พิมพ์ขนาด <b>' + g.qty + " " + coin + "</b> หรือลากสไลเดอร์ไปที่ <b>" + pctTxt + '</b></span></li>' +
-      '<li><b class="k">5</b><span>ติ๊ก <b>TP/SL</b> ' + (hasTp(g) ? "ใส่ Take Profit <b>" + price(g.tps[2]) + "</b> และ " : "เว้น Take Profit ว่าง ใส่เฉพาะ ") + "Stop Loss <b>" + price(g.stop) + '</b></span></li>' +
-      '<li><b class="k">6</b><span>กด <b>' + (long ? "Buy/Long (สีเขียว)" : "Sell/Short (สีแดง)") + "</b> แล้วกลับมากด \"เข้าแล้ว · บันทึกลงพอร์ต\"</span></li>" +
-      (hasTp(g) ? '<li><b class="k">⏱</b><span>ถ้าครบ <b>' + g.hold + ' ชม.</b> แล้วยังไม่ชน TP/SL ให้ไปที่ Positions กด <b>Close → Market</b></span></li></ul>'
-        : '<li><b class="k">⏱</b><span>ถือไว้จนแอปเด้ง <b>ปิดไม้</b> แล้วไปที่ Positions กด <b>Close → Market</b> (ห้ามเลื่อน SL)</span></li></ul>') +
-      '<small class="muted">ภาพนี้เป็นตัวช่วยตั้งค่า ไม่ใช่แอป Binance จริง ตำแหน่งปุ่มในแอปจริงอาจต่างเล็กน้อย ต้องอยู่ในแท็บ <b>Futures</b> (แถบล่างของ Binance) ไม่ใช่ Spot</small>';
-  }
-
-  // Step-by-step for the Binance app, filled in with this signal's numbers.
-  function binanceHowTo(r, g) {
-    var coin = r.symbol.replace("USDT", ""), long = g.dir > 0;
-    var lowNotional = g.notional < ({ BTCUSDT: 100, ETHUSDT: 20 }[r.symbol] || 5);
-    return '<button class="mini ghost" data-how="' + r.symbol + '" style="width:100%">ดูหน้าตั้งค่าใน Binance (ทำตามภาพ)</button><div class="how hidden" id="how-' + r.symbol + '">' +
-      '<b>ช่วง Paper Trading ยังไม่ต้องทำ</b> แอปจดผลให้เอง ใช้หน้านี้เมื่อพร้อมใช้เงินจริง' + orderPanel(r, g) +
-      '<details style="margin-top:8px"><summary class="muted" style="font-size:13px">ขั้นตอนแบบข้อความ</summary><ol>' +
-      "<li>เปิดแอป Binance → แท็บ <b>Futures</b> → <b>USDⓈ-M</b> → เลือก <b>" + r.symbol + " Perpetual</b></li>" +
-      "<li>กดปุ่มโหมด Margin เลือก <b>Isolated</b> และกดปุ่ม Leverage ตั้งเป็น <b>" + g.lev + "x</b></li>" +
-      "<li>ประเภทคำสั่งเลือก <b>Market</b> แล้ว<b>ลากสไลเดอร์ไปที่ " + fmt(Math.max(g.sliderPct, 0.1), g.sliderPct < 10 ? 1 : 0) + "%</b> หรือพิมพ์จำนวน <b>" + g.qty + " " + coin +
-        "</b> (≈ " + fmt(g.notional, 0) + " USDT · Margin ≈ " + fmt(g.margin, 1) + " USDT) — ถ้าเงินใน Futures wallet ไม่เท่ากับทุนในแอป ให้ใช้วิธีพิมพ์จำนวน</li>" +
-      (hasTp(g) ? "<li>ติ๊ก <b>TP/SL</b>: Take Profit <b>" + price(g.tps[2]) + "</b> (TP3 = 5R ตามสูตร) · Stop Loss <b>" + price(g.stop) + "</b> · Trigger เลือก <b>Mark Price</b></li>"
-        : "<li>ติ๊ก <b>TP/SL</b>: เว้น Take Profit ว่าง · Stop Loss <b>" + price(g.stop) + "</b> · Trigger เลือก <b>Mark Price</b></li>") +
-      "<li>กด <b>" + (long ? "Buy/Long (สีเขียว)" : "Sell/Short (สีแดง)") + "</b> แล้วตรวจในแท็บ Positions ว่า TP/SL ขึ้นครบ</li>" +
-      "<li>กลับมาแอปนี้ กด <b>เข้าแล้ว · บันทึกลงพอร์ต</b></li>" +
-      (hasTp(g) ? "<li>ถ้าครบ <b>" + g.hold + " ชม.</b> แล้วยังไม่ชน TP/SL ให้ปิดเองด้วย Market (ภายใน " + thai(g.expires + (g.hold - 1) * 3600000).slice(0, 14) + " น.)</li></ol>"
-        : "<li>" + esc(g.exitRule) + " เมื่อแอปเด้ง <b>ปิดไม้</b> ให้ปิดด้วย Market</li></ol>") +
-      (lowNotional ? '<small class="down">มูลค่าไม้ต่ำ อาจต่ำกว่าขั้นต่ำของ Binance สำหรับ ' + r.symbol + ' ถ้าเปิดไม่ได้แปลว่าทุนยังน้อยเกินสำหรับความเสี่ยง 0.25% อย่าเพิ่มขนาดไม้เอง</small><br>' : "") +
-      '<small class="muted">' + (hasTp(g) ? "TP1/TP2 ในการ์ดเป็นระดับอ้างอิง งานวิจัยทดสอบเฉพาะ TP 5R + ออกเมื่อครบเวลา " : "") + "ชื่อปุ่มใน Binance อาจต่างเล็กน้อยตามเวอร์ชันแอป</small></details></div>";
-  }
-
   // What "entered, save it" stores in the portfolio; Trend 4H trades have no target and no time limit.
   function recordOf(r, g, fx) {
     return hasTp(g) ? { symbol: r.symbol, dir: g.dir, entry: g.entry, stop: g.stop, target: g.tps[2], tps: g.tps, qty: g.qty, fx: fx, risk: g.riskUsdt * fx,
@@ -1679,7 +1579,7 @@
         '<div class="slider-tip">ลากสไลเดอร์ไปที่ <b style="font-size:20px">' + fmt(Math.max(g.sliderPct, 0.1), g.sliderPct < 10 ? 1 : 0) +
           "%</b> · โดน SL เสีย ≈ " + fmt(g.riskUsdt * fx, 0) + " ฿ · เข้าก่อน " + thai(g.expires).slice(9) + " น.</div>" +
         (g.sizeLimited ? '<div class="banner wait" style="margin:8px 0 0;font-size:13px">ลดขนาดให้ Margin ไม่เกิน ' + (locked() ? "5" : "25") + "% ของทุน</div>" : "") +
-        '<div id="ai-' + r.symbol + '"></div>' + binanceHowTo(r, g) +
+        '<div id="ai-' + r.symbol + '"></div>' +
         '<div class="btnrow"><button class="mini" data-record="' + esc(JSON.stringify(recordOf(r, g, fx))) + '">เข้าแล้ว · บันทึก</button>' +
         '<button class="mini ghost" data-ai="' + r.symbol + '">AI วิเคราะห์</button><button class="mini ghost" data-chart="' + r.symbol + '">กราฟ</button></div>' +
         '<details style="margin-top:8px"><summary>รายละเอียด</summary><small>' + detail + "</small></details></div>";
@@ -1700,9 +1600,6 @@
   }
 
   function bindCardButtons() {
-    Array.prototype.forEach.call(document.querySelectorAll("[data-how]"), function (b) {
-      b.onclick = function () { $("how-" + b.getAttribute("data-how")).classList.toggle("hidden"); };
-    });
     Array.prototype.forEach.call(document.querySelectorAll("[data-ai]"), function (b) {
       b.onclick = function () {
         var r = lastFutures.filter(function (x) { return x.symbol === b.getAttribute("data-ai"); })[0];
@@ -2188,15 +2085,10 @@
       return doneCount === required.length;
     }
 
-    // Sticky "next step" bar on every tab until the required steps are done.
-    function renderBar(required, doneCount) {
-      var next = STEPS.filter(function (s) { return !s.optional && !s.info && !s.done(); })[0], bar = $("guideBar");
-      bar.classList.toggle("hidden", !next);
-      document.body.classList.toggle("has-guide", !!next);
-      if (!next) return;
-      $("guideBarStep").textContent = "ขั้นต่อไป " + (doneCount + 1) + "/" + required.length + (next.confirm ? " · เสร็จแล้วกด \"" + next.confirm + "\"" : next.id === "capital" ? " · พิมพ์ทุนแล้วแตะที่อื่น" : "");
-      $("guideBarTitle").textContent = next.title;
-      bar.onclick = function () { go(next); };
+    // The sticky "next step" bar stays off: the user asked for plain trade data, not tutorials (the checklist tab remains).
+    function renderBar() {
+      $("guideBar").classList.add("hidden");
+      document.body.classList.remove("has-guide");
     }
     setInterval(function () { if (!document.hidden) render(); }, 1500);
     $("pfCapital").addEventListener("change", function () { mark("capital"); });

@@ -198,8 +198,11 @@ def main():
                                "justClosed": 14_400_000}, bg=False)
     shown = r["smMain"] + r["coach"]
     check("BTC LONG" in r["smMain"] and "สูตรถืออยู่ 1 ไม้" in r["smMain"] and "SOL" in r["smMain"], "main screen: Trend entry, held SOL listed")
-    for must in ["เปิด LONG (Buy) BTC", "ใส่เงิน (Margin)", "Isolated", "โดนแล้วเสีย", 'ไม่ตั้ง · ออกเมื่อแอปเด้ง "ปิดไม้"', "เข้าก่อน"]:
-        check(must in r["smMain"], "order box says: " + must)
+    for must in ["BTCUSDT Perp", "LONG (Buy)", "แท่งสัญญาณปิด", "เข้าภายใน", "ราคาเข้าอ้างอิง", "Stop Loss", "Take Profitไม่มีราคาตายตัว", "จุดออก",
+                 "Liquidation (ประมาณ)", "Isolated", "Leverage", "ขนาด (Size)", "มูลค่าสัญญา", "Margin ที่ใช้", "ถ้าโดน SL", "ค่าธรรมเนียม+slippage",
+                 "ราคาขยับ 1%", "เข้าแล้ว · บันทึกลงพอร์ต"]:
+        check(must in r["smMain"], "trade sheet shows: " + must)
+    check("ขั้นที่" not in shown and "ภาพจำลองหน้า Binance" not in shown and "ทำตามภาพ" not in shown, "no coaching steps or Binance look-alike")
     check(r["chart"] and "สัญญาณเข้า LONG" in r["smMain"] and "เข้า " in r["smMain"] and "SL " in r["smMain"], "4h chart drawn with entry and SL for the signal")
     check("NaN" not in shown and "undefined" not in shown, "main screen has no NaN/undefined for a signal without TP")
 

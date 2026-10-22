@@ -108,6 +108,8 @@ body.simple #guideBar{display:none!important}body.simple main{padding-bottom:24p
 .sm-wait{background:var(--panel);border-radius:12px;padding:16px;margin-top:10px;text-align:center}.sm-wait b{display:block;font-size:22px}.sm-wait small{display:block;margin-top:4px;font-size:13px}
 .sm-pick{display:flex;gap:6px;margin-top:10px;overflow-x:auto}.sm-pick button{width:auto;margin:0;padding:8px 12px;font-size:14px;background:var(--deep);color:var(--ink);white-space:nowrap}.sm-pick button.on.l{background:var(--up);color:#fff}.sm-pick button.on.s{background:var(--down);color:#fff}
 .sm-sum{background:var(--panel);border-radius:12px;padding:10px 12px;margin-top:8px;font-size:15px}.sm-sum small{font-size:12px}
+.sm-sheet-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}.sm-sheet-hd b{font-size:17px}
+.sm-sec{display:block!important;border:0!important;padding:10px 0 2px!important;color:var(--yel);font-size:12.5px;font-weight:700}
 .sm-order>div{display:flex;justify-content:space-between;gap:10px;padding:4px 0;border-bottom:1px solid var(--line);font-size:14px}.sm-order>div>span{color:var(--muted);white-space:nowrap}.sm-order b{font-weight:600;text-align:right}
 .sm-chartbox{background:var(--panel);border-radius:12px;padding:8px;margin-top:8px}.sm-chart-hd{font-size:13px;color:var(--muted);margin:0 0 6px 2px}.sm-chart{height:260px}
 .sm-legend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12.5px;margin-top:8px}.sm-legend b{width:100%;font-size:14px}.sm-legend small{width:100%;color:var(--muted)}
@@ -161,7 +163,6 @@ a{color:var(--accent)}
   <div class="sm-cap"><label for="smCap">💰 เงินของผมใน Binance Futures (บาท)</label><input id="smCap" type="number" inputmode="decimal" min="0"></div>
   <div id="smMain"></div>
   <button id="smScan" class="mini ghost" type="button" style="width:100%;margin-top:10px">เช็กสัญญาณอีกครั้ง</button>
-  <div id="coach" class="hidden"></div>
 </div>
 <div id="fullView" class="hidden">
 <nav class="tabs" id="mainTabs"><button data-tab="guideTab"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>หน้าแรก</button><button data-tab="signalTab" class="on"><svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>สัญญาณ</button><button data-tab="chartTab"><svg viewBox="0 0 24 24"><path d="M7 4v16M17 4v16"/><rect x="4.5" y="8" width="5" height="8" rx="1"/><rect x="14.5" y="6" width="5" height="9" rx="1"/></svg>กราฟ</button><button data-tab="portTab"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="14" rx="2"/><path d="M3 10h18M16 15h2"/><path d="M7 6V4h10v2"/></svg>พอร์ต</button><button data-tab="backtestTab"><svg viewBox="0 0 24 24"><path d="M4 20V4M4 20h16"/><rect x="7" y="12" width="3" height="5"/><rect x="12" y="8" width="3" height="9"/><rect x="17" y="5" width="3" height="12"/></svg>Backtest</button></nav>
