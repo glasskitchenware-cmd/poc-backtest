@@ -99,16 +99,33 @@ summary{cursor:pointer;color:var(--muted);font-size:14px}
 .mkthead{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);padding:6px 0}
 .mkt{display:grid;grid-template-columns:auto 1fr auto 56px;align-items:baseline;gap:4px 8px;padding:10px 0;border-top:1px solid var(--line);cursor:pointer}.mkt b{font-size:15px}.mkt span{font-variant-numeric:tabular-nums;font-weight:600}.mkt small:last-child{text-align:right}
 a.mini{background:var(--deep);color:var(--yel);border-radius:8px;font-weight:600}
-body.simple #guideBar{display:none!important}body.simple main{padding-bottom:24px}
-.sm-card{background:var(--panel);border-radius:16px;padding:20px 18px;margin-top:10px;text-align:center}
-.sm-card.go{border:2px solid var(--yel);text-align:left}
-.sm-big{font-size:26px;font-weight:700;line-height:1.3}.sm-sub{color:var(--muted);font-size:15px;margin-top:8px}
-.sm-head{display:flex;justify-content:space-between;align-items:center;gap:8px}.sm-coin{font-size:30px;font-weight:800}
-.sm-dir{font-size:22px;font-weight:800;padding:6px 16px;border-radius:10px;color:#fff}.sm-dir.l{background:var(--up)}.sm-dir.s{background:var(--down)}
-.sm-steps{list-style:none;padding:0;margin:14px 0 0;counter-reset:st}.sm-steps li{counter-increment:st;display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-top:1px solid var(--line);font-size:16px}
-.sm-steps li::before{content:counter(st);flex:none;width:24px;height:24px;border-radius:50%;background:var(--yel);color:#181a20;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;margin-top:1px}
-.sm-steps b{font-variant-numeric:tabular-nums}.sm-time{margin-top:12px;font-size:15px;font-weight:600;color:var(--yel)}
-.sm-note{font-size:13px;color:var(--muted);margin-top:8px}
+body.simple #guideBar{display:none!important}body.simple main{padding-bottom:24px}body.simple.coaching main{padding-bottom:200px}
+.sm-cap{display:flex;align-items:center;gap:8px;background:var(--panel);border-radius:12px;padding:10px 12px}.sm-cap label{margin:0;flex:1;color:var(--ink);font-size:14px}.sm-cap input{width:120px;text-align:right;font-weight:700;font-size:17px}
+.sm-wait{background:var(--panel);border-radius:12px;padding:16px;margin-top:10px;text-align:center}.sm-wait b{display:block;font-size:22px}.sm-wait small{display:block;margin-top:4px;font-size:13px}
+.sm-pick{display:flex;gap:6px;margin-top:10px;overflow-x:auto}.sm-pick button{width:auto;margin:0;padding:8px 12px;font-size:14px;background:var(--deep);color:var(--ink);white-space:nowrap}.sm-pick button.on.l{background:var(--up);color:#fff}.sm-pick button.on.s{background:var(--down);color:#fff}
+.sm-sum{background:var(--panel);border-radius:12px;padding:10px 12px;margin-top:8px;font-size:15px}.sm-sum small{font-size:12px}
+.sm-note{font-size:12px;color:var(--muted);margin:8px 0 0}
+.tx{background:#0b0e11;border:1px solid #2b3139;border-radius:14px;margin-top:10px;overflow:hidden;color:#eaecef;font-size:13px}.tx.idle .tx-form{opacity:.45}
+.tx-top{display:flex;justify-content:center;padding:8px}.tx-seg{display:flex;gap:18px;font-size:15px;color:#848e9c}.tx-seg .on{color:#eaecef;font-weight:700}
+.tx-hd{display:flex;align-items:baseline;gap:6px;padding:4px 12px 8px}.tx-hd b{font-size:18px}.tx-chg{font-size:12px;margin-left:auto;font-weight:600}
+.tx-body{display:grid;grid-template-columns:58% 42%;gap:8px;padding:0 10px 10px}
+.tx-chips{display:flex;gap:6px;margin-bottom:6px}.tx-chips span{flex:1;background:#2b3139;border-radius:6px;padding:6px 0;text-align:center;font-weight:600}
+.tx-tabs{display:flex;background:#2b3139;border-radius:6px;margin-bottom:6px}.tx-tabs span{flex:1;text-align:center;padding:5px;border-radius:6px;color:#848e9c}.tx-tabs .on{background:#474d57;color:#eaecef}
+.tx-avbl{display:flex;justify-content:space-between;font-size:11px;color:#848e9c;margin-bottom:6px}.tx-avbl span{color:#eaecef}
+.tx-fld{background:#2b3139;border-radius:6px;padding:8px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;min-height:34px}.tx-fld small{color:#848e9c}.tx-fld span{font-weight:700;font-variant-numeric:tabular-nums}.tx-fld.sm{padding:6px 8px;min-height:0;font-size:12px}
+.tx-sl{position:relative;height:20px;margin:2px 6px 0}.tx-sl .ln{position:absolute;left:0;right:0;top:9px;height:2px;background:#474d57}.tx-sl .fill{position:absolute;left:0;top:9px;height:2px;background:#f0b90b}
+.tx-sl .tick{position:absolute;top:5px;width:9px;height:9px;margin-left:-4px;transform:rotate(45deg);border:2px solid #474d57;background:#0b0e11}.tx-sl .kb{position:absolute;top:2px;width:14px;height:14px;margin-left:-7px;transform:rotate(45deg);background:#f0b90b;border:2px solid #0b0e11}
+.tx-pct{text-align:center;font-size:12px;color:#f0b90b;font-weight:700;min-height:16px}
+.tx-ck{display:flex;align-items:center;gap:6px;margin:4px 0 6px}.tx-ck i{width:15px;height:15px;border-radius:3px;border:1px solid #848e9c;display:inline-flex;align-items:center;justify-content:center;font-style:normal;font-size:11px;font-weight:800;color:#181a20}.tx-ck i:not(:empty){background:#f0b90b;border-color:#f0b90b}
+.tx-btn{border-radius:6px;padding:10px;text-align:center;font-weight:700;color:#fff;margin-top:6px}.tx-btn.buy{background:#2ebd85}.tx-btn.sell{background:#f6465d}.tx-btn.dim{opacity:.3}
+.tx-book{font-size:11px;font-variant-numeric:tabular-nums}.bk-h{display:flex;justify-content:space-between;color:#848e9c;margin-bottom:4px}.bk-r{display:flex;justify-content:space-between;line-height:1.75}.bk-r span:last-child{color:#b7bdc6}
+.bk-mid{font-size:15px;font-weight:700;padding:6px 0;text-align:left}
+.tx-pos{display:flex;gap:16px;border-top:1px solid #2b3139;padding:8px 12px;color:#848e9c}.tx-pos .on{color:#eaecef;font-weight:600}
+.tx-nav{display:flex;justify-content:space-around;border-top:1px solid #2b3139;padding:8px 4px;font-size:11px;color:#848e9c}.tx-nav .on{color:#f0b90b;font-weight:700}
+.coach-on{outline:3px solid #f0b90b;outline-offset:2px;border-radius:6px;animation:pulse 1.2s infinite;position:relative;z-index:2;cursor:pointer}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(240,185,11,.6)}50%{box-shadow:0 0 0 8px rgba(240,185,11,0)}}
+#coach{position:fixed;left:8px;right:8px;bottom:calc(8px + env(safe-area-inset-bottom,0px));z-index:40;background:#1e2329;border:2px solid #f0b90b;border-radius:14px;padding:12px 14px;box-shadow:0 -6px 24px rgba(0,0,0,.5)}
+#coach .co-n{font-size:12px;color:#f0b90b;font-weight:700}#coach .co-t{font-size:16px;margin:4px 0 10px;line-height:1.5}#coach .co-b{display:flex;gap:8px}#coach .co-b button{flex:1;margin:0;padding:11px}
 .inline{display:flex;gap:8px;align-items:center;margin-top:8px}.inline input{flex:1;min-width:0}
 #status.err{color:var(--down)}
 .hero{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
@@ -132,9 +149,10 @@ a{color:var(--accent)}
 <main>
 <div class="topbar"><div class="brand"><i>P</i>POC Signal</div><button id="menuBtn" type="button" class="mini ghost" style="margin:0">☰ เมนู</button></div>
 <div id="simpleView">
-  <div id="smMain"><div class="sm-card"><div class="sm-big">กำลังเช็ก…</div></div></div>
-  <button id="smScan" class="mini ghost" type="button" style="width:100%;margin-top:10px">เช็กอีกครั้ง</button>
-  <p id="smFoot" class="muted" style="font-size:12px;text-align:center;margin:10px 0 0"></p>
+  <div class="sm-cap"><label for="smCap">💰 เงินของผมใน Binance Futures (บาท)</label><input id="smCap" type="number" inputmode="decimal" min="0"></div>
+  <div id="smMain"></div>
+  <button id="smScan" class="mini ghost" type="button" style="width:100%;margin-top:10px">เช็กสัญญาณอีกครั้ง</button>
+  <div id="coach" class="hidden"></div>
 </div>
 <div id="fullView" class="hidden">
 <nav class="tabs" id="mainTabs"><button data-tab="guideTab"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>หน้าแรก</button><button data-tab="signalTab" class="on"><svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>สัญญาณ</button><button data-tab="chartTab"><svg viewBox="0 0 24 24"><path d="M7 4v16M17 4v16"/><rect x="4.5" y="8" width="5" height="8" rx="1"/><rect x="14.5" y="6" width="5" height="9" rx="1"/></svg>กราฟ</button><button data-tab="portTab"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="14" rx="2"/><path d="M3 10h18M16 15h2"/><path d="M7 6V4h10v2"/></svg>พอร์ต</button><button data-tab="backtestTab"><svg viewBox="0 0 24 24"><path d="M4 20V4M4 20h16"/><rect x="7" y="12" width="3" height="5"/><rect x="12" y="8" width="3" height="9"/><rect x="17" y="5" width="3" height="12"/></svg>Backtest</button></nav>
@@ -2090,61 +2108,159 @@ a{color:var(--accent)}
 
   var lastFutures = [];
 
-  // ---- Main screen: only "what to trade now" (everything else is behind the menu) ----
+  // ---- Main screen: a Binance-Futures look-alike that coaches every tap, sized from the user's own money ----
   var Simple = (function () {
-    var lastScan = 0, timer = null;
+    var lastScan = 0, timer = null, results = [], fx = 33, pick = 0, step = 0, live = null, liveSym = "", busyNow = false;
+    var MIN_NOTIONAL = { BTCUSDT: 100, ETHUSDT: 20 };
+    function money() { return readNumber("pfCapital", 10000); }
+    function signals() {
+      var now = Date.now();
+      return results.filter(function (r) { return r.signal && now < r.signal.expires; })
+        .sort(function (a, b) { return (b.symbol === LOCK.symbol) - (a.symbol === LOCK.symbol); });
+    }
+    // Sizes scale linearly with the balance, so a new amount needs no rescan.
+    function sized(g) {
+      var f = money() / (g.balanceUsdt * fx), qty = g.qty * f, notional = qty * g.entry;
+      var cost = notional * 2 * (FUT.fee + FUT.slippage);
+      return { qty: qty, notional: notional, marginB: notional / g.lev * fx, lossB: g.riskUsdt * f * fx,
+        winB: (qty * Math.abs(g.tps[2] - g.entry) - cost) * fx, avbl: money() / fx };
+    }
+    function qtyTxt(q) { return q >= 1 ? fmt(q, 3) : q.toPrecision(3); }
+    function stepsFor(r, g, z) {
+      var coin = r.symbol.replace("USDT", ""), long = g.dir > 0, pct = Math.max(0.1, g.sliderPct), pctTxt = fmt(pct, pct < 10 ? 1 : 0) + "%";
+      return [
+        { t: "nav", text: "เปิดแอป Binance แตะ <b>Futures</b> ที่แถบล่าง (ไม่ใช่ Spot)" },
+        { t: "sym", text: "แตะชื่อเหรียญด้านบน พิมพ์ค้นหา <b>" + r.symbol + "</b> แล้วเลือกตัวที่มีคำว่า <b>Perp</b>" },
+        { t: "mode", text: "แตะ <b>Cross</b> → เลือก <b>Isolated</b> → กด Confirm" },
+        { t: "lev", text: "แตะตัวเลข Leverage → ตั้งเป็น <b>" + g.lev + "x</b> → กด Confirm" },
+        { t: "type", text: "แตะแท็บ <b>Open</b> แล้วเลือกชนิดคำสั่ง <b>Market</b>" },
+        { t: "size", text: "ลากสไลเดอร์ไปที่ <b>" + pctTxt + "</b> หรือพิมพ์ Size <b>" + qtyTxt(z.qty) + " " + coin + "</b><br>= ลงเงิน (Margin) ประมาณ <b>" + fmt(z.marginB, 0) + " บาท</b>" },
+        { t: "tpsl", text: "ติ๊ก <b>TP/SL</b> แล้วใส่ Take Profit <b class=\"up\">" + price(g.tps[2]) + "</b> และ Stop Loss <b class=\"down\">" + price(g.stop) + "</b>" },
+        { t: "buy", text: "กด <b class=\"" + (long ? "up" : "down") + "\">" + (long ? "Buy/Long" : "Sell/Short") + "</b> ถ้ามีหน้ายืนยัน กด <b>Confirm</b>" },
+        { t: "done", text: "เสร็จแล้ว! ถ้าโดน SL เสียประมาณ <b class=\"down\">" + fmt(z.lossB, 0) + " ฿</b> · ถ้าถึง TP ได้ประมาณ <b class=\"up\">" + fmt(z.winB, 0) +
+          " ฿</b><br>ถ้าครบ 48 ชม. ยังไม่ชน ให้ไปที่ Positions กด Close" }
+      ];
+    }
+    function screen(r, g, z) {
+      var sym = r ? r.symbol : LOCK.symbol, coin = sym.replace("USDT", ""), on = function (k) { return g && steps[step] && steps[step].t === k ? " coach-on" : ""; };
+      var past = function (k) { if (!g) return false; for (var i = 0; i < step; i++) if (steps[i].t === k) return true; return steps[step] && steps[step].t === "done"; };
+      var long = g ? g.dir > 0 : true, pct = g ? Math.max(0.1, Math.min(100, g.sliderPct)) : 0, slid = past("size") ? pct : 0;
+      var ticks = [0, 25, 50, 75, 100].map(function (x) { return '<span class="tick" style="left:' + x + '%"></span>'; }).join("");
+      return '<div class="tx' + (g ? "" : " idle") + '">' +
+        '<div class="tx-top"><div class="tx-seg"><span>Spot</span><span class="on' + on("nav") + '" data-k="nav">Futures</span></div></div>' +
+        '<div class="tx-hd' + on("sym") + '" data-k="sym"><b>' + sym + '</b> <small>Perp ▾</small> <span id="txChg" class="tx-chg">—</span></div>' +
+        '<div class="tx-body"><div class="tx-form">' +
+          '<div class="tx-chips"><span class="' + on("mode") + '" data-k="mode">' + (past("mode") ? "Isolated" : "Cross") + '</span><span class="' + on("lev") + '" data-k="lev">' + (past("lev") ? g.lev : 20) + "x</span></div>" +
+          '<div class="tx-tabs' + on("type") + '" data-k="type"><span class="on">Open</span><span>Close</span></div>' +
+          '<div class="tx-avbl"><small>Avbl</small><span>' + fmt(z ? z.avbl : money() / fx, 2) + " USDT</span></div>" +
+          '<div class="tx-fld' + on("type") + '" data-k="type"><span>' + (past("type") ? "Market" : "Limit") + "</span><small>▾</small></div>" +
+          '<div class="tx-fld' + on("size") + '" data-k="size"><small>Size</small><span>' + (past("size") ? qtyTxt(z.qty) : "") + " <small>" + coin + "</small></span></div>" +
+          '<div class="tx-sl' + on("size") + '" data-k="size"><span class="ln"></span><span class="fill" style="width:' + slid + '%"></span>' + ticks + '<span class="kb" style="left:' + slid + '%"></span></div>' +
+          (g ? '<div class="tx-pct">' + (past("size") ? fmt(pct, pct < 10 ? 1 : 0) + "%" : "&nbsp;") + "</div>" : "") +
+          '<div class="tx-ck' + on("tpsl") + '" data-k="tpsl"><i>' + (past("tpsl") ? "✓" : "") + "</i>TP/SL</div>" +
+          (past("tpsl") ? '<div class="tx-fld sm"><small>Take Profit</small><span class="up">' + price(g.tps[2]) + '</span></div><div class="tx-fld sm"><small>Stop Loss</small><span class="down">' + price(g.stop) + "</span></div>" : "") +
+          '<div class="tx-btn buy' + (long ? on("buy") : " dim") + '"' + (long ? ' data-k="buy"' : "") + ">Buy/Long</div>" +
+          '<div class="tx-btn sell' + (long ? " dim" : on("buy")) + '"' + (long ? "" : ' data-k="buy"') + ">Sell/Short</div>" +
+        '</div><div class="tx-book" id="txBook"><div class="bk-h"><span>Price</span><span>Amount</span></div><div id="txAsks"></div><div class="bk-mid" id="txPrice">' +
+          (r ? price(r.close) : "—") + '</div><div id="txBids"></div></div></div>' +
+        '<div class="tx-pos"><span class="on">Positions (0)</span><span>Open Orders (0)</span></div>' +
+        '<div class="tx-nav"><span>Home</span><span>Markets</span><span>Trade</span><span class="on' + on("nav") + '" data-k="nav">Futures</span><span>Assets</span></div>' +
+        "</div>";
+    }
+    var steps = [];
+    function draw() {
+      var list = signals(), r = list[pick] || null, g = r && r.signal, z = g ? sized(g) : null;
+      steps = g ? stepsFor(r, g, z) : [];
+      var head = "";
+      if (list.length) {
+        head = '<div class="sm-pick">' + list.map(function (x, i) {
+          var d = x.signal.dir > 0;
+          return '<button type="button" class="' + (i === pick ? "on " : "") + (d ? "l" : "s") + '" data-pick="' + i + '">' + x.symbol.replace("USDT", "") + " " + (d ? "LONG" : "SHORT") + "</button>";
+        }).join("") + "</div>" +
+          '<div class="sm-sum">ลงเงิน <b>' + fmt(z.marginB, 0) + ' ฿</b> · โดน SL เสีย <b class="down">' + fmt(z.lossB, 0) + ' ฿</b> · ถึง TP ได้ <b class="up">' + fmt(z.winB, 0) + " ฿</b>" +
+          "<br><small>เข้าก่อน " + thai(g.expires).slice(9) + " น." + (r.symbol === LOCK.symbol ? "" : " · เหรียญนี้ยังไม่ผ่านงานวิจัย เสี่ยงกว่า BTC") +
+          (r.ai ? " · AI เช็กข่าว: " + esc(r.ai.verdict) : "") +
+          (z.notional < (MIN_NOTIONAL[r.symbol] || 5) ? " · ถ้า Binance แจ้งว่าต่ำกว่าขั้นต่ำ ให้ข้ามไม้นี้" : "") + "</small></div>";
+      } else {
+        head = '<div class="sm-wait"><b>' + (busyNow ? "กำลังเช็ก 12 เหรียญ…" : "ตอนนี้ยังไม่ต้องเทรด") + "</b><small>" +
+          (busyNow ? "ประมาณ 30 วินาที" : "แอปจะเด้งแจ้งเตือนเมื่อมีให้เทรด · เช็กรอบถัดไป " + thai(Math.floor(Date.now() / 3600000) * 3600000 + 3600000).slice(9) + " น.") + "</small></div>";
+      }
+      $("smMain").innerHTML = head + screen(r, g, z) + '<p class="sm-note" style="text-align:center">ภาพจำลองหน้า Binance Futures (ไม่ใช่แอปจริง) · ราคาจริงจาก Binance</p>';
+      Array.prototype.forEach.call(document.querySelectorAll("[data-pick]"), function (b) {
+        b.onclick = function () { pick = +b.getAttribute("data-pick"); step = 0; draw(); };
+      });
+      Array.prototype.forEach.call(document.querySelectorAll("#smMain [data-k]"), function (el) {
+        el.onclick = function () { if (steps[step] && steps[step].t === el.getAttribute("data-k")) go(step + 1); };
+      });
+      coach(r, g);
+      watch(r ? r.symbol : LOCK.symbol);
+    }
+    function coach(r, g) {
+      var box = $("coach");
+      document.body.classList.toggle("coaching", !!g);
+      if (!g) { box.classList.add("hidden"); return; }
+      var st = steps[step], last = step === steps.length - 1;
+      box.classList.remove("hidden");
+      box.innerHTML = '<div class="co-n">ขั้นที่ ' + (step + 1) + "/" + steps.length + '</div><div class="co-t">' + st.text + "</div>" +
+        '<div class="co-b"><button type="button" class="mini ghost" id="coBack"' + (step ? "" : " disabled") + '>◀ ย้อน</button>' +
+        (last ? '<button type="button" class="mini" id="coSave">เข้าแล้ว · บันทึก</button>' : '<button type="button" class="mini" id="coNext">ทำแล้ว ▶</button>') + "</div>";
+      $("coBack").onclick = function () { go(step - 1); };
+      if (last) {
+        $("coSave").onclick = function () {
+          var z = sized(g);
+          Portfolio.open({ symbol: r.symbol, dir: g.dir, entry: g.entry, stop: g.stop, target: g.tps[2], tps: g.tps, qty: z.qty, fx: fx,
+            risk: z.lossB, fee: FUT.fee + FUT.slippage, lev: g.lev, hold_hours: g.hold });
+          $("coSave").textContent = "บันทึกแล้ว ✓"; $("coSave").disabled = true;
+        };
+      } else $("coNext").onclick = function () { go(step + 1); };
+      var hl = document.querySelector("#smMain .coach-on");
+      if (hl && step > 0) setTimeout(function () { hl.scrollIntoView({ behavior: "smooth", block: "center" }); }, 50);
+    }
+    function go(n) { step = Math.max(0, Math.min(steps.length - 1, n)); draw(); }
+    // Real price, 24h change and order book from Binance while the screen is open.
+    function watch(sym) {
+      if (liveSym === sym && live) return;
+      clearInterval(live); liveSym = sym;
+      var pull = function () {
+        if (document.hidden || !document.body.classList.contains("simple")) return;
+        binance("/api/v3/ticker/24hr?symbol=" + sym).then(function (t) {
+          if (!$("txPrice") || liveSym !== sym) return;
+          var c = +t.priceChangePercent;
+          $("txPrice").textContent = price(+t.lastPrice); $("txPrice").className = "bk-mid " + (c >= 0 ? "up" : "down");
+          $("txChg").textContent = (c >= 0 ? "+" : "") + c.toFixed(2) + "%"; $("txChg").className = "tx-chg " + (c >= 0 ? "up" : "down");
+        }).catch(function () { /* keep the last value */ });
+        binance("/api/v3/depth?symbol=" + sym + "&limit=5").then(function (d) {
+          if (!$("txAsks") || liveSym !== sym || !d.asks) return;
+          var row = function (x, cls) { return '<div class="bk-r"><span class="' + cls + '">' + price(+x[0]) + "</span><span>" + (+x[1]).toFixed(3) + "</span></div>"; };
+          $("txAsks").innerHTML = d.asks.slice(0, 5).reverse().map(function (x) { return row(x, "down"); }).join("");
+          $("txBids").innerHTML = d.bids.slice(0, 5).map(function (x) { return row(x, "up"); }).join("");
+        }).catch(function () { /* keep the last value */ });
+      };
+      pull(); live = setInterval(pull, 4000);
+    }
     function show(simple) {
       document.body.classList.toggle("simple", simple);
       $("simpleView").classList.toggle("hidden", !simple);
       $("fullView").classList.toggle("hidden", simple);
+      $("coach").classList.toggle("hidden", !simple || !steps.length);
+      document.body.classList.toggle("coaching", simple && steps.length > 0);
       $("menuBtn").textContent = simple ? "☰ เมนู" : "← กลับ";
       if (!simple && !Guide.render()) document.querySelector('[data-tab="guideTab"]').click();
+      if (simple) { $("smCap").value = money(); draw(); }
       window.scrollTo(0, 0);
-      foot();
     }
-    function foot() {
-      var alerts = $("autoScan").checked;
-      $("smFoot").innerHTML = "ทุน " + fmt(readNumber("pfCapital", 10000), 0) + " ฿ · แจ้งเตือน " + (alerts ? "เปิด" : '<span class="down">ปิด</span>') +
-        " · แก้ได้ที่ ☰ เมนู";
-    }
-    function busy() { $("smMain").innerHTML = '<div class="sm-card"><div class="sm-big">กำลังเช็ก 12 เหรียญ…</div><div class="sm-sub">ประมาณ 30 วินาที</div></div>'; }
-    function nextCheck() {
-      var t = Math.floor(Date.now() / 3600000) * 3600000 + 3600000;
-      return thai(t).slice(9) + " น.";
-    }
-    function render(results, error, fx) {
-      lastScan = Date.now();
-      foot();
+    function busy() { busyNow = true; if (!signals().length) draw(); }
+    function render(res, error, rate) {
+      lastScan = Date.now(); busyNow = false;
       if (error) {
-        $("smMain").innerHTML = '<div class="sm-card"><div class="sm-big">เช็กไม่สำเร็จ</div><div class="sm-sub">' + esc(error).slice(0, 160) + "<br>ตรวจเน็ตแล้วกด เช็กอีกครั้ง</div></div>";
+        $("smMain").innerHTML = '<div class="sm-wait"><b>เช็กไม่สำเร็จ</b><small>' + esc(error).slice(0, 160) + " · ตรวจเน็ตแล้วกด เช็กอีกครั้ง</small></div>";
         return;
       }
-      var now = Date.now(), sigs = results.filter(function (r) { return r.signal && now < r.signal.expires; });
-      sigs.sort(function (a, b) { return (b.symbol === LOCK.symbol) - (a.symbol === LOCK.symbol); });
-      if (!sigs.length) {
-        $("smMain").innerHTML = '<div class="sm-card"><div class="sm-big">ตอนนี้ยังไม่ต้องเทรด</div>' +
-          '<div class="sm-sub">ไม่มีเหรียญไหนเข้าได้ · รอได้เลย แอปจะเด้งแจ้งเตือนเมื่อมี<br>เช็กรอบถัดไป ' + nextCheck() + "</div></div>";
-        return;
-      }
-      $("smMain").innerHTML = sigs.map(function (r) {
-        var g = r.signal, coin = r.symbol.replace("USDT", ""), long = g.dir > 0, pct = Math.max(0.1, g.sliderPct);
-        var ai = r.ai ? '<div class="sm-note">AI เช็กข่าว: <b>' + esc(r.ai.verdict) + "</b>" + (r.ai.verdict === "ข้าม" ? " — มีข่าวไม่ดี แนะนำข้ามไม้นี้" : "") + "</div>" : "";
-        return '<div class="sm-card go"><div class="sm-head"><span class="sm-coin">' + coin + '</span><span class="sm-dir ' + (long ? "l" : "s") + '">' +
-          (long ? "LONG ↑" : "SHORT ↓") + "</span></div>" +
-          '<ol class="sm-steps">' +
-          "<li><span>Binance → <b>Futures</b> → เลือก <b>" + r.symbol + "</b></span></li>" +
-          "<li><span>ตั้ง <b>Isolated</b> และ <b>" + g.lev + "x</b></span></li>" +
-          "<li><span>เลือก <b>Market</b> แล้วลากสไลเดอร์ไปที่ <b>" + fmt(pct, pct < 10 ? 1 : 0) + "%</b></span></li>" +
-          '<li><span>ติ๊ก TP/SL · TP <b class="up">' + price(g.tps[2]) + '</b> · SL <b class="down">' + price(g.stop) + "</b></span></li>" +
-          "<li><span>กด <b class=\"" + (long ? "up" : "down") + "\">" + (long ? "Buy/Long (เขียว)" : "Sell/Short (แดง)") + "</b></span></li></ol>" +
-          '<div class="sm-time">⏱ เข้าก่อน ' + thai(g.expires).slice(9) + " น. · เกิน 48 ชม. ยังไม่ชน ให้ปิดเอง</div>" +
-          '<div class="sm-note">ถ้าโดน SL เสียประมาณ ' + fmt(g.riskUsdt * (fx || 1), 0) + " " + (fx ? "฿" : "USDT") + (r.symbol === LOCK.symbol ? "" : " · เหรียญนี้ยังไม่ผ่านงานวิจัย (เสี่ยงกว่า BTC)") + "</div>" + ai +
-          '<button class="mini ghost" type="button" style="width:100%;margin-top:10px" data-smhow="' + r.symbol + '">ดูภาพหน้าจอ Binance</button>' +
-          '<div class="hidden" id="smhow-' + r.symbol + '">' + orderPanel(r, g) + "</div></div>";
-      }).join("");
-      Array.prototype.forEach.call(document.querySelectorAll("[data-smhow]"), function (b) {
-        b.onclick = function () { $("smhow-" + b.getAttribute("data-smhow")).classList.toggle("hidden"); };
-      });
+      var prev = signals()[pick];
+      results = res; fx = rate || fx;
+      var list = signals(), keep = prev ? list.map(function (x) { return x.symbol; }).indexOf(prev.symbol) : -1;
+      if (keep < 0) { pick = 0; step = 0; } else pick = keep;
+      draw();
     }
     function schedule() {
       clearTimeout(timer);
@@ -2154,6 +2270,11 @@ a{color:var(--accent)}
     if (location.hash !== "#bg") {
       $("menuBtn").onclick = function () { show(!document.body.classList.contains("simple")); };
       $("smScan").onclick = function () { scan(); };
+      $("smCap").addEventListener("change", function () {
+        $("pfCapital").value = $("smCap").value;
+        $("pfCapital").dispatchEvent(new Event("change"));
+        draw();
+      });
       document.addEventListener("visibilitychange", function () {
         if (!document.hidden && document.body.classList.contains("simple") && Date.now() - lastScan > 5 * 60000) scan();
       });
