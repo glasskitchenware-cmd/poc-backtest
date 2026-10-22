@@ -75,7 +75,12 @@ final class Alerts {
                     .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
                     .setPersisted(true)
                     .build();
-            scheduler.schedule(job);
+            try {
+                scheduler.schedule(job);
+            } catch (RuntimeException e) {
+                // The exact alarm above is the main schedule; a refused backup job must never crash the app.
+                recordStatus(context, false, "ตั้งงานสแกนสำรองไม่ได้: " + e.getClass().getSimpleName());
+            }
         }
     }
 

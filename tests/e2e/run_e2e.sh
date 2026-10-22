@@ -67,6 +67,7 @@ check "$(echo "$FOCUS" | grep -q "$PKG" && echo 1 || echo 0)" "app is in the for
 hook DEBUG_CONFIG --es base "http://10.0.2.2:8765"
 check "$(adb shell dumpsys alarm | grep -c "$PKG" | awk '{print ($1>0)}')" "alarm armed after first launch"
 check "$(prefs | grep -c 'name="enabled" value="true"' | awk '{print ($1>0)}')" "alerts enabled by default"
+check "$(adb shell dumpsys jobscheduler | grep -c "$PKG/.ScanJobService" | awk '{print ($1>0)}')" "15-minute backup job registered"
 adb shell input keyevent KEYCODE_HOME
 
 # 1. Real scan of 3 default coins (BTC, ETH, SOL) on a real ETH candle where the rule fired LONG.
