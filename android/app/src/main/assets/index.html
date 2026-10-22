@@ -82,6 +82,11 @@ a{color:var(--accent)}
   </div>
   <label for="sgStrat">สูตรสัญญาณ Futures</label>
   <select id="sgStrat"><option value="squeeze3_ls">Squeeze v2 · Momentum2 + Squeeze 3 ชม. (งานวิจัย 10,000 แบบ)</option><option value="squeeze_ls">Squeeze v1 · ONE BEST COMBO</option></select>
+  <label class="checks" style="margin-top:10px;align-items:flex-start"><input type="checkbox" id="sgLock" checked> <span><b>ใช้สูตรที่ผมเลือก</b>: BTCUSDT · Squeeze v2 · 10x Isolated · เสี่ยง 0.25%/ไม้ · กรอง FOMC</span></label>
+  <details style="margin-top:6px"><summary class="muted" style="font-size:13px">วันประกาศผล FOMC (แก้ได้)</summary>
+    <textarea id="sgFomc" rows="4" style="width:100%;background:var(--deep);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:8px;font:12px ui-monospace,monospace"></textarea>
+    <p class="muted" style="font-size:12px;margin:4px 0 0">2024–2025 มาจากไฟล์วิจัยของคุณ · ปี 2026 ผมใส่จากความจำ ยังไม่ได้ตรวจ โปรดเทียบกับ federalreserve.gov/monetarypolicy/fomccalendars.htm · งดเข้าไม้ถ้าแท่งสัญญาณอยู่ในวันนั้น หรือห่างไม่เกิน 24 ชม.</p>
+  </details>
   <p class="muted" style="margin:8px 0 0;font-size:13px" id="sgHelp"></p>
   <button id="scan">สแกนหาสัญญาณตอนนี้</button>
   <label class="checks" style="margin-top:10px"><input type="checkbox" id="autoScan"> <span id="autoScanLabel">สแกนเองทุก 15 นาที (ต้องเปิดหน้านี้ไว้)</span></label>
@@ -139,6 +144,18 @@ a{color:var(--accent)}
 </div>
 
 <div id="portTab" class="hidden">
+<section>
+  <h2>Paper Trading อัตโนมัติ · สูตรที่เลือก</h2>
+  <p class="muted" style="margin:0;font-size:13px">BTCUSDT · Momentum2 + Squeeze 3 ชม. · Volume ≥ 1.8x · กรอง FOMC · SL 1.8 ATR · TP 5R · ถือ ≤ 48 ชม. · 10x Isolated · เสี่ยง 0.25% (Margin ไม่เกิน 5% ของพอร์ต) · ต้นทุน 0.14% ไป-กลับ + funding 0.01%/8 ชม. · แอปคำนวณจากแท่งที่ปิดจริงหลังวันเริ่ม ไม่ต้องกดอะไร</p>
+  <div class="row" style="margin-top:10px">
+    <button class="mini" id="ppStart" style="width:100%;margin:0">เริ่ม Paper วันนี้</button>
+    <button class="mini ghost" id="pp2026" style="width:100%;margin:0">ดูผลปี 2026 (ข้อมูลใหม่)</button>
+  </div>
+  <div id="ppStatus" class="status-line"></div>
+  <div class="hero" id="ppHero" style="margin-top:8px"></div>
+  <p class="muted" style="font-size:12px;margin:8px 0 0">เทียบงานวิจัยปี 2025 (10x): 61 ไม้ · win 32.8% · ถึง TP5R 21.3% · เฉลี่ย +0.38R · PF 1.50 · +5.83% · Max DD 2.52% — ต้องมีอย่างน้อย 30 ไม้ก่อนสรุป</p>
+  <div id="ppTrades"></div>
+</section>
 <section>
   <h2>เงินของฉัน</h2>
   <div class="row">
@@ -970,6 +987,11 @@ a{color:var(--accent)}
       return null;
     }
     if (id === "squeeze3_long" || id === "squeeze3_ls") {
+      // FOMC veto as in the replay script: the UTC date of bar i, i-24h or i+24h is a decision day.
+      if (opt.fomcDates && opt.fomcDates.length) {
+        var t0 = bars[i].time, day = function (ms) { return new Date(ms).toISOString().slice(0, 10); };
+        if ([t0, t0 - 86400000, t0 + 86400000].some(function (ms) { return opt.fomcDates.indexOf(day(ms)) >= 0; })) return null;
+      }
       var d2 = ind.momentum2[i];
       if (!d2 || (id === "squeeze3_long" && d2 !== 1) || !((bars[i].volume || 0) >= 1.8 * ind.v20[i])) return null;
       for (var j2 = i - 3; j2 <= i; j2++) if (ind.squeeze[j2] === d2) return { dir: d2, dist: 1.8 * ind.atrEma[i], rr: 5 };
@@ -1727,25 +1749,110 @@ a{color:var(--accent)}
     return { ask: ask, auto: auto, analyseSignal: analyseSignal, analyseChart: analyseChart };
   })();
 
+  // ---- The user's chosen strategy (locked) and its automatic paper trading ----
+  var FOMC_DEFAULT = [
+    // 2024–2025: from CRYPTO_FUTURES_10000 research. 2026: from memory, NOT verified — check federalreserve.gov.
+    "2024-01-31", "2024-03-20", "2024-05-01", "2024-06-12", "2024-07-31", "2024-09-18", "2024-11-07", "2024-12-18",
+    "2025-01-29", "2025-03-19", "2025-05-07", "2025-06-18", "2025-07-30", "2025-09-17", "2025-10-29", "2025-12-10",
+    "2026-01-28", "2026-03-18", "2026-04-29", "2026-06-17", "2026-07-29", "2026-09-16", "2026-10-28", "2026-12-09"
+  ];
+  var LOCK = { symbol: "BTCUSDT", tech: "squeeze3_ls", lev: 10, riskPct: 0.25, marginShare: 0.05 };
+  function locked() { return $("sgLock").checked; }
+  function fomcDates() {
+    return ($("sgFomc").value.match(/\d{4}-\d{2}-\d{2}/g) || []);
+  }
+
+  var Paper = (function () {
+    var KEY = "paper.v2";
+    function load() { try { return JSON.parse(localStorage.getItem(KEY) || "null"); } catch (e) { return null; } }
+    function status(t, err) { $("ppStatus").textContent = t; $("ppStatus").className = "status-line" + (err ? " err" : ""); }
+
+    // Same rules and costs as the research: fee 0.07%/side, no extra slippage, funding 0.01%/8h,
+    // risk = min(0.25%, 5% margin x 10x x stop fraction) per trade, compounding.
+    function run(startMs, label) {
+      var opt = Object.assign({}, Swing.DEFAULTS, { fee: 0.0007, slippage: 0, fomcDates: fomcDates() });
+      status("กำลังดึงแท่ง 1 ชม. ของ BTCUSDT…");
+      return binance("/api/v3/time").then(function (t) {
+        var end = Math.floor(t.serverTime / 3600000) * 3600000, from = Math.floor(startMs / 3600000) * 3600000 - 2000 * 3600000;
+        return fetchCandles(LOCK.symbol, from, end, function (k) { status("ดึงแล้ว " + k + " แท่ง…"); }, "1h");
+      }).then(function (bars) {
+        var ind = Swing.indicators(bars, opt), first = 0;
+        while (first < bars.length && bars[first].time < startMs) first++;
+        var trades = Swing.runTechnique(LOCK.tech, bars, ind, Math.max(first, 260), bars.length, opt);
+        render(trades, bars, startMs, label);
+        status("อัปเดต " + thai(Date.now()) + " น. · ใช้แท่งที่ปิดแล้วถึง " + thai(bars[bars.length - 1].close_time + 1) + " น.");
+      }).catch(function (e) { status(e.message || String(e), true); });
+    }
+
+    function render(trades, bars, startMs, label) {
+      var closed = trades.filter(function (t) { return t.reason !== "end"; }), open = trades.filter(function (t) { return t.reason === "end"; })[0];
+      var eq = 1, peak = 1, dd = 0, wins = 0, tps = 0, sumR = 0, gp = 0, gl = 0;
+      closed.forEach(function (t) {
+        var frac = Math.abs(t.entry - t.stop) / t.entry, risk = Math.min(LOCK.riskPct / 100, LOCK.marginShare * LOCK.lev * frac);
+        eq *= 1 + risk * t.r; peak = Math.max(peak, eq); dd = Math.max(dd, 1 - eq / peak);
+        if (t.r > 0) { wins++; gp += t.r; } else gl -= t.r;
+        if (t.reason === "target" || t.reason === "target_gap") tps++;
+        sumR += t.r;
+      });
+      var n = closed.length, days = (Date.now() - startMs) / 86400000;
+      $("ppHero").innerHTML = [
+        [label, fmt(days, 0) + " วัน", "เริ่ม " + thai(startMs).slice(0, 8)],
+        ["ปิดแล้ว", n + " ไม้", n < 30 ? "ยังน้อยกว่า 30 ไม้ สรุปไม่ได้" : "พอเริ่มประเมินได้"],
+        ["Win rate", n ? fmt(wins / n * 100, 1) + "%" : "—", "ถึง TP5R " + (n ? fmt(tps / n * 100, 1) : "—") + "%"],
+        ["R เฉลี่ย · PF", n ? fmt(sumR / n, 2, true) + "R · " + fmt(gl > 0 ? gp / gl : NaN, 2) : "—", "งานวิจัย 2025: +0.38R · 1.50"],
+        ["กำไรพอร์ต", '<span class="' + tone(eq - 1) + '">' + fmt((eq - 1) * 100, 2, true) + "%</span>", "เสี่ยง 0.25%/ไม้ ทบต้น"],
+        ["Max DD", fmt(dd * 100, 2) + "%", "งานวิจัย 2025: 2.52%"]
+      ].map(function (c) { return '<div class="stat"><small>' + c[0] + "</small><b>" + c[1] + "</b><small>" + c[2] + "</small></div>"; }).join("");
+      var reason = { stop: "SL", stop_gap: "SL (gap)", target: "TP5R", target_gap: "TP5R", time: "ครบ 48 ชม." };
+      var openHtml = "";
+      if (open) {
+        var now = bars[bars.length - 1].close, side = open.side === "long" ? 1 : -1, risk = Math.abs(open.entry - open.stop);
+        var tps3 = [1, 2, 5].map(function (k) { return open.entry + side * k * risk; });
+        openHtml = '<div class="coin go"><div class="coin-head"><b>ถืออยู่ (Paper)</b><span class="pill go">' + open.side.toUpperCase() + " 10x</span></div>" +
+          '<div class="levels"><div><small>เข้า</small><b>' + price(open.entry) + '</b></div><div><small>SL</small><b class="down">' + price(open.stop) +
+          '</b></div><div><small>TP1 · TP2 · TP3</small><b class="up" style="font-size:13px">' + tps3.map(price).join("<br>") + "</b></div></div>" +
+          "<small>เข้าเมื่อ " + thai(open.entry_time) + " · ปิดภายใน " + thai(open.entry_time + 47 * 3600000) + " · ตอนนี้ " + price(now) + " (" +
+          fmt(side * (now - open.entry) / risk, 2, true) + "R ยังไม่รวมต้นทุน)</small></div>";
+      }
+      $("ppTrades").innerHTML = openHtml + closed.slice(-30).reverse().map(function (t) {
+        return '<div class="trade"><div><b>' + t.side.toUpperCase() + "</b> " + price(t.entry) + " → " + price(t.exit) + "<br><small>" + thai(t.entry_time) +
+          " · " + (reason[t.reason] || t.reason) + '</small></div><div class="' + tone(t.r) + '">' + fmt(t.r, 2, true) + "R</div></div>";
+      }).join("") || (openHtml ? "" : '<p class="muted">ยังไม่มีไม้ตั้งแต่วันเริ่ม</p>');
+    }
+
+    $("ppStart").onclick = function () {
+      var cur = load();
+      if (cur && $("ppStart").textContent !== "ยืนยันเริ่มใหม่") { $("ppStart").textContent = "ยืนยันเริ่มใหม่"; return; }
+      var state = { start: Date.now() };
+      try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* ignore */ }
+      $("ppStart").textContent = "เริ่มใหม่ (ล้างผลเดิม)";
+      run(state.start, "Paper ตั้งแต่เริ่ม");
+    };
+    $("pp2026").onclick = function () { run(Date.UTC(2026, 0, 1), "ปี 2026 ถึงวันนี้"); };
+    function refresh() { var st = load(); if (st) { $("ppStart").textContent = "เริ่มใหม่ (ล้างผลเดิม)"; run(st.start, "Paper ตั้งแต่เริ่ม"); } }
+    return { refresh: refresh };
+  })();
+
   // ---- Futures: ONE BEST COMBO (Momentum + Squeeze, 1H) long/short with leverage-aware sizing ----
   var FUT = { fee: 0.0005, slippage: 0.0002, mmr: 0.005, enterWithinMin: 15, marginShare: 0.25 };
 
   var lastFutures = [];
 
   function futuresScan() {
-    var results = [], errors = [], done = 0, fxInfo, end, lev = Math.max(1, Math.min(125, readNumber("sgLev", 10)));
+    var results = [], errors = [], done = 0, fxInfo, end, lev = locked() ? LOCK.lev : Math.max(1, Math.min(125, readNumber("sgLev", 10)));
+    var coins = locked() ? [LOCK.symbol] : COINS;
     scanStatus("กำลังดึงแท่ง 1 ชม. และอัตราแลกเปลี่ยน…");
     return Promise.all([binance("/api/v3/time"), fetchFx()]).then(function (res) {
       fxInfo = res[1];
       end = Math.floor(res[0].serverTime / 3600000) * 3600000;
-      var start = end - 100 * 86400000, queue = COINS.slice();
+      var start = end - 100 * 86400000, queue = coins.slice();
       function worker() {
         var s = queue.shift();
         if (!s) return Promise.resolve();
         return fetchCandles(s, start, end, function () {}, "1h").then(function (bars) {
           results.push(futuresCard(s, bars, fxInfo.rate, lev));
         }).catch(function (e) { errors.push(s.replace("USDT", "") + ": " + e.message); }).then(function () {
-          done++; scanStatus("สแกนแล้ว " + done + "/" + COINS.length + " เหรียญ…");
+          done++; scanStatus("สแกนแล้ว " + done + "/" + coins.length + " เหรียญ…");
           return worker();
         });
       }
@@ -1762,24 +1869,36 @@ a{color:var(--accent)}
   }
 
   function futuresCard(symbol, bars, fx, lev) {
-    var opt = Object.assign({}, Swing.DEFAULTS, { fee: FUT.fee, slippage: FUT.slippage }), n = bars.length;
+    var opt = Object.assign({}, Swing.DEFAULTS, { fee: FUT.fee, slippage: FUT.slippage, fomcDates: locked() ? fomcDates() : [] }), n = bars.length;
     var ind = Swing.indicators(bars, opt), last = bars[n - 1];
-    var tech = $("sgStrat").value, spec = Swing.TECHNIQUES.filter(function (t) { return t.id === tech; })[0];
+    var tech = locked() ? LOCK.tech : $("sgStrat").value, spec = Swing.TECHNIQUES.filter(function (t) { return t.id === tech; })[0];
     var hist = Swing.stats(Swing.runTechnique(tech, bars, ind, 270, n, opt), 0.01);
     var e = ind.e50[n - 1], e2 = ind.e200[n - 1];
     var out = { symbol: symbol, close: last.close, trend: e > e2 && last.close > e2 ? 1 : e < e2 && last.close < e2 ? -1 : 0, hist: hist, signal: null };
     var sig = Swing.signal(tech, bars, ind, n - 1, opt);
     if (!sig || !(sig.dist / last.close >= 0.0015)) return out;
     var plan = Portfolio.plan(), dir = sig.dir, entry = last.close, dist = sig.dist, cost = 2 * (FUT.fee + FUT.slippage);
-    var balance = plan.balance / fx, riskUsdt = balance * plan.riskPct / 100, stopFrac = dist / entry;
+    var riskPct = locked() ? Math.min(LOCK.riskPct, plan.riskPct || LOCK.riskPct) : plan.riskPct;
+    var balance = plan.balance / fx, riskUsdt = balance * riskPct / 100, stopFrac = dist / entry;
     var qty = riskUsdt / (dist + cost * entry), notional = qty * entry;
     // Leverage only sets margin. Pick the lowest x that keeps margin <= 25% of the balance, but never
     // so high that liquidation sits closer than 1.5x the stop distance; cap at the user's maximum.
-    var levLiq = Math.max(1, Math.floor(1 / (1.5 * stopFrac + FUT.mmr))), levCap = Math.min(levLiq, lev);
-    var levMargin = Math.max(1, Math.ceil(notional / (FUT.marginShare * balance))), rec = Math.min(levMargin, levCap), sizeLimited = false;
-    if (levMargin > levCap) {
-      sizeLimited = true;
-      qty = FUT.marginShare * balance * rec / entry; notional = qty * entry; riskUsdt = qty * (dist + cost * entry);
+    var levLiq = Math.max(1, Math.floor(1 / (1.5 * stopFrac + FUT.mmr))), levCap = Math.min(levLiq, lev), rec, sizeLimited = false;
+    if (locked()) {
+      // The chosen setup: fixed 10x isolated, margin at most 5% of the account (as in the research).
+      if (stopFrac >= 1 / LOCK.lev - 0.007) return out;   // stop too close to liquidation: the research skips it
+      rec = LOCK.lev;
+      if (notional / rec > LOCK.marginShare * balance) {
+        sizeLimited = true;
+        qty = LOCK.marginShare * balance * rec / entry; notional = qty * entry; riskUsdt = qty * (dist + cost * entry);
+      }
+    } else {
+      var levMargin = Math.max(1, Math.ceil(notional / (FUT.marginShare * balance)));
+      rec = Math.min(levMargin, levCap);
+      if (levMargin > levCap) {
+        sizeLimited = true;
+        qty = FUT.marginShare * balance * rec / entry; notional = qty * entry; riskUsdt = qty * (dist + cost * entry);
+      }
     }
     var liq = dir > 0 ? entry * (1 - 1 / rec + FUT.mmr) : entry * (1 + 1 / rec - FUT.mmr);
     out.signal = { dir: dir, entry: entry, stop: entry - dir * dist, tps: [1, 2, 5].map(function (r) { return entry + dir * r * dist; }),
@@ -1803,10 +1922,11 @@ a{color:var(--accent)}
         body = '<div class="levels"><div><small>เข้า (Market)</small><b>' + price(g.entry) + '</b></div><div><small>SL (' + fmt(g.stopPct, 2) + '%)</small><b class="down">' + price(g.stop) +
           '</b></div><div><small>TP1 · TP2 · TP3</small><b class="up" style="font-size:13px">' + g.tps.map(price).join("<br>") + "</b></div></div>" +
           "<small>TP1 = 1R · TP2 = 2R · TP3 = 5R · SL " + g.stopAtr + " ATR · ถือไม่เกิน " + g.hold + " ชม. · เข้าก่อน " + thai(g.expires).slice(9) + " น.<br>" +
-          '<b style="font-size:16px">Leverage แนะนำ x' + g.lev + "</b> · ไม่ควรเกิน x" + g.levLiq + " (Liquidate ต้องไกลกว่า SL 1.5 เท่า)<br>" +
+          (locked() ? '<b style="font-size:16px">10x Isolated</b> (สูตรที่เลือก) · Liquidate ห่างกว่า SL ' + fmt(Math.abs(g.liq - g.entry) / Math.abs(g.stop - g.entry), 1) + " เท่า<br>"
+            : '<b style="font-size:16px">Leverage แนะนำ x' + g.lev + "</b> · ไม่ควรเกิน x" + g.levLiq + " (Liquidate ต้องไกลกว่า SL 1.5 เท่า)<br>") +
           "ขนาด " + g.qty + " " + name + " (≈ " + fmt(g.notional, 0) + " USDT) · Margin ≈ " + fmt(g.margin, 1) + " USDT · ถ้าโดน SL เสีย ≈ " +
           fmt(g.riskUsdt * fx, 0) + " ฿<br>ราคา Liquidate ≈ " + price(g.liq) + "</small>" +
-          (g.sizeLimited ? '<div class="banner wait" style="margin:8px 0 0;font-size:13px">ทุนน้อยเมื่อเทียบกับไม้นี้: ลดขนาดลงให้ Margin ไม่เกิน 25% ของทุน (เสี่ยงน้อยกว่าที่ตั้งไว้)</div>' : "") +
+          (g.sizeLimited ? '<div class="banner wait" style="margin:8px 0 0;font-size:13px">ลดขนาดลงให้ Margin ไม่เกิน ' + (locked() ? "5" : "25") + '% ของทุน (เสี่ยงน้อยกว่าที่ตั้งไว้)</div>' : "") +
           '<div id="ai-' + r.symbol + '"></div>' +
           '<br><button class="mini" data-record="' + esc(JSON.stringify({ symbol: r.symbol, dir: g.dir, entry: g.entry, stop: g.stop, target: g.tps[2], tps: g.tps,
             qty: g.qty, fx: fx, risk: g.riskUsdt * fx, fee: FUT.fee + FUT.slippage, lev: g.lev, hold_hours: g.hold })) + '">เข้าแล้ว · บันทึกลงพอร์ต</button> ' +
@@ -1947,18 +2067,25 @@ a{color:var(--accent)}
   };
   $("scan").onclick = scan;
   function modeHelp() {
-    var v2 = $("sgStrat").value === "squeeze3_ls";
+    var lock = locked();
+    $("sgStrat").disabled = $("sgLev").disabled = lock;
+    var v2 = lock || $("sgStrat").value === "squeeze3_ls";
     $("sgHelp").textContent = $("sgMode").value === "futures"
       ? (v2 ? "Squeeze v2 แท่ง 1 ชม.: เทรนด์ EMA20/50/200 + บีบตัวแล้วทะลุภายใน 3 ชม. + แท่งโมเมนตัม 2 แท่ง + Volume ≥ 1.8 เท่า · SL 1.8 ATR · TP1/2/3 = 1R/2R/5R · ถือไม่เกิน 48 ชม."
           : "Squeeze v1 แท่ง 1 ชม.: เทรนด์ EMA20/50/200 + บีบตัวแล้วทะลุภายใน 8 ชม. + แท่งโมเมนตัม · SL 2.5 ATR · TP1/2/3 = 1R/2R/5R · ถือไม่เกิน 24 ชม.") +
         " · ขนาดไม้คิดจาก % เสี่ยงในแท็บพอร์ต ไม่ใช่จาก Leverage"
       : "Spot: สแกนแนวโน้ม 1 ชม. เลือกกลยุทธ์ที่ได้ผลดีสุดใน 90 วันล่าสุดของแต่ละเหรียญ แล้วดูแท่ง 15 นาทีที่เพิ่งปิด";
-    $("sgLev").disabled = $("sgStrat").disabled = $("sgMode").value !== "futures";
+    if ($("sgMode").value !== "futures") $("sgLev").disabled = $("sgStrat").disabled = true;
+    if (lock && $("sgMode").value === "futures") $("sgHelp").textContent = "สูตรที่เลือก: BTCUSDT · Momentum2 + Squeeze 3 ชม. · Volume ≥ 1.8x · กรอง FOMC · SL 1.8 ATR · TP1/2/3 = 1R/2R/5R · ถือ ≤ 48 ชม. · 10x Isolated · เสี่ยง 0.25%/ไม้ (Margin ≤ 5% ของพอร์ต) · ใช้เพื่อ Paper Trading ก่อน";
   }
   ["sgMode", "sgLev", "sgStrat"].forEach(function (id) {
     try { var v = localStorage.getItem(id); if (v !== null) $(id).value = v; } catch (e) { /* ignore */ }
     $(id).addEventListener("change", function () { try { localStorage.setItem(id, $(id).value); } catch (e) { /* ignore */ } modeHelp(); });
   });
+  try { var lk = localStorage.getItem("sgLock"); if (lk !== null) $("sgLock").checked = lk === "1"; } catch (e) { /* ignore */ }
+  $("sgLock").addEventListener("change", function () { try { localStorage.setItem("sgLock", $("sgLock").checked ? "1" : "0"); } catch (e) { /* ignore */ } modeHelp(); });
+  try { $("sgFomc").value = localStorage.getItem("sgFomc") || FOMC_DEFAULT.join("\n"); } catch (e) { $("sgFomc").value = FOMC_DEFAULT.join("\n"); }
+  $("sgFomc").addEventListener("change", function () { try { localStorage.setItem("sgFomc", $("sgFomc").value); } catch (e) { /* ignore */ } });
   modeHelp();
 
   // ---- Realtime chart: EMA, Bollinger, RSI, auto Fibonacci, trendlines, plan ----
@@ -2190,6 +2317,7 @@ a{color:var(--accent)}
       });
       if (last && b.getAttribute("data-tab") === "backtestTab") render();
       if (b.getAttribute("data-tab") === "chartTab") ChartView.open(); else ChartView.stop();
+      if (b.getAttribute("data-tab") === "portTab") Paper.refresh();
     };
   });
 
