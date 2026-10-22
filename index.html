@@ -156,6 +156,21 @@ a{color:var(--accent)}
   <div id="status">กดปุ่มเพื่อดึงแท่ง 15 นาทีที่ปิดแล้วจาก Binance (ไม่ต้องใช้ API key)</div>
 </section>
 
+<section>
+  <h2>เทคนิคของฉัน · กราฟ 4 ชม.</h2>
+  <p class="muted" style="margin:0;font-size:13px">ทดสอบ 5 เทคนิคจากคลังความรู้ของคุณ (เทรนด์ไลน์, Inside Bar, Fibo, Breakout+Pullback, Double Bottom) เป็นกฎตายตัว ซื้ออย่างเดียว ใช้ค่าธรรมเนียมจากช่องด้านบน ผลเป็น R (หน่วยความเสี่ยงต่อไม้) หลังหักต้นทุน</p>
+  <label>เหรียญ</label><div class="checks" id="swCoins" style="flex-wrap:wrap;gap:10px;font-size:13px"></div>
+  <label for="swDays">ช่วงข้อมูล</label>
+  <select id="swDays"><option value="730">2 ปี</option><option value="1095" selected>3 ปี</option><option value="1460">4 ปี</option></select>
+  <button id="swRun">Backtest เทคนิคของฉัน</button>
+  <div id="swStatus" class="status-line">แต่ละเทคนิคแบ่งข้อมูล 60/20/20 เลือกผู้ชนะจากช่วง Valid แล้วตรวจกับ Holdout ครั้งเดียว</div>
+  <div id="swResults" class="hidden" style="margin-top:12px">
+    <div id="swBest"></div>
+    <div style="overflow-x:auto;margin-top:10px"><table><thead><tr><th>เทคนิค</th><th>Dev ไม้·win·R</th><th>Valid ไม้·win·R</th><th>Valid PF</th></tr></thead><tbody id="swTable"></tbody></table></div>
+    <p class="muted" style="font-size:12px;margin:8px 0 0">เป็นกฎจำลองจากหลักการในคลิป ไม่ใช่สูตรตรงของผู้สอนทุกข้อ · ผลในอดีตไม่รับประกันอนาคต</p>
+  </div>
+</section>
+
 <div id="results" class="hidden">
   <section>
     <h2>สัญญาณที่ดีที่สุดหลังทดสอบ</h2>
@@ -811,6 +826,220 @@ a{color:var(--accent)}
 
 </script>
 <script>
+/* Swing (4H) backtest of the user's own techniques, operationalised as fixed rules.
+ * Source: Trading_Techniques_6_Folders_Original.text (TL-01..TL-07 transcript, Inside Bar 4H,
+ * Fibonacci, Breakout + Pullback, Double Bottom). These are proxies, not the teacher's exact rules.
+ * Long-only Spot. Signal on a closed bar, entry at the next open, stop checked before target
+ * inside a bar, fixed fee + slippage per side. Metrics are in R (risk units) after costs.
+ */
+(function (root, factory) {
+  if (typeof module === "object" && module.exports) module.exports = factory();
+  else root.Swing = factory();
+})(this, function () {
+  "use strict";
+
+  var TECHNIQUES = [
+    { id: "trendline", name: "ย้อนแตะเทรนด์ไลน์ + แท่งปฏิเสธ", source: "TL-01–TL-03 (ถอดเสียงยืนยัน)" },
+    { id: "inside_bar", name: "Inside Bar 4H ทะลุตามเทรนด์", source: "หัวข้อ 17 (ภาพยืนยัน)" },
+    { id: "fibo", name: "ย่อ Fibo 38.2–61.8% + แท่งปฏิเสธ", source: "หัวข้อ 13 (ภาพยืนยัน)" },
+    { id: "retest", name: "Breakout แล้ว Pullback กลับมาทดสอบ", source: "TL-06 (ถอดเสียงยืนยัน)" },
+    { id: "double_bottom", name: "Double Bottom ทะลุ Neckline", source: "หัวข้อ 16 (ภาพยืนยัน)" }
+  ];
+  var DEFAULTS = { fee: 0.001, slippage: 0.0005, risk: 0.01, maxHoldBars: 30, pivotK: 3, takeR: 2 };
+
+  function ema(values, n) {
+    var a = 2 / (n + 1), y = NaN, out = [];
+    values.forEach(function (x, i) { y = i ? y + a * (x - y) : x; out.push(i >= n - 1 ? y : NaN); });
+    return out;
+  }
+  function wilder(values, n) {
+    var y = NaN, out = [];
+    values.forEach(function (x, i) { y = i ? y + (x - y) / n : x; out.push(i >= n - 1 ? y : NaN); });
+    return out;
+  }
+
+  function indicators(bars, opt) {
+    var close = bars.map(function (b) { return b.close; });
+    var tr = bars.map(function (b, i) {
+      if (!i) return b.high - b.low;
+      var pc = bars[i - 1].close;
+      return Math.max(b.high - b.low, Math.abs(b.high - pc), Math.abs(b.low - pc));
+    });
+    var e50 = ema(close, 50), e200 = ema(close, 200), atr = wilder(tr, 14), k = opt.pivotK;
+    // A pivot at i is only known once k later bars have closed: confirmedAt = i + k.
+    var lows = [], highs = [];
+    for (var i = k; i < bars.length - k; i++) {
+      var isL = true, isH = true;
+      for (var j = i - k; j <= i + k; j++) {
+        if (j === i) continue;
+        if (bars[j].low <= bars[i].low) isL = false;
+        if (bars[j].high >= bars[i].high) isH = false;
+      }
+      if (isL) lows.push({ i: i, price: bars[i].low, known: i + k });
+      if (isH) highs.push({ i: i, price: bars[i].high, known: i + k });
+    }
+    return { e50: e50, e200: e200, atr: atr, lows: lows, highs: highs };
+  }
+
+  function rejection(b) {
+    var range = b.high - b.low;
+    return range > 0 && (Math.min(b.open, b.close) - b.low) >= 0.3 * range && b.close >= b.low + 0.6 * range;
+  }
+  function knownBefore(list, i) { return list.filter(function (p) { return p.known <= i; }); }
+
+  /* Returns null or {stop, target} for an entry at the next open, using bars up to i only. */
+  function signal(id, bars, ind, i, opt) {
+    var b = bars[i], atr = ind.atr[i];
+    if (!(atr > 0) || isNaN(ind.e200[i])) return null;
+    var up = ind.e50[i] > ind.e200[i] && b.close > ind.e200[i];
+    if (id === "trendline") {
+      if (!up) return null;
+      var L = knownBefore(ind.lows, i);
+      if (L.length < 2) return null;
+      var p1 = L[L.length - 2], p2 = L[L.length - 1];
+      if (!(p2.price > p1.price) || i - p2.i > 60) return null;
+      var line = p2.price + (p2.price - p1.price) / (p2.i - p1.i) * (i - p2.i);
+      if (b.low <= line + 0.25 * atr && b.close > line && rejection(b)) return { stop: Math.min(b.low, line) - 0.5 * atr, rr: opt.takeR };
+      return null;
+    }
+    if (id === "inside_bar") {
+      if (!up || i < 2) return null;
+      var m = bars[i - 2], ins = bars[i - 1];
+      if (!(ins.high <= m.high && ins.low >= m.low) || (m.high - m.low) < 0.45 * atr) return null;
+      if (b.close > m.high) return { stop: m.low - 0.1 * atr, rr: opt.takeR };
+      return null;
+    }
+    if (id === "fibo") {
+      if (!up || i < 48) return null;
+      var lo = Infinity, hi = -Infinity, loI = 0, hiI = 0;
+      for (var q = i - 48; q < i; q++) {
+        if (bars[q].low < lo) { lo = bars[q].low; loI = q; }
+        if (bars[q].high > hi) { hi = bars[q].high; hiI = q; }
+      }
+      var range = hi - lo;
+      if (!(loI < hiI) || range < 4 * atr) return null;
+      var f382 = hi - 0.382 * range, f618 = hi - 0.618 * range, f786 = hi - 0.786 * range;
+      if (b.low <= f382 && b.low >= f786 && b.close > f618 && rejection(b)) {
+        var stop = f786 - 0.25 * atr, entry = b.close, rr = (hi - entry) / (entry - stop);
+        return rr >= 1 ? { stop: stop, target: hi } : null;
+      }
+      return null;
+    }
+    if (id === "retest") {
+      if (!up) return null;
+      for (var s = Math.max(37, i - 8); s < i; s++) {
+        var prior = -Infinity;
+        for (var r = s - 36; r < s; r++) prior = Math.max(prior, bars[r].high);
+        if (bars[s].close > prior + 0.08 * atr) {
+          var failed = false;
+          for (var t = s + 1; t < i; t++) if (bars[t].close < prior - 0.5 * atr) failed = true;
+          if (!failed && Math.abs(b.low - prior) <= 0.2 * atr && b.close > prior && rejection(b))
+            return { stop: prior - 1.0 * atr, rr: opt.takeR };
+          return null;
+        }
+      }
+      return null;
+    }
+    if (id === "double_bottom") {
+      var lows = knownBefore(ind.lows, i);
+      if (lows.length < 2) return null;
+      var a = lows[lows.length - 2], c = lows[lows.length - 1], gap = c.i - a.i;
+      if (gap < 5 || gap > 35 || Math.abs(c.price - a.price) > 0.65 * atr || i - c.i > 20) return null;
+      var neck = -Infinity;
+      for (var z = a.i; z <= c.i; z++) neck = Math.max(neck, bars[z].high);
+      var crossed = b.close > neck + 0.08 * atr && bars[i - 1].close <= neck;
+      if (!crossed) return null;
+      var bottom = Math.min(a.price, c.price);
+      return { stop: bottom - 0.2 * atr, target: neck + (neck - bottom) };
+    }
+    return null;
+  }
+
+  /* One position at a time per technique and coin. A signal on bar i enters at bar i+1's open;
+   * exits are checked from the entry bar on, stop before target, with no same-bar re-entry.
+   * R uses the risk at entry and includes round-trip costs. */
+  function runTechnique(id, bars, ind, from, to, opt) {
+    var trades = [], pos = null, cost = 2 * (opt.fee + opt.slippage);
+    function close(i, exit, reason) {
+      var risk = pos.entry - pos.stop;
+      trades.push({ technique: id, entry_time: bars[pos.bar].time, exit_time: bars[i].time, entry: pos.entry, stop: pos.stop,
+        target: pos.target, exit: exit, r: (exit - pos.entry) / risk - cost * pos.entry / risk, reason: reason });
+      pos = null;
+    }
+    for (var i = from; i < to; i++) {
+      var b = bars[i];
+      if (pos) {
+        if (b.open <= pos.stop) close(i, b.open, "stop_gap");
+        else if (b.low <= pos.stop) close(i, pos.stop, "stop");
+        else if (b.open >= pos.target) close(i, pos.target, "target_gap");
+        else if (b.high >= pos.target) close(i, pos.target, "target");
+        else if (i - pos.bar + 1 >= opt.maxHoldBars) close(i, b.close, "time");
+        continue;
+      }
+      if (i + 1 >= to) break;
+      var sig = signal(id, bars, ind, i, opt);
+      if (!sig) continue;
+      var entry = bars[i + 1].open * (1 + opt.slippage);
+      if (!(sig.stop < entry)) continue;
+      var target = sig.target !== undefined ? sig.target : entry + sig.rr * (entry - sig.stop);
+      if (target > entry) pos = { bar: i + 1, entry: entry, stop: sig.stop, target: target };
+    }
+    if (pos) close(to - 1, bars[to - 1].close, "end");
+    return trades;
+  }
+
+  function stats(trades, risk) {
+    var n = trades.length, wins = 0, gp = 0, gl = 0, sum = 0, eq = 1, peak = 1, dd = 0;
+    trades.slice().sort(function (a, b) { return a.exit_time - b.exit_time; }).forEach(function (t) {
+      if (t.r > 0) { wins++; gp += t.r; } else gl -= t.r;
+      sum += t.r;
+      eq *= 1 + risk * t.r; peak = Math.max(peak, eq); dd = Math.max(dd, 1 - eq / peak);
+    });
+    var ci = [null, null];
+    if (n) {
+      var z = 1.959963984540054, f = wins / n, d = 1 + z * z / n, c = (f + z * z / (2 * n)) / d;
+      var h = z * Math.sqrt(f * (1 - f) / n + z * z / (4 * n * n)) / d;
+      ci = [100 * (c - h), 100 * (c + h)];
+    }
+    return { trades: n, win_rate: n ? wins / n * 100 : null, ci: ci, exp_r: n ? sum / n : null,
+      pf: gl > 0 ? gp / gl : null, return_pct: (eq - 1) * 100, max_dd_pct: dd * 100 };
+  }
+
+  /* data: {symbol: bars[]} on the same timeframe. Splits by time 60/20/20 on each coin's own bars;
+   * the winner is chosen on validation (>= 30 trades, positive development and validation
+   * expectancy) and then reported once on holdout. */
+  function evaluate(data, options) {
+    var opt = Object.assign({}, DEFAULTS, options || {}), symbols = Object.keys(data), prepared = {};
+    symbols.forEach(function (s) { prepared[s] = indicators(data[s], opt); });
+    var results = TECHNIQUES.map(function (tq) {
+      var parts = { development: [], validation: [], holdout: [] };
+      symbols.forEach(function (s) {
+        var bars = data[s], n = bars.length, warm = 210, avail = n - warm;
+        if (avail < 300) return;
+        var a = warm + Math.floor(0.6 * avail), b = warm + Math.floor(0.8 * avail);
+        parts.development = parts.development.concat(runTechnique(tq.id, bars, prepared[s], warm, a, opt).map(tag(s)));
+        parts.validation = parts.validation.concat(runTechnique(tq.id, bars, prepared[s], a, b, opt).map(tag(s)));
+        parts.holdout = parts.holdout.concat(runTechnique(tq.id, bars, prepared[s], b, n, opt).map(tag(s)));
+      });
+      return { id: tq.id, name: tq.name, source: tq.source, trades: parts,
+        development: stats(parts.development, opt.risk), validation: stats(parts.validation, opt.risk) };
+    });
+    var chosen = null;
+    results.forEach(function (r) {
+      var ok = r.validation.trades >= 30 && r.validation.exp_r > 0 && r.development.exp_r > 0;
+      if (ok && (!chosen || r.validation.exp_r > chosen.validation.exp_r)) chosen = r;
+    });
+    return { techniques: results, chosen: chosen ? chosen.id : null,
+      holdout: chosen ? stats(chosen.trades.holdout, opt.risk) : null, options: opt };
+  }
+  function tag(symbol) { return function (t) { t.symbol = symbol; return t; }; }
+
+  return { TECHNIQUES: TECHNIQUES, DEFAULTS: DEFAULTS, indicators: indicators, signal: signal,
+    runTechnique: runTechnique, stats: stats, evaluate: evaluate };
+});
+
+</script>
+<script>
 /* UI for the Android backtest app: download closed Binance 15m candles, run engine.js, chart results. */
 (function () {
   "use strict";
@@ -896,11 +1125,13 @@ a{color:var(--accent)}
     });
   }
 
-  function fetchCandles(symbol, start, end, progress) {
+  function fetchCandles(symbol, start, end, progress, interval) {
+    interval = interval || "15m";
+    var step = { "15m": 900000, "1h": 3600000, "4h": 14400000, "1d": 86400000 }[interval];
     var rows = [];
     function page(from) {
       if (from >= end) return Promise.resolve(rows);
-      return binance("/api/v3/klines?symbol=" + symbol + "&interval=15m&startTime=" + from +
+      return binance("/api/v3/klines?symbol=" + symbol + "&interval=" + interval + "&startTime=" + from +
           "&endTime=" + (end - 1) + "&limit=1000").then(function (batch) {
         if (!Array.isArray(batch)) throw new Error(symbol + ": ข้อมูลแท่งผิดรูปแบบ");
         batch.forEach(function (k) {
@@ -909,16 +1140,16 @@ a{color:var(--accent)}
         });
         progress(rows.length);
         if (!batch.length) return rows;
-        var nextFrom = batch[batch.length - 1][0] + Engine.BAR_MS;
+        var nextFrom = batch[batch.length - 1][0] + step;
         return nextFrom <= from ? rows : page(nextFrom);
       });
     }
     return page(start).then(function (all) {
       for (var i = 0; i < all.length; i++) {
         var r = all[i];
-        if (r.close_time !== r.time + Engine.BAR_MS - 1 || !(r.low <= Math.min(r.open, r.close) && r.high >= Math.max(r.open, r.close)) || !(r.volume >= 0))
+        if (r.close_time !== r.time + step - 1 || !(r.low <= Math.min(r.open, r.close) && r.high >= Math.max(r.open, r.close)) || !(r.volume >= 0))
           throw new Error(symbol + ": แท่งไม่ถูกต้องที่ " + new Date(r.time).toISOString());
-        if (i && r.time !== all[i - 1].time + Engine.BAR_MS)
+        if (i && r.time !== all[i - 1].time + step)
           throw new Error(symbol + ": ข้อมูลขาดช่วงที่ " + new Date(all[i - 1].time).toISOString() + " ลองเลือกช่วงวันอื่น");
       }
       if (!all.length || all[0].time !== start) throw new Error(symbol + ": ข้อมูลเริ่มไม่ตรงช่วงที่ขอ");
@@ -1593,6 +1824,53 @@ a{color:var(--accent)}
       if (b.getAttribute("data-tab") === "chartTab") ChartView.open(); else ChartView.stop();
     };
   });
+
+  // ---- 4H backtest of the user's own techniques (swing.js) ----
+  (function () {
+    var box = $("swCoins");
+    box.innerHTML = COINS.map(function (c, k) {
+      return '<label><input type="checkbox" value="' + c + '"' + (k < 5 ? " checked" : "") + "> " + c.replace("USDT", "") + "</label>";
+    }).join("");
+    $("swRun").onclick = function () {
+      var coins = Array.prototype.filter.call(box.querySelectorAll("input"), function (x) { return x.checked; }).map(function (x) { return x.value; });
+      if (!coins.length) { $("swStatus").textContent = "เลือกอย่างน้อย 1 เหรียญ"; return; }
+      var days = parseInt($("swDays").value, 10), data = {}, done = 0;
+      $("swRun").disabled = true; $("swStatus").className = "status-line"; $("swStatus").textContent = "กำลังดึงแท่ง 4 ชม.…";
+      binance("/api/v3/time").then(function (t) {
+        var end = Math.floor(t.serverTime / 14400000) * 14400000, start = end - days * 86400000;
+        return Promise.all(coins.map(function (c) {
+          return fetchCandles(c, start, end, function () {}, "4h").then(function (rows) {
+            data[c] = rows; done++; $("swStatus").textContent = "ดึงแล้ว " + done + "/" + coins.length + " เหรียญ";
+          }).catch(function (e) { $("swStatus").textContent = c + ": " + e.message; });
+        }));
+      }).then(function () {
+        var r = Swing.evaluate(data, { fee: readNumber("fee", 0.1) / 100, slippage: readNumber("slip", 0.05) / 100, risk: 0.01 });
+        renderSwing(r, Object.keys(data));
+        $("swStatus").textContent = "เสร็จ · " + Object.keys(data).length + " เหรียญ · " + days + " วัน · กราฟ 4 ชม.";
+      }).catch(function (e) { $("swStatus").className = "status-line err"; $("swStatus").textContent = e.message; })
+        .then(function () { $("swRun").disabled = false; });
+    };
+    function renderSwing(r, coins) {
+      var best = r.chosen && r.techniques.filter(function (x) { return x.id === r.chosen; })[0], h = r.holdout;
+      var html;
+      if (best && h.trades >= 30 && h.exp_r > 0 && (h.pf || 0) > 1) {
+        html = '<div class="banner go">ผ่าน: ' + esc(best.name) + "</div><small>เลือกจาก Valid แล้วผ่าน Holdout: " + h.trades + " ไม้ · win " + fmt(h.win_rate, 1) +
+          "% · เฉลี่ย " + fmt(h.exp_r, 2, true) + "R/ไม้ · PF " + fmt(h.pf, 2) + " · ถ้าเสี่ยง 1%/ไม้: " + fmt(h.return_pct, 1, true) + "% (DD " + fmt(h.max_dd_pct, 1) + "%)</small>";
+      } else if (best) {
+        html = '<div class="banner wait">ยังไม่ผ่าน</div><small>' + esc(best.name) + " ดีสุดช่วง Valid แต่ Holdout: " + h.trades + " ไม้ · win " + fmt(h.win_rate, 1) +
+          "% · " + fmt(h.exp_r, 2, true) + "R/ไม้ · PF " + fmt(h.pf, 2) + "</small>";
+      } else {
+        html = '<div class="banner wait">ยังไม่มีเทคนิคที่ได้เปรียบ</div><small>ไม่มีเทคนิคไหนกำไรเฉลี่ยต่อไม้เป็นบวกทั้ง Dev และ Valid (และ Valid ≥ 30 ไม้) หลังหักค่าธรรมเนียม</small>';
+      }
+      $("swBest").innerHTML = html;
+      $("swTable").innerHTML = r.techniques.map(function (t) {
+        var d = t.development, v = t.validation;
+        return "<tr><td>" + esc(t.name) + (t.id === r.chosen ? " ✓" : "") + '<br><small class="muted">' + esc(t.source) + "</small></td><td>" + d.trades + " · " + fmt(d.win_rate, 0) +
+          "%<br>" + fmt(d.exp_r, 2, true) + "R</td><td>" + v.trades + " · " + fmt(v.win_rate, 0) + "%<br>" + fmt(v.exp_r, 2, true) + "R</td><td>" + fmt(v.pf, 2) + "</td></tr>";
+      }).join("");
+      $("swResults").classList.remove("hidden");
+    }
+  })();
 
   loadSettings();
   Portfolio.render();
