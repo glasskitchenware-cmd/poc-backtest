@@ -101,6 +101,8 @@ summary{cursor:pointer;color:var(--muted);font-size:14px}
 a.mini{background:var(--deep);color:var(--yel);border-radius:8px;font-weight:600}
 body.simple #guideBar{display:none!important}body.simple main{padding-bottom:24px}body.simple.coaching main{padding-bottom:200px}
 .sm-cap{display:flex;align-items:center;gap:8px;background:var(--panel);border-radius:12px;padding:10px 12px}.sm-cap label{margin:0;flex:1;color:var(--ink);font-size:14px}.sm-cap input{width:120px;text-align:right;font-weight:700;font-size:17px}
+.sm-tf{display:flex;gap:6px;margin-top:10px}.sm-tf button{flex:1;margin:0;padding:8px 4px;font-size:13px;background:var(--deep);color:var(--muted)}.sm-tf button.on{background:var(--yel);color:#181a20}
+.sm-bt{background:var(--panel);border-radius:12px;padding:10px 12px;margin-top:8px;font-size:14px}.sm-bt.good{background:rgba(14,203,129,.12);border:1px solid var(--up)}.sm-bt.bad{background:rgba(246,70,93,.12);border:1px solid var(--down)}.sm-bt small{font-size:12px;color:var(--muted)}
 .sm-wait{background:var(--panel);border-radius:12px;padding:16px;margin-top:10px;text-align:center}.sm-wait b{display:block;font-size:22px}.sm-wait small{display:block;margin-top:4px;font-size:13px}
 .sm-pick{display:flex;gap:6px;margin-top:10px;overflow-x:auto}.sm-pick button{width:auto;margin:0;padding:8px 12px;font-size:14px;background:var(--deep);color:var(--ink);white-space:nowrap}.sm-pick button.on.l{background:var(--up);color:#fff}.sm-pick button.on.s{background:var(--down);color:#fff}
 .sm-sum{background:var(--panel);border-radius:12px;padding:10px 12px;margin-top:8px;font-size:15px}.sm-sum small{font-size:12px}
@@ -1366,7 +1368,7 @@ a{color:var(--accent)}
 
   function fetchCandles(symbol, start, end, progress, interval) {
     interval = interval || "15m";
-    var step = { "15m": 900000, "1h": 3600000, "4h": 14400000, "1d": 86400000 }[interval];
+    var step = { "5m": 300000, "15m": 900000, "1h": 3600000, "4h": 14400000, "1d": 86400000 }[interval];
     var rows = [];
     function page(from) {
       if (from >= end) return Promise.resolve(rows);
@@ -2105,6 +2107,14 @@ a{color:var(--accent)}
 
   // ---- Futures: ONE BEST COMBO (Momentum + Squeeze, 1H) long/short with leverage-aware sizing ----
   var FUT = { fee: 0.0005, slippage: 0.0002, mmr: 0.005, enterWithinMin: 15, marginShare: 0.25 };
+  // Timeframe of the main screen. Background alerts always use 1H (the researched setup); 5m/15m are a trial that runs while the app is open.
+  var TF = { "1h": { ms: 3600000, days: 100, name: "1 ชม." }, "15m": { ms: 900000, days: 30, name: "15 นาที" }, "5m": { ms: 300000, days: 14, name: "5 นาที" } };
+  function curTf() {
+    if (location.hash === "#bg") return "1h";
+    var t = "1h";
+    try { t = localStorage.getItem("tradeTf") || "1h"; } catch (e) { /* ignore */ }
+    return TF[t] ? t : "1h";
+  }
 
   var lastFutures = [];
 
@@ -2138,7 +2148,7 @@ a{color:var(--accent)}
         { t: "tpsl", text: "ติ๊ก <b>TP/SL</b> แล้วใส่ Take Profit <b class=\"up\">" + price(g.tps[2]) + "</b> และ Stop Loss <b class=\"down\">" + price(g.stop) + "</b>" },
         { t: "buy", text: "กด <b class=\"" + (long ? "up" : "down") + "\">" + (long ? "Buy/Long" : "Sell/Short") + "</b> ถ้ามีหน้ายืนยัน กด <b>Confirm</b>" },
         { t: "done", text: "เสร็จแล้ว! ถ้าโดน SL เสียประมาณ <b class=\"down\">" + fmt(z.lossB, 0) + " ฿</b> · ถ้าถึง TP ได้ประมาณ <b class=\"up\">" + fmt(z.winB, 0) +
-          " ฿</b><br>ถ้าครบ 48 ชม. ยังไม่ชน ให้ไปที่ Positions กด Close" }
+          " ฿</b><br>ถ้าครบ " + fmt(g.hold, g.hold < 10 ? 1 : 0) + " ชม. ยังไม่ชน ให้ไปที่ Positions กด Close" }
       ];
     }
     function screen(r, g, z) {
@@ -2171,9 +2181,20 @@ a{color:var(--accent)}
     function draw() {
       var list = signals(), r = list[pick] || null, g = r && r.signal, z = g ? sized(g) : null;
       steps = g ? stepsFor(r, g, z) : [];
-      var head = "";
+      var tf = curTf(), head = '<div class="sm-tf">' + ["1h", "15m", "5m"].map(function (k) {
+        return '<button type="button" data-tf="' + k + '" class="' + (k === tf ? "on" : "") + '">' + TF[k].name + (k === "1h" ? " (แนะนำ)" : " (ทดลอง)") + "</button>";
+      }).join("") + "</div>";
+      if (results.length) {
+        // What the same rule did on these coins over the data just downloaded, in baht at 0.25% risk per trade.
+        var n = 0, sumR = 0, wins = 0;
+        results.forEach(function (x) { if (x.hist && x.hist.trades) { n += x.hist.trades; sumR += x.hist.trades * x.hist.exp_r; wins += x.hist.trades * x.hist.win_rate / 100; } });
+        var baht = sumR * money() * LOCK.riskPct / 100, days = Math.round(TF[tf].days - 270 * TF[tf].ms / 86400000);
+        head += '<div class="sm-bt ' + (n ? (baht > 0 ? "good" : "bad") : "") + '">ย้อนหลัง ' + days + " วัน ถ้าเข้าทุกสัญญาณ (12 เหรียญ): " +
+          (n ? "<b>" + (baht >= 0 ? "ได้ +" : "เสีย ") + fmt(baht, 0) + " ฿</b> · " + n + " ไม้ · ชนะ " + fmt(wins / n * 100, 0) + "%" : "ยังไม่มีไม้") +
+          (tf === "1h" ? "" : "<br><small>โหมดทดลอง: ยังไม่ผ่านงานวิจัย · เด้งเตือนเฉพาะตอนเปิดแอปไว้" + (n && baht <= 0 ? " · ผลย้อนหลังขาดทุน ไม่ควรใช้เงินจริง" : "") + "</small>") + "</div>";
+      }
       if (list.length) {
-        head = '<div class="sm-pick">' + list.map(function (x, i) {
+        head += '<div class="sm-pick">' + list.map(function (x, i) {
           var d = x.signal.dir > 0;
           return '<button type="button" class="' + (i === pick ? "on " : "") + (d ? "l" : "s") + '" data-pick="' + i + '">' + x.symbol.replace("USDT", "") + " " + (d ? "LONG" : "SHORT") + "</button>";
         }).join("") + "</div>" +
@@ -2182,10 +2203,17 @@ a{color:var(--accent)}
           (r.ai ? " · AI เช็กข่าว: " + esc(r.ai.verdict) : "") +
           (z.notional < (MIN_NOTIONAL[r.symbol] || 5) ? " · ถ้า Binance แจ้งว่าต่ำกว่าขั้นต่ำ ให้ข้ามไม้นี้" : "") + "</small></div>";
       } else {
-        head = '<div class="sm-wait"><b>' + (busyNow ? "กำลังเช็ก 12 เหรียญ…" : "ตอนนี้ยังไม่ต้องเทรด") + "</b><small>" +
-          (busyNow ? "ประมาณ 30 วินาที" : "แอปจะเด้งแจ้งเตือนเมื่อมีให้เทรด · เช็กรอบถัดไป " + thai(Math.floor(Date.now() / 3600000) * 3600000 + 3600000).slice(9) + " น.") + "</small></div>";
+        head += '<div class="sm-wait"><b>' + (busyNow ? "กำลังเช็ก 12 เหรียญ…" : "ตอนนี้ยังไม่ต้องเทรด") + "</b><small>" +
+          (busyNow ? "ประมาณ 30 วินาที" : "แอปจะเด้งแจ้งเตือนเมื่อมีให้เทรด · เช็กรอบถัดไป " + thai(Math.floor(Date.now() / TF[tf].ms) * TF[tf].ms + TF[tf].ms).slice(9) + " น.") + "</small></div>";
       }
       $("smMain").innerHTML = head + screen(r, g, z) + '<p class="sm-note" style="text-align:center">ภาพจำลองหน้า Binance Futures (ไม่ใช่แอปจริง) · ราคาจริงจาก Binance</p>';
+      Array.prototype.forEach.call(document.querySelectorAll("[data-tf]"), function (b) {
+        if (!b.closest("#smMain")) return;
+        b.onclick = function () {
+          try { localStorage.setItem("tradeTf", b.getAttribute("data-tf")); } catch (e) { /* ignore */ }
+          results = []; pick = 0; step = 0; schedule(); scan();
+        };
+      });
       Array.prototype.forEach.call(document.querySelectorAll("[data-pick]"), function (b) {
         b.onclick = function () { pick = +b.getAttribute("data-pick"); step = 0; draw(); };
       });
@@ -2249,7 +2277,7 @@ a{color:var(--accent)}
       if (simple) { $("smCap").value = money(); draw(); }
       window.scrollTo(0, 0);
     }
-    function busy() { busyNow = true; if (!signals().length) draw(); }
+    function busy() { busyNow = true; if (!signals().length) { results = []; draw(); } }
     function render(res, error, rate) {
       lastScan = Date.now(); busyNow = false;
       if (error) {
@@ -2264,7 +2292,7 @@ a{color:var(--accent)}
     }
     function schedule() {
       clearTimeout(timer);
-      var wait = 3600000 - (Date.now() % 3600000) + 45000;
+      var ms = TF[curTf()].ms, wait = ms - (Date.now() % ms) + (ms > 900000 ? 45000 : 15000);
       timer = setTimeout(function () { if (!document.hidden) scan(); schedule(); }, wait);
     }
     if (location.hash !== "#bg") {
@@ -2286,16 +2314,17 @@ a{color:var(--accent)}
   function futuresScan() {
     var results = [], errors = [], done = 0, fxInfo, end, lev = locked() ? LOCK.lev : Math.max(1, Math.min(125, readNumber("sgLev", 10)));
     var coins = COINS;   // every coin uses the same rules; only BTCUSDT was covered by the research
-    scanStatus("กำลังดึงแท่ง 1 ชม. และอัตราแลกเปลี่ยน…");
+    var tf = curTf(), tfMs = TF[tf].ms;
+    scanStatus("กำลังดึงแท่ง " + TF[tf].name + " และอัตราแลกเปลี่ยน…");
     return Promise.all([binance("/api/v3/time"), fetchFx()]).then(function (res) {
       fxInfo = res[1];
-      end = Math.floor(res[0].serverTime / 3600000) * 3600000;
-      var start = end - 100 * 86400000, queue = coins.slice();
+      end = Math.floor(res[0].serverTime / tfMs) * tfMs;
+      var start = end - TF[tf].days * 86400000, queue = coins.slice();
       function worker() {
         var s = queue.shift();
         if (!s) return Promise.resolve();
-        return fetchCandles(s, start, end, function () {}, "1h").then(function (bars) {
-          results.push(futuresCard(s, bars, fxInfo.rate, lev));
+        return fetchCandles(s, start, end, function () {}, tf).then(function (bars) {
+          results.push(futuresCard(s, bars, fxInfo.rate, lev, tf));
         }).catch(function (e) { errors.push(s.replace("USDT", "") + ": " + e.message); }).then(function () {
           done++; scanStatus("สแกนแล้ว " + done + "/" + coins.length + " เหรียญ…");
           return worker();
@@ -2310,12 +2339,13 @@ a{color:var(--accent)}
     }).then(function () {
       Simple.render(results, null, fxInfo.rate);
       reportScan(results, end, null);
-      scanStatus("สแกนล่าสุด " + thai(Date.now()) + " น. · แท่ง 1 ชม. ที่ปิดเมื่อ " + thai(end) + " น. · ราคาจาก Binance Spot ใช้แทน Futures (ต่างกันเล็กน้อย)" +
+      scanStatus("สแกนล่าสุด " + thai(Date.now()) + " น. · แท่ง " + TF[tf].name + " ที่ปิดเมื่อ " + thai(end) + " น. · ราคาจาก Binance Spot ใช้แทน Futures (ต่างกันเล็กน้อย)" +
         (errors.length ? "\nข้ามบางเหรียญ: " + errors.join(" · ") : ""), !results.length);
     });
   }
 
-  function futuresCard(symbol, bars, fx, lev) {
+  function futuresCard(symbol, bars, fx, lev, tf) {
+    var tfMs = TF[tf || "1h"].ms;
     var opt = Object.assign({}, Swing.DEFAULTS, { fee: FUT.fee, slippage: FUT.slippage, fomcDates: locked() ? fomcDates() : [] }), n = bars.length;
     var ind = Swing.indicators(bars, opt), last = bars[n - 1];
     var tech = locked() ? LOCK.tech : $("sgStrat").value, spec = Swing.TECHNIQUES.filter(function (t) { return t.id === tech; })[0];
@@ -2351,8 +2381,8 @@ a{color:var(--accent)}
     out.signal = { dir: dir, entry: entry, stop: entry - dir * dist, tps: [1, 2, 5].map(function (r) { return entry + dir * r * dist; }),
       qty: +qty.toPrecision(4), notional: notional, margin: notional / rec, liq: liq, riskUsdt: riskUsdt, lev: rec, levLiq: levLiq,
       sliderPct: notional / rec * (1 + FUT.fee * rec) / balance * 100, balanceUsdt: balance,
-      sizeLimited: sizeLimited, expires: last.close_time + 1 + FUT.enterWithinMin * 60000, stopPct: stopFrac * 100,
-      trend: out.trend, hist: hist, stratName: spec.name, hold: spec.hold, stopAtr: spec.stopAtr || 2.5 };
+      sizeLimited: sizeLimited, expires: last.close_time + 1 + Math.min(FUT.enterWithinMin * 60000, tfMs), stopPct: stopFrac * 100,
+      trend: out.trend, hist: hist, stratName: spec.name, hold: spec.hold * tfMs / 3600000, tf: tf || "1h", stopAtr: spec.stopAtr || 2.5 };
     return out;
   }
 
