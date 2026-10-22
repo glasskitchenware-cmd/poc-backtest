@@ -570,9 +570,62 @@ a{color:var(--accent)}
       { daily: true, max_holding_minutes: 1440, flatten_minutes_before_utc_day_end: 0 }],
     ["daily_poc_hold", "POC เฉพาะขาขึ้นรายวัน · ถือจนชน stop/เป้า · 1R", "poc", 1.0, true, false, { daily: true }],
     ["daily_pullback_swing", "ย่อ EMA20 ขาขึ้นรายวัน · 2R · ถือ ≤ 1 วัน", "pullback", 2.0, true, false,
-      { daily: true, max_holding_minutes: 1440, flatten_minutes_before_utc_day_end: 0 }]
+      { daily: true, max_holding_minutes: 1440, flatten_minutes_before_utc_day_end: 0 }],
+    ["rsi2_dip", "ย่อแรง RSI(2)<10 รายชม. · ขายเมื่อเด้งเหนือ SMA5", "rsi2", 10.0, true, true,
+      { daily: true, rsi_max: 10, stop_atr: 6.0, max_holding_minutes: 2880, flatten_minutes_before_utc_day_end: 0 }],
+    ["rsi2_deep", "ย่อแรงมาก RSI(2)<5 รายชม. · ขายเมื่อเด้งเหนือ SMA5", "rsi2", 10.0, true, true,
+      { daily: true, rsi_max: 5, stop_atr: 6.0, max_holding_minutes: 2880, flatten_minutes_before_utc_day_end: 0 }],
+    ["bb_dip", "ปิดใต้ Bollinger ล่าง · ขายเมื่อกลับเส้นกลาง", "bb", 10.0, true, true,
+      { daily: true, stop_atr: 4.0, max_holding_minutes: 1440, flatten_minutes_before_utc_day_end: 0 }]
   ];
   var BREAKOUT_BARS = 96;
+
+  // Per bar: hourly RSI(2), SMA5 and close of the last complete hour (<= 45 min old), and
+  // whether that hour completed on this bar. Same arithmetic as bot/research.py.
+  function hourlyRsi2(base) {
+    var hours = [];
+    base.forEach(function (r) {
+      var label = Math.ceil((r.close_time + 1) / HOUR_MS) * HOUR_MS, last = hours[hours.length - 1];
+      if (!last || last.label !== label) { last = { label: label, count: 0, close: NaN }; hours.push(last); }
+      last.count++; last.close = r.close;
+    });
+    var complete = hours.filter(function (h) { return h.count === 4; });
+    var closes = complete.map(function (h) { return h.close; });
+    var delta = closes.map(function (c, k) { return k ? c - closes[k - 1] : NaN; });
+    var up = ewm(delta.map(function (d) { return isNaN(d) ? NaN : Math.max(d, 0); }), 0.5, 2);
+    var down = ewm(delta.map(function (d) { return isNaN(d) ? NaN : -Math.min(d, 0); }), 0.5, 2);
+    var rsi = up.map(function (u, k) {
+      var d = down[k];
+      if (isNaN(u) || isNaN(d)) return NaN;
+      if (d === 0) return u > 0 ? 100 : 50;
+      return 100 - 100 / (1 + u / d);
+    });
+    var sma = closes.map(function (c, k) {
+      if (k < 4) return NaN;
+      var sum = 0;
+      for (var q = k - 4; q <= k; q++) sum += closes[q];
+      return sum / 5;
+    });
+    var out = [], j = -1;
+    base.forEach(function (r) {
+      var at = r.close_time + 1;
+      while (j + 1 < complete.length && complete[j + 1].label <= at) j++;
+      if (j >= 0 && at - complete[j].label <= 45 * 60000) out.push([rsi[j], sma[j], closes[j], at === complete[j].label]);
+      else out.push([NaN, NaN, NaN, false]);
+    });
+    return out;
+  }
+
+  function bollinger(base) {
+    return base.map(function (r, i) {
+      if (i < 19) return [NaN, NaN];
+      var sum = 0, sq = 0, k;
+      for (k = i - 19; k <= i; k++) sum += base[k].close;
+      var mean = sum / 20;
+      for (k = i - 19; k <= i; k++) sq += Math.pow(base[k].close - mean, 2);
+      return [mean, mean - 2 * Math.sqrt(sq / 19)];
+    });
+  }
 
   // Last complete UTC day closed above its daily EMA50; known only after that day ends.
   function dailyUptrend(base) {
@@ -614,18 +667,23 @@ a{color:var(--accent)}
     return out;
   }
 
-  function variantRows(base, rule, calm, signalExit, daily) {
+  function variantRows(base, rule, calm, signalExit, daily, rsiMax) {
     var typical = calm ? priorRollingMedian(base.map(function (r) { return r.atr; }), VOL_LOOKBACK) : null;
     var breakouts = rule === "breakout" ? breakout(base) : null, dailyUp = daily ? dailyUptrend(base) : null;
+    var hourly = rule === "rsi2" ? hourlyRsi2(base) : null, bands = rule === "bb" ? bollinger(base) : null;
     return base.map(function (r, i) {
       var pullback = r.trend_confirmed && !isNaN(r.ema20) && !isNaN(r.atr) && r.atr > 0 && r.low <= r.ema20 &&
         r.close > r.ema20 && r.close > r.open && r.rsi >= 40 && r.rsi <= 65;
-      var entry = rule === "poc" ? r.entry : rule === "pullback" ? pullback : rule === "breakout" ? breakouts[i] : (r.entry || pullback);
+      var entry = rule === "poc" ? r.entry : rule === "pullback" ? pullback : rule === "breakout" ? breakouts[i] :
+        rule === "rsi2" ? (!!r.trend_confirmed && hourly[i][3] && hourly[i][0] < rsiMax) :
+        rule === "bb" ? (!!r.trend_confirmed && r.atr > 0 && r.close < bands[i][1]) : (r.entry || pullback);
       if (daily) entry = entry && dailyUp[i];
       if (calm) entry = entry && r.atr <= VOL_RATIO * typical[i];
       var row = Object.assign({}, r);
       row.entry = !!entry;
       if (!signalExit) row.exit = false;
+      if (rule === "rsi2") row.exit = hourly[i][3] && hourly[i][2] > hourly[i][1];
+      if (rule === "bb") row.exit = r.close > bands[i][0];
       return row;
     });
   }
@@ -664,8 +722,9 @@ a{color:var(--accent)}
     return VARIANTS.map(function (v) {
       var rows = {};
       var options = Object.assign({}, v[6] || {}), daily = !!options.daily;
-      delete options.daily;
-      cfg.symbols.forEach(function (s) { rows[s] = variantRows(prepared[s], v[2], v[4], v[5], daily); });
+      var rsiMax = options.rsi_max === undefined ? 10 : options.rsi_max;
+      delete options.daily; delete options.rsi_max;
+      cfg.symbols.forEach(function (s) { rows[s] = variantRows(prepared[s], v[2], v[4], v[5], daily, rsiMax); });
       return { name: v[0], description: v[1], prepared: rows, config: Object.assign({}, cfg, { take_profit_r: v[3] }, options) };
     });
   }
