@@ -21,6 +21,9 @@ jobs:
       - name: Use the same page as the website
         run: cp index.html android/app/src/main/assets/index.html
 
+      - name: Verify UI JavaScript and alert settings
+        run: python3 tools/check_embedded_js.py
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
