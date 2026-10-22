@@ -134,6 +134,11 @@ a{color:var(--accent)}
 
 <div id="results" class="hidden">
   <section>
+    <h2>สัญญาณที่ดีที่สุดหลังทดสอบ</h2>
+    <div id="bestBox"></div>
+  </section>
+
+  <section>
     <h2>ผลช่วง Holdout <small id="holdoutRange"></small></h2>
     <div class="hero" id="hero"></div>
     <div class="notice"><ul id="warnings" style="margin:0;padding-left:18px"></ul></div>
@@ -147,7 +152,7 @@ a{color:var(--accent)}
   </section>
 
   <section>
-    <h2>เทียบ 7 กลยุทธ์</h2>
+    <h2>เทียบทุกกลยุทธ์</h2>
     <p class="muted" style="margin:0 0 10px;font-size:13px" id="researchVerdict"></p>
     <div style="overflow-x:auto"><table><thead><tr><th>กลยุทธ์</th><th>Dev win</th><th>Dev PF</th><th>Val ไม้</th><th>Val win</th><th>Val PF</th></tr></thead><tbody id="variants"></tbody></table></div>
   </section>
@@ -560,8 +565,37 @@ a{color:var(--accent)}
     ["ema20_pullback", "ย่อ EMA20 · เป้า 1R", "pullback", 1.0, true, true],
     ["pullback_or_poc", "POC หรือย่อ EMA20 · เป้า 1.2R", "either", 1.2, true, true],
     ["poc_hold", "POC · ถือจนชน stop/เป้า · 1R", "poc", 1.0, true, false],
-    ["pullback_hold", "ย่อ EMA20 · ถือจนชน stop/เป้า · 1R", "pullback", 1.0, true, false]
+    ["pullback_hold", "ย่อ EMA20 · ถือจนชน stop/เป้า · 1R", "pullback", 1.0, true, false],
+    ["trend_breakout", "Breakout 24 ชม. ขาขึ้นรายวัน · 2R · ถือ ≤ 1 วัน", "breakout", 2.0, true, false,
+      { daily: true, max_holding_minutes: 1440, flatten_minutes_before_utc_day_end: 0 }],
+    ["daily_poc_hold", "POC เฉพาะขาขึ้นรายวัน · ถือจนชน stop/เป้า · 1R", "poc", 1.0, true, false, { daily: true }],
+    ["daily_pullback_swing", "ย่อ EMA20 ขาขึ้นรายวัน · 2R · ถือ ≤ 1 วัน", "pullback", 2.0, true, false,
+      { daily: true, max_holding_minutes: 1440, flatten_minutes_before_utc_day_end: 0 }]
   ];
+  var BREAKOUT_BARS = 96;
+
+  // Last complete UTC day closed above its daily EMA50; known only after that day ends.
+  function dailyUptrend(base) {
+    var days = [];
+    base.forEach(function (r) {
+      var day = Math.floor(r.time / DAY_MS), last = days[days.length - 1];
+      if (!last || last.day !== day) { last = { day: day, count: 0, close: NaN }; days.push(last); }
+      last.count++; last.close = r.close;
+    });
+    var complete = days.filter(function (d) { return d.count === 96; });
+    var ema = ewm(complete.map(function (d) { return d.close; }), 2 / 51, 50), up = {};
+    complete.forEach(function (d, k) { up[d.day] = !isNaN(ema[k]) && d.close > ema[k]; });
+    return base.map(function (r) { return !!up[Math.floor((r.close_time + 1) / DAY_MS) - 1]; });
+  }
+
+  function breakout(base) {
+    return base.map(function (r, i) {
+      if (i < BREAKOUT_BARS) return false;
+      var prior = -Infinity;
+      for (var k = i - BREAKOUT_BARS; k < i; k++) if (base[k].high > prior) prior = base[k].high;
+      return r.trend_confirmed && r.atr > 0 && r.close > prior;
+    });
+  }
   var VOL_LOOKBACK = 2880, VOL_RATIO = 2.5, MIN_VALIDATION_TRADES = 30;
   var WF_STEP = 2880, WF_LOOKBACK = 8640, WF_MIN_TRADES = 10;
 
@@ -580,12 +614,14 @@ a{color:var(--accent)}
     return out;
   }
 
-  function variantRows(base, rule, calm, signalExit) {
+  function variantRows(base, rule, calm, signalExit, daily) {
     var typical = calm ? priorRollingMedian(base.map(function (r) { return r.atr; }), VOL_LOOKBACK) : null;
+    var breakouts = rule === "breakout" ? breakout(base) : null, dailyUp = daily ? dailyUptrend(base) : null;
     return base.map(function (r, i) {
       var pullback = r.trend_confirmed && !isNaN(r.ema20) && !isNaN(r.atr) && r.atr > 0 && r.low <= r.ema20 &&
         r.close > r.ema20 && r.close > r.open && r.rsi >= 40 && r.rsi <= 65;
-      var entry = rule === "poc" ? r.entry : rule === "pullback" ? pullback : (r.entry || pullback);
+      var entry = rule === "poc" ? r.entry : rule === "pullback" ? pullback : rule === "breakout" ? breakouts[i] : (r.entry || pullback);
+      if (daily) entry = entry && dailyUp[i];
       if (calm) entry = entry && r.atr <= VOL_RATIO * typical[i];
       var row = Object.assign({}, r);
       row.entry = !!entry;
@@ -627,8 +663,10 @@ a{color:var(--accent)}
   function buildVariants(prepared, cfg) {
     return VARIANTS.map(function (v) {
       var rows = {};
-      cfg.symbols.forEach(function (s) { rows[s] = variantRows(prepared[s], v[2], v[4], v[5]); });
-      return { name: v[0], description: v[1], prepared: rows, config: Object.assign({}, cfg, { take_profit_r: v[3] }) };
+      var options = Object.assign({}, v[6] || {}), daily = !!options.daily;
+      delete options.daily;
+      cfg.symbols.forEach(function (s) { rows[s] = variantRows(prepared[s], v[2], v[4], v[5], daily); });
+      return { name: v[0], description: v[1], prepared: rows, config: Object.assign({}, cfg, { take_profit_r: v[3] }, options) };
     });
   }
 
@@ -943,6 +981,27 @@ a{color:var(--accent)}
       $("wfWindows").innerHTML = "";
     }
     var h = rs.chosen_holdout && rs.chosen_holdout.metrics;
+    // Verdict: chosen on validation and confirmed once on holdout; plus what walk-forward picked most.
+    var counts = {};
+    (wf ? wf.windows : []).forEach(function (w) { if (w.variant) counts[w.variant] = (counts[w.variant] || 0) + 1; });
+    var favourite = Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a]; })[0];
+    var passed = h && h.trade_count >= 30 && h.return_pct > 0 && (h.profit_factor || 0) > 1;
+    var wfOk = wf && wf.metrics.trade_count >= 30 && wf.metrics.return_pct > 0;
+    var box;
+    if (passed) {
+      box = '<div class="banner go">ผู้ชนะ: ' + esc(VARIANT_NAMES[rs.chosen]) + "</div><small>เลือกจากช่วง Valid แล้วผ่าน Holdout ที่ไม่เคยใช้: " +
+        h.trade_count + " ไม้ · win " + fmt(h.win_rate_pct, 1) + "% · กำไร " + fmt(h.return_pct, 2, true) + "% · PF " + fmt(h.profit_factor, 2) +
+        " · Max DD " + fmt(h.max_drawdown_pct, 1) + "%<br>ขั้นต่อไป: ตามสัญญาณด้วยเงินจำลองหรือเงินน้อย 1–2 เดือน แล้วเทียบผลจริงกับตัวเลขนี้</small>";
+    } else if (rs.chosen) {
+      box = '<div class="banner wait">ยังไม่มีผู้ชนะ</div><small>' + esc(VARIANT_NAMES[rs.chosen]) + " ดีที่สุดในช่วง Valid แต่ตกช่วง Holdout (" +
+        fmt(h.trade_count, 0) + " ไม้ · " + fmt(h.return_pct, 2, true) + "% · PF " + fmt(h.profit_factor, 2) + ") — ข้อได้เปรียบไม่คงที่ ยังไม่ควรใช้เงินจริง</small>";
+    } else {
+      box = '<div class="banner wait">ยังไม่มีผู้ชนะ</div><small>ไม่มีกลยุทธ์ไหนกำไรเฉลี่ยต่อไม้เป็นบวกทั้งช่วง Dev และ Valid — ช่วงข้อมูลนี้ยังไม่พบสัญญาณที่ได้เปรียบ ลองเลือก 730 วัน หรือรอข้อมูลเพิ่ม</small>';
+    }
+    box += '<p class="muted" style="font-size:13px;margin:8px 0 0">Walk-forward: ' + (wf ? (wfOk ? "<span class=\"up\">กำไร</span> " : "ยังไม่ผ่าน ") +
+      fmt(wf.metrics.return_pct, 2, true) + "% จาก " + wf.metrics.trade_count + " ไม้" +
+      (favourite ? " · ถูกเลือกบ่อยสุด: " + esc(VARIANT_NAMES[favourite]) + " (" + counts[favourite] + "/" + wf.windows.length + " รอบ)" : " · ถือเงินสดทุกรอบ") : "ข้อมูลไม่พอ") + "</p>";
+    $("bestBox").innerHTML = box;
     $("researchVerdict").innerHTML = !rs.chosen
       ? "ไม่มีกลยุทธ์ไหนผ่านเกณฑ์ (กำไรเฉลี่ยต่อไม้เป็นบวกทั้ง Dev และ Valid และ Valid ≥ 30 ไม้) — ยังไม่ควรใช้เงินจริง"
       : "เลือกจาก Valid: <b>" + esc(VARIANT_NAMES[rs.chosen]) + "</b> → ทดสอบ Holdout ครั้งเดียว: " + fmt(h.trade_count, 0) + " ไม้ · win " +
