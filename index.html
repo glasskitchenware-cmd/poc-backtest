@@ -82,6 +82,16 @@ body.has-guide main{padding-bottom:calc(150px + env(safe-area-inset-bottom,0px))
 .bx .n{position:absolute;top:-8px;right:-6px;width:22px;height:22px;border-radius:50%;background:#f0b90b;color:#181a20;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #181a20}
 .bx .hl{outline:2px solid #f0b90b;outline-offset:1px}
 .bx-steps{margin:10px 0 0;padding-left:0;list-style:none;font-size:14px}.bx-steps li{display:flex;gap:8px;margin:6px 0}.bx-steps b.k{flex:none;width:22px;height:22px;border-radius:50%;background:#f0b90b;color:#181a20;font-size:12px;display:flex;align-items:center;justify-content:center}
+.cvhead{display:flex;justify-content:space-between;align-items:center;gap:10px}.cvhead small{display:block;margin-top:2px}#cvPrice{font-size:24px;font-variant-numeric:tabular-nums}
+.symsel{width:auto;background:none;border:0;padding:0 18px 0 0;font-size:20px;font-weight:700}
+.tfbar{display:flex;gap:16px;margin:10px 0 4px;border-bottom:1px solid var(--line)}.tfbar button{width:auto;margin:0;padding:6px 0;background:none;color:var(--muted);border-radius:0;font-size:14px;border-bottom:2px solid transparent}.tfbar button.on{color:var(--ink);border-bottom-color:var(--yel)}
+.pos{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;margin:10px 0}.pos-hd{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.pos-hd b{font-size:16px}
+.pos .side{width:20px;height:20px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff}.pos .side.l{background:var(--up)}.pos .side.s{background:var(--down)}
+.pos .tag{font-size:11px;padding:1px 6px;border-radius:4px;background:var(--deep);color:var(--muted)}
+.pos-pnl{display:flex;justify-content:space-between;margin:10px 0}.pos-pnl b{display:block;font-size:20px;font-variant-numeric:tabular-nums}
+.pos-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 6px}.pos-grid b{display:block;font-size:13.5px;font-variant-numeric:tabular-nums}.pos-grid div:nth-child(3n){text-align:right}.pos-grid div:nth-child(3n+2){text-align:center}
+.pos-tpsl{margin:10px 0 4px;font-size:13px;color:var(--muted)}.warn{color:var(--yel)}
+.coin .tag{font-size:11px;padding:1px 6px;border-radius:4px;background:var(--deep);color:var(--muted)}.mrow{display:flex;align-items:center;gap:6px;margin-top:4px}.mrow b{font-size:22px;font-variant-numeric:tabular-nums}.mrow .mini{margin:0 0 0 auto}
 .inline{display:flex;gap:8px;align-items:center;margin-top:8px}.inline input{flex:1;min-width:0}
 #status.err{color:var(--down)}
 .hero{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
@@ -180,10 +190,9 @@ a{color:var(--accent)}
 
 <div id="chartTab" class="hidden">
 <section style="padding:10px">
-  <div class="row">
-    <div><label for="cvSymbol">เหรียญ</label><select id="cvSymbol"></select></div>
-    <div><label for="cvTf">Timeframe</label><select id="cvTf"><option value="15m">15 นาที</option><option value="1h">1 ชม.</option><option value="4h" selected>4 ชม.</option><option value="1d">1 วัน</option></select></div>
-  </div>
+  <div class="cvhead"><div><select id="cvSymbol" class="symsel"></select><small id="cvChg">—</small></div><b id="cvPrice">—</b></div>
+  <div class="tfbar" id="cvTfBar"><button data-tf="15m">15m</button><button data-tf="1h">1H</button><button data-tf="4h" class="on">4H</button><button data-tf="1d">1D</button></div>
+  <select id="cvTf" class="hidden"><option value="15m">15 นาที</option><option value="1h">1 ชม.</option><option value="4h" selected>4 ชม.</option><option value="1d">1 วัน</option></select>
   <div class="checks" style="flex-wrap:wrap;gap:10px;margin-top:8px;font-size:13px">
     <label><input type="checkbox" id="cvEma" checked> EMA 20/50/200</label>
     <label><input type="checkbox" id="cvFib" checked> Fibonacci</label>
@@ -1917,16 +1926,6 @@ a{color:var(--accent)}
         ["Max DD", fmt(dd * 100, 2) + "%", "งานวิจัย 2025: 2.52%"]
       ].map(function (c) { return '<div class="stat"><small>' + c[0] + "</small><b>" + c[1] + "</b><small>" + c[2] + "</small></div>"; }).join("");
       var reason = { stop: "SL", stop_gap: "SL (gap)", target: "TP5R", target_gap: "TP5R", time: "ครบ 48 ชม." };
-      var openHtml = "";
-      if (open) {
-        var now = bars[bars.length - 1].close, side = open.side === "long" ? 1 : -1, risk = Math.abs(open.entry - open.stop);
-        var tps3 = [1, 2, 5].map(function (k) { return open.entry + side * k * risk; });
-        openHtml = '<div class="coin go"><div class="coin-head"><b>ไม้ที่ถืออยู่ตอนนี้ (จำลอง)</b><span class="pill go">' + (open.side === "long" ? "ซื้อ" : "ขาย") + " 10x</span></div>" +
-          '<div class="levels"><div><small>เข้า</small><b>' + price(open.entry) + '</b></div><div><small>SL</small><b class="down">' + price(open.stop) +
-          '</b></div><div><small>TP1 · TP2 · TP3</small><b class="up" style="font-size:13px">' + tps3.map(price).join("<br>") + "</b></div></div>" +
-          "<small>เข้าเมื่อ " + thai(open.entry_time) + " · ปิดภายใน " + thai(open.entry_time + 47 * 3600000) + " · ตอนนี้ " + price(now) + " (" +
-          fmt(side * (now - open.entry) / risk, 2, true) + "R ยังไม่รวมต้นทุน)</small></div>";
-      }
       // Plain-language view in baht: what the user's own capital would be now.
       var capital = readNumber("pfCapital", 10000), money = capital, curve = [{ time: Math.floor(startMs / 1000) + THAI_OFFSET_S, value: capital }];
       var rows = closed.map(function (t) {
@@ -1970,6 +1969,22 @@ a{color:var(--accent)}
       }
       var sideTh = function (side) { return side === "long" ? "ซื้อ (Long)" : "ขาย (Short)"; };
       var why = { stop: "โดนตัดขาดทุน", stop_gap: "โดนตัดขาดทุน", target: "ถึงเป้ากำไร", target_gap: "ถึงเป้ากำไร", time: "ครบ 48 ชม. ปิดเอง" };
+      var openHtml = "";
+      if (open) {
+        // Binance "Positions" card: sized from the simulated balance with the same risk rule as the closed trades.
+        var now = bars[bars.length - 1].close, side = open.side === "long" ? 1 : -1, risk = Math.abs(open.entry - open.stop);
+        var riskB = money * Math.min(LOCK.riskPct / 100, LOCK.marginShare * LOCK.lev * risk / open.entry), qty = riskB / risk;
+        var marginB = qty * open.entry / LOCK.lev, pnlB = side * (now - open.entry) * qty, roi = marginB ? pnlB / marginB * 100 : 0;
+        var liq = open.entry * (1 - side * (1 / LOCK.lev - 0.005)), pc = pnlB >= 0 ? "up" : "down";
+        var cell = function (k, v, cls) { return "<div><small>" + k + '</small><b class="' + (cls || "") + '">' + v + "</b></div>"; };
+        openHtml = '<div class="pos"><div class="pos-hd"><span class="side ' + (side > 0 ? "l" : "s") + '">' + (side > 0 ? "L" : "S") + "</span><b>" + LOCK.symbol +
+          '</b> <small>Perp</small><span class="tag">Isolated ' + LOCK.lev + 'x</span><span class="tag">จำลอง</span></div>' +
+          '<div class="pos-pnl"><div><small>Unrealized PNL (฿)</small><b class="' + pc + '">' + fmt(pnlB, 2, true) + '</b></div><div style="text-align:right"><small>ROI</small><b class="' + pc + '">' + fmt(roi, 2, true) + "%</b></div></div>" +
+          '<div class="pos-grid">' + cell("ขนาด (฿)", fmt(qty * open.entry, 0)) + cell("Margin (฿)", fmt(marginB, 2)) + cell("Risk", fmt(side * (now - open.entry) / risk, 2, true) + "R", pc) +
+          cell("Entry Price", price(open.entry)) + cell("Mark Price", price(now)) + cell("Liq. Price", price(liq), "warn") + "</div>" +
+          '<div class="pos-tpsl">TP/SL <span class="up">' + price(open.entry + side * 5 * risk) + '</span> / <span class="down">' + price(open.stop) + "</span></div>" +
+          "<small>เข้าเมื่อ " + thai(open.entry_time) + " · ปิดเองภายใน " + thai(open.entry_time + 47 * 3600000) + "</small></div>";
+      }
       $("ppTrades").innerHTML = openHtml + rows.slice(-30).reverse().map(function (x) {
         return '<div class="trade"><div><b>' + sideTh(x.t.side) + "</b><br><small>" + thai(x.t.entry_time).slice(0, 8) + " · " + (why[x.t.reason] || x.t.reason) +
           '</small></div><div class="' + tone(x.baht) + '" style="font-weight:600">' + (x.baht >= 0 ? "ได้ +" : "เสีย ") + fmt(x.baht, 0) + " ฿</div></div>";
@@ -2141,8 +2156,8 @@ a{color:var(--accent)}
       }
       var stats = h.trades ? "<br><small>สูตรนี้กับ " + name + " 100 วันล่าสุด: " + h.trades + " ไม้ · win " + fmt(h.win_rate, 0) + "% · เฉลี่ย " + fmt(h.exp_r, 2, true) + "R</small>" :
         "<br><small>100 วันล่าสุดยังไม่มีสัญญาณในเหรียญนี้</small>";
-      return '<div class="coin' + (g ? " go" : "") + '"><div class="coin-head"><b>' + name + "</b>" + pill + "</div><small>ราคา " + price(r.close) +
-        ' USDT</small> <button class="mini ghost" data-chart="' + r.symbol + '">ดูกราฟ</button>' + stats + body + "</div>";
+      return '<div class="coin' + (g ? " go" : "") + '"><div class="coin-head"><span><b>' + r.symbol + '</b> <small class="tag">Perp</small></span>' + pill + "</div>" +
+        '<div class="mrow"><b class="' + (r.trend > 0 ? "up" : r.trend < 0 ? "down" : "") + '">' + price(r.close) + '</b> <small>USDT</small> <button class="mini ghost" data-chart="' + r.symbol + '">ดูกราฟ</button></div>' + stats + body + "</div>";
     }).join("");
     bindCardButtons();
     var plan = Portfolio.plan();
@@ -2508,6 +2523,21 @@ a{color:var(--accent)}
     $("cvSymbol").innerHTML = COINS.map(function (c) { return '<option value="' + c + '">' + c.replace("USDT", "/USDT") + "</option>"; }).join("");
     $("cvSymbol").onchange = function () { symbol = $("cvSymbol").value; load(); };
     $("cvTf").onchange = function () { tf = $("cvTf").value; load(); };
+    Array.prototype.forEach.call($("cvTfBar").children, function (b) {
+      b.onclick = function () {
+        Array.prototype.forEach.call($("cvTfBar").children, function (x) { x.classList.toggle("on", x === b); });
+        $("cvTf").value = b.getAttribute("data-tf"); tf = $("cvTf").value; load();
+      };
+    });
+    // Binance-style header: last price coloured by the 24h change.
+    setInterval(function () {
+      if (!bars || !bars.length) return;
+      var last = bars[bars.length - 1], ref = bars.filter(function (b) { return b.time <= last.time - 86400000; }).pop() || bars[0];
+      var chg = (last.close / ref.open - 1) * 100, cls = chg >= 0 ? "up" : "down";
+      $("cvPrice").textContent = last.close.toLocaleString("en-US", { maximumFractionDigits: last.close >= 100 ? 2 : 4 });
+      $("cvPrice").className = cls;
+      $("cvChg").innerHTML = '24h <span class="' + cls + '">' + (chg >= 0 ? "+" : "") + chg.toFixed(2) + "%</span>";
+    }, 1000);
     ["cvEma", "cvFib", "cvTrend", "cvBb"].forEach(function (id) { $(id).onchange = function () { if (bars.length) draw(false); }; });
     window.addEventListener("resize", function () {
       if (chart) { chart.applyOptions({ width: $("cvChart").clientWidth }); rsiChart.applyOptions({ width: $("cvRsi").clientWidth }); }
