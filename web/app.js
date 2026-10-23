@@ -632,13 +632,12 @@
         b.onclick = function () { var list = keys(); list.splice(+b.getAttribute("data-delkey"), 1); saveKeys(list); };
       });
     }
-    function addKey(text) {
-      var k = (text || "").trim();
-      if (!/^AIza[0-9A-Za-z_-]{20,}$/.test(k)) return false;
-      var a = keys();
-      if (a.indexOf(k) < 0) a.push(k);
-      saveKeys(a);
-      return true;
+    // Adds every Gemini key found in the text (one or many, any separators); returns how many were new.
+    function addKeys(text) {
+      var found = String(text || "").match(/AIza[0-9A-Za-z_-]{35}/g) || [], a = keys(), added = 0;
+      found.forEach(function (k) { if (a.indexOf(k) < 0) { a.push(k); added++; } });
+      if (found.length) saveKeys(a);
+      return { found: found.length, added: added };
     }
     var FALLBACK = "gemini-flash-latest";
     function model() { return ($("aiModel").value || FALLBACK).trim(); }
@@ -775,11 +774,16 @@
         try { localStorage.setItem(id, id === "aiAuto" ? ($(id).checked ? "1" : "0") : $(id).value.trim()); } catch (e) { /* ignore */ }
       });
     });
+    var keysAdded = function (res, where) {
+      if (!res.found) { status("ไม่พบคีย์ที่ขึ้นต้นด้วย AIza ใน" + where, true); return; }
+      status("พบ " + res.found + " คีย์ · เพิ่มใหม่ " + res.added + " · มีทั้งหมด " + keys().length + " คีย์ · กดทดสอบคีย์ได้เลย");
+    };
+    $("aiKeysAdd").onclick = function () {
+      keysAdded(addKeys($("aiKeysBox").value), "ช่องที่วาง");
+      $("aiKeysBox").value = "";   // keys are kept only in the masked list, not left visible in the box
+    };
     $("aiPaste").onclick = function () {
-      var done = function (text) {
-        if (!addKey(text)) { status("ในคลิปบอร์ดยังไม่มีคีย์ที่ขึ้นต้นด้วย AIza · ไปกด ① คัดลอกคีย์ก่อน", true); return; }
-        status("เพิ่มคีย์แล้ว (" + keys().length + " คีย์) · กดทดสอบคีย์ได้เลย");
-      };
+      var done = function (text) { keysAdded(addKeys(text), "คลิปบอร์ด · คัดลอกคีย์ก่อน หรือวางในช่องด้านล่าง"); };
       if (window.NativeHttp && window.NativeHttp.clipboard) { done(window.NativeHttp.clipboard()); return; }
       if (navigator.clipboard && navigator.clipboard.readText) navigator.clipboard.readText().then(done, function () { done(""); });
       else done("");
@@ -1188,8 +1192,9 @@
       else {
         var z = sized(lg), tp1 = it.tpLevels[0];
         join = '<span class="up">เข้าตามได้</span>' + (v.avgRCI && v.avgRCI[0] <= 0 ? " (ผลทดสอบบวกน้อย ไม่ชัด)" : "") + " ที่ ≈ " + price(lg.entry) + " · SL เดิม " + price(lg.stop) + " · " + (tp1 ? "TP1 เดิม " + price(tp1.price) + " (R:R " + fmt(Math.abs(tp1.price - lg.entry) / lg.dist, 1) + ")" : "ไม่มี TP") +
-          "<br>Isolated " + lg.lev + "x · " + qtyTxt(z.qty) + " " + r.symbol.replace("USDT", "") + (lg.minSize ? " (ขั้นต่ำ Binance)" : "") + " · Margin ≈ " + fmt(z.marginB, 0) + " ฿ · โดน SL เสีย ≈ " +
-          fmt(z.lossB, 0) + " ฿ (" + fmt(z.lossB / cap * 100, 2) + "%)<br><small>ทดสอบเข้าช้า " + v.bars + " แท่ง: " + v.n + " ไม้ · ชนะ " + v.win + "% · เฉลี่ย " + fmt(v.avgR, 2, true) + "R</small>";
+          "<br><b>x" + lg.lev + "</b> Isolated · <b>เสี่ยง " + fmt(z.lossB / cap * 100, 2) + "%</b> (≈ " + fmt(z.lossB, 0) + " ฿ ถ้าโดน SL) · Margin ≈ " + fmt(z.marginB, 0) + " ฿ · ขนาด " +
+          qtyTxt(z.qty) + " " + r.symbol.replace("USDT", "") + (lg.minSize ? " (ขั้นต่ำ Binance)" : "") + "<br><small>" + levWhy(lg) + "</small>" +
+          "<br><small>ทดสอบเข้าช้า " + v.bars + " แท่ง: " + v.n + " ไม้ · ชนะ " + v.win + "% · เฉลี่ย " + fmt(v.avgR, 2, true) + "R</small>";
       }
       return '<div class="sm-sum sm-sheet"><div class="sm-sheet-hd"><b>' + r.symbol.replace("USDT", "") + ' <small>เปิดอยู่ · เข้า ' + thai(it.entryTime) + '</small></b><span class="pill ' + (long ? "go" : "short") + '">' +
           (long ? "LONG" : "SHORT") + " " + fmt(it.r, 2, true) + "R</span></div><div class=\"sm-order\">" +
@@ -1239,6 +1244,17 @@
     // Everything about one trade: the signal, the price levels and take profits, the size in coins / USDT / baht at the
     // user's balance and risk, how often trades like it went right in the test (with its 95% range), and what the user
     // gets if it goes right or wrong.
+    // The three numbers to type and check in Binance: leverage, risk of the balance, margin.
+    function keyBox(g, z, cap) {
+      var cell = function (k, v, sub) { return "<div><small>" + k + "</small><b>" + v + "</b><small>" + sub + "</small></div>"; };
+      return '<div class="sm-key">' + cell("Leverage", "x" + g.lev, "Isolated") +
+        cell("ความเสี่ยงต่อไม้", fmt(z.lossB / cap * 100, 2) + "%", "≈ " + fmt(z.lossB, 0) + " ฿ ถ้าโดน SL") +
+        cell("Margin ที่วาง", fmt(z.marginB, 0) + " ฿", fmt(z.marginB / cap * 100, 1) + "% ของทุน") + "</div>";
+    }
+    function levWhy(g) {
+      return "SL ห่าง " + fmt(g.stopPct, 2) + "% → Leverage สูงสุดที่จุด Liquidation ยังไกลกว่า SL 1.5 เท่า = " + g.levLiq + "x · เพดานที่ตั้ง " + g.levCapUser + "x → ใช้ " + g.lev +
+        "x · Leverage ไม่เปลี่ยนเงินที่เสียถ้าโดน SL (กำหนดจาก % ความเสี่ยง) แค่เปลี่ยน Margin ที่ต้องวาง";
+    }
     function tradeSheet(r, g, z, tf, i) {
       var coin = r.symbol.replace("USDT", ""), long = g.dir > 0, cap = money(), usd = function (v) { return fmt(v, v < 10 ? 2 : 1) + " USDT"; };
       var row = function (k, v) { return "<div><span>" + k + "</span><b>" + v + "</b></div>"; }, sec = function (t) { return '<div class="sm-sec">' + t + "</div>"; };
@@ -1285,7 +1301,7 @@
             row("ไม้ที่ใช้คำนวณ", st.n + " ไม้ (" + coin + " · " + (trendLadder() ? "แบ่งขาย" : "ไม่ตั้ง TP") + ")")
           : row("ความมั่นใจ", "ยังไม่มีข้อมูลยืนยัน (ไม้ทดสอบน้อยกว่า 30)");
       return '<div class="sm-sum sm-sheet"><div class="sm-sheet-hd"><b>' + (i + 1) + ". " + r.symbol + ' <small>Perp</small></b><span class="pill ' + (long ? "go" : "short") + '">' +
-          (long ? "LONG" : "SHORT") + "</span></div><div class=\"sm-order\">" +
+          (long ? "LONG" : "SHORT") + "</span></div>" + keyBox(g, z, cap) + "<div class=\"sm-order\">" +
         sec("สัญญาณ") +
         row("ฝั่ง", '<span class="' + (long ? "up" : "down") + '">' + (long ? "LONG (Buy)" : "SHORT (Sell)") + "</span>") +
         row("สูตร", esc(g.stratName)) + row("กรอบเวลา", TF[tf].name) +
@@ -1299,7 +1315,9 @@
         row("Liquidation (ประมาณ)", price(g.liq) + " (" + dist(g.liq) + ")") +
         sec("ขนาดไม้ · ทุน " + fmt(cap, 0) + " ฿" + (risk ? " · เสี่ยง " + risk + "%/ไม้" : "")) +
         row("Margin mode", "Isolated") +
-        row("Leverage", g.lev + "x (เพดานที่เลือก " + g.levCapUser + "x · SL นี้ยอมได้ถึง " + g.levLiq + "x)") +
+        row("ทำไม x" + g.lev, levWhy(g)) +
+        row("ความเสี่ยง", g.minSize ? "จริง " + fmt(z.lossB / cap * 100, 2) + "% (ขนาดขั้นต่ำของ Binance) · ตั้งไว้ " + (risk || LOCK.riskPct) + "%"
+          : fmt(z.lossB / cap * 100, 2) + "% ของทุน ตามที่ตั้งไว้ (เปลี่ยนได้ในตั้งค่า \"เสี่ยงต่อไม้\")") +
         row("ขนาด (Size)", qtyTxt(z.qty) + " " + coin + (g.minSize ? " (ขั้นต่ำที่ Binance ยอม)" : "")) +
         row("มูลค่าสัญญา", usd(z.notional) + " ≈ " + fmt(z.notional * fx, 0) + " ฿") +
         row("Margin ที่ใช้", usd(marginU) + " ≈ " + fmt(z.marginB, 0) + " ฿ (" + fmt(z.marginB / cap * 100, 1) + "% ของทุน)") +
@@ -1833,6 +1851,7 @@
       tp2: tp ? pxDp(g.tps[1], g.dp) : g.ladder && g.ladder[1] ? pxDp(g.ladder[1].price, g.dp) : "",
       tp5: tp ? pxDp(g.tps[2], g.dp) : "", exit_rule: tp ? "" : g.exitRule, tp_plan: g.tpPlan || "",
       qty: String(g.qty), margin_usdt: g.margin.toFixed(2), margin_thb: String(Math.round(g.margin * fx)), risk_thb: String(Math.round(g.riskUsdt * fx)),
+      risk_pct: (g.riskUsdt * fx / Math.max(1e-9, Portfolio.plan().balance) * 100).toFixed(2),
       leverage: g.lev, leverage_cap: g.levCapUser, liq_est: pxDp(g.liq, g.dp), mark: g.mark ? pxDp(g.mark, g.dp) : "",
       rationale: g.why, evidence: ev.text, evidence_ok: ev.ok, experimental: true };
   }

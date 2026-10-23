@@ -115,6 +115,8 @@ body.simple #guideBar{display:none!important}body.simple main{padding-bottom:24p
 .sm-legend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12.5px;margin-top:8px}.sm-legend b{width:100%;font-size:14px}.sm-legend small{width:100%;color:var(--muted)}
 .sm-legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:middle}
 .sm-h{font-size:15px;font-weight:700;margin:14px 2px 0}
+.sm-key{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:6px 0 4px}.sm-key>div{background:var(--deep);border-radius:10px;padding:8px;text-align:center}
+.sm-key small{display:block;font-size:11px;color:var(--muted)}.sm-key b{display:block;font-size:20px;color:var(--yel);margin:2px 0}
 .sm-status{font-size:12px;color:var(--muted);margin:8px 2px 0;line-height:1.5}
 .sm-row{padding:7px 0 2px;border-top:1px solid var(--line);margin-top:6px;cursor:pointer}
 .sm-note{font-size:12px;color:var(--muted);margin:8px 0 0}
@@ -198,6 +200,9 @@ a{color:var(--accent)}
      style="display:block;text-align:center;text-decoration:none;margin:0;padding:10px">① เอาคีย์ ↗</a>
     <button class="mini" id="aiPaste" type="button" style="width:100%;margin:0">② วางคีย์ (เพิ่มได้หลายอัน)</button>
   </div>
+  <textarea id="aiKeysBox" rows="3" autocomplete="off" spellcheck="false" placeholder="หรือวางหลายคีย์ที่นี่ (บรรทัดละคีย์ / คั่นด้วยช่องว่างก็ได้)"
+    style="width:100%;margin-top:8px;background:var(--deep);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:8px;font:12px ui-monospace,monospace"></textarea>
+  <button class="mini ghost" id="aiKeysAdd" type="button" style="width:100%;margin-top:6px">เพิ่มทุกคีย์จากช่องนี้</button>
   <details style="margin-top:8px"><summary>วิธีเอาคีย์ · ตั้งค่าเพิ่ม</summary>
     <ol class="how" style="padding-left:30px">
       <li>กด ① แล้วล็อกอิน Google</li>

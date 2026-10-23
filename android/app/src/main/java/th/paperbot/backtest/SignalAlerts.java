@@ -153,15 +153,18 @@ final class SignalAlerts {
         int cap = item.optInt("leverage_cap", leverage);
         long expires = item.optLong("expires", 0);
         String key = "sent:" + tf + ":" + symbol + ":" + side;
-        String title = "เข้า " + side + " " + symbol + " · " + tf + (leverage > 0 ? " · ≤" + leverage + "x" : "");
+        String title = "เข้า " + side + " " + symbol + " · " + tf + (leverage > 0 ? " · x" + leverage : "");
         StringBuilder b = new StringBuilder();
         // First line is what the collapsed notification shows: the whole order.
         b.append("เข้า ").append(entry).append(" · SL ").append(sl).append(" · ");
         if (!tp5.isEmpty()) b.append("TP ").append(tp1).append(" / ").append(tp2).append(" / ").append(tp5);
         else if (!tp1.isEmpty()) b.append("TP1 ").append(tp1).append(tp2.isEmpty() ? "" : " · TP2 " + tp2);
         else b.append("ไม่มี TP (ออกตามสูตร)");
+        if (leverage > 0) b.append(" · x").append(leverage);
         String risk = item.optString("risk_thb", "");
-        if (!risk.isEmpty()) b.append(" · โดน SL เสีย ≈ ").append(risk).append(" ฿");
+        String riskPct = item.optString("risk_pct", "");
+        if (!riskPct.isEmpty()) b.append(" · เสี่ยง ").append(riskPct).append("%");
+        if (!risk.isEmpty()) b.append(riskPct.isEmpty() ? " · โดน SL เสีย ≈ " : " (≈ ").append(risk).append(riskPct.isEmpty() ? " ฿" : " ฿)");
         b.append("\nแท่งปิด ").append(bangkok(candle, "dd/MM HH:mm")).append(" น. (เวลาไทย UTC+7)");
         if (expires > candle) b.append(" · ยกเลิกถ้ายังไม่เข้าภายใน ").append(bangkok(expires, "HH:mm")).append(" น.");
         if (!tp5.isEmpty()) b.append("\nTP1 ").append(tp1).append(" (1R) · TP2 ").append(tp2).append(" (2R) · TP5 ").append(tp5).append(" (5R)");

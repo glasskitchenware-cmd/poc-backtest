@@ -208,7 +208,7 @@ def main():
     check("สัญญาณน่าเข้า 2 ตัว" in r["smMain"] and "BTCUSDT Perp" in r["smMain"] and "ETHUSDT Perp" in r["smMain"], "every signal worth entering is shown (BTC and ETH)")
     check(r["charts"] >= 3, "a 4h chart per signal plus one for the held position (" + str(r["charts"]) + ")")
     check("ไม้ที่เปิดอยู่ตอนนี้ 1 ไม้" in r["smMain"] and "SOL" in r["smMain"], "open SOL position listed")
-    for must in ["LONG (Buy)", "SHORT (Sell)", "แท่งสัญญาณปิด", "เข้าภายใน", "ราคาเข้าอ้างอิง", "Stop Loss", "TP1 · ขาย", "ส่วนที่เหลือ", "Liquidation (ประมาณ)",
+    for must in ["Leverage", "ความเสี่ยงต่อไม้", "Margin ที่วาง", "ทำไม x", "ความเสี่ยง", "LONG (Buy)", "SHORT (Sell)", "แท่งสัญญาณปิด", "เข้าภายใน", "ราคาเข้าอ้างอิง", "Stop Loss", "TP1 · ขาย", "ส่วนที่เหลือ", "Liquidation (ประมาณ)",
                  "Isolated", "Leverage", "ขนาด (Size)", "มูลค่าสัญญา", "Margin ที่ใช้", "ค่าธรรมเนียม+slippage", "ราคาขยับ 1%", "ผิดทาง: โดน SL ทั้งไม้",
                  "ถึง TP1 แล้วกลับมาโดน SL", "ถึงทุก TP แล้วส่วนที่เหลือวิ่งถึง +5R", "ปิดกำไร", "ราคาไปถึง +1R", "ไม่ถึง +1R เลย", "กำไรเฉลี่ยต่อไม้",
                  "เข้าแล้ว · บันทึกลงพอร์ต"]:
@@ -219,7 +219,7 @@ def main():
     r = run(page, "h4_small", {"storage": h4, "capital": 37, "trendForce": {"ETHUSDT": "SHORT", "SOLUSDT": "HOLD_SHORT"}, "clickTf": "4h", "waitMs": 15000,
                                "justClosed": 14_400_000}, bg=False)
     sg = r["packet"]["signals"]
-    check(len(sg) == 1 and sg[0]["kind"] == "ENTRY" and sg[0]["symbol"] == "ETHUSDT" and float(sg[0]["qty"]) >= 0.001,
+    check(len(sg) == 1 and sg[0]["kind"] == "ENTRY" and sg[0]["symbol"] == "ETHUSDT" and float(sg[0]["qty"]) >= 0.001 and float(sg[0]["risk_pct"]) > 1,
           "37 THB: the signal is still sent, sized at Binance's smallest order")
     check("ETHUSDT Perp" in r["smMain"] and "(ขั้นต่ำที่ Binance ยอม)" in r["smMain"] and "ทุนไม่พอ" not in r["smMain"] and "ยังเทรดตามสูตรไม่ได้" not in r["smMain"],
           "37 THB: full trade sheet at the smallest order, no capital lecture")
@@ -252,6 +252,10 @@ def main():
     c = r["chartPlan"]
     check("จุดเข้า LONG" in c and "จุดเข้า SHORT" in c and "แท่ง 4 ชม. ปิดเหนือ" in c and "SL ถ้าเข้า LONG" in c and "NaN" not in c,
           "chart tab, no position: the 4h closes that would start a LONG or a SHORT, with SL and TP")
+
+    fake = ["AIza" + c * 35 for c in "ABCDEFGHIJ"]
+    r = run(page, "keys10", {"storage": h4, "capital": 1_000, "clipboard": "\n".join(fake) + "\n", "clickId": "aiPaste", "waitMs": 8000}, bg=False)
+    check(r["aiKeys"].count("คีย์ ") == 10 and "พบ 10 คีย์" in r["aiStatus"] and fake[0] not in r["aiKeys"], "10 keys pasted at once: all added, shown masked")
 
     r = run(page, "paper_trend", {"storage": h4, "capital": 100_000, "clickId": "pp2026", "waitMs": 20000}, bg=False)
     check("Trend 4H · 3 เหรียญ" in r["paperTitle"] and "บาท" in r["paper"] and "อัปเดต" in r["paperStatus"], "Paper runs Trend 4H on the selected coins: " + r["paperStatus"][:60])

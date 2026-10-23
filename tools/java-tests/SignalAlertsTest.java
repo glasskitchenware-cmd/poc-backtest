@@ -55,8 +55,11 @@ public class SignalAlertsTest {
         for (SignalAlerts.Note n : p.notes) ids.add(n.id());
         check(ids.size() == 12, "notification ids are distinct per coin");
         SignalAlerts.Note first = p.notes.get(0);
-        check(first.title.equals("เข้า LONG BTCUSDT · M15 · ≤10x"), "title says the action: enter + side + symbol + timeframe + leverage");
-        check(first.body.startsWith("เข้า 100.00 · SL 98.20 · TP 101.80 / 103.60 / 109.00 · โดน SL เสีย ≈ 25 ฿"), "first line (collapsed view) is the whole order");
+        check(first.title.equals("เข้า LONG BTCUSDT · M15 · x10"), "title says the action: enter + side + symbol + timeframe + leverage");
+        check(first.body.startsWith("เข้า 100.00 · SL 98.20 · TP 101.80 / 103.60 / 109.00 · x10 · โดน SL เสีย ≈ 25 ฿"), "first line (collapsed view) is the whole order");
+        JSONObject withPct = item("BTCUSDT", "LONG", "M15", candle).put("risk_pct", "0.25");
+        String fp = SignalAlerts.plan(packet(15, candle, new JSONArray().put(withPct)), now, key -> -1L).notes.get(0).body;
+        check(fp.startsWith("เข้า 100.00 · SL 98.20 · TP 101.80 / 103.60 / 109.00 · x10 · เสี่ยง 0.25% (≈ 25 ฿)"), "first line says leverage and risk % of the balance");
         for (String must : new String[]{"UTC+7", "เข้า 100.00", "SL 98.20", "TP1 101.80 (1R)", "TP2 103.60 (2R)", "TP5 109.00 (5R)",
                 "Margin ≈ 5.00 USDT (≈ 165 ฿)", "ถ้าโดน SL เสีย ≈ 25 ฿", "Leverage ≤10x (เพดานที่เลือก 20x)", "Liq ประมาณ 91.00", "squeeze3_ls", "ข้อมูลยืนยัน 2026",
                 "ไม่ใช่คำสั่งซื้อขาย", "ยกเลิกถ้ายังไม่เข้าภายใน"}) {
@@ -121,7 +124,7 @@ public class SignalAlertsTest {
             .put("exit_rule", "ไม่มี TP ตายตัว: ปิดเมื่อแท่ง 4 ชม. ปิดต่ำกว่าจุดต่ำสุด 10 แท่ง");
         SignalAlerts.Plan t4 = SignalAlerts.plan(packet(240, c4, new JSONArray().put(trend)), n4, key -> -1L);
         check(t4.ok && t4.notes.size() == 1 && t4.notes.get(0).title.startsWith("เข้า LONG BTCUSDT · H4"), "H4 entry without TP is notified, title says H4");
-        check(t4.notes.get(0).body.startsWith("เข้า 100.00 · SL 98.20 · ไม่มี TP (ออกตามสูตร)"), "H4 without TP: the first line says so");
+        check(t4.notes.get(0).body.startsWith("เข้า 100.00 · SL 98.20 · ไม่มี TP (ออกตามสูตร) · x10"), "H4 without TP: the first line says so");
         check(t4.notes.get(0).body.contains("ไม่มี TP ตายตัว") && !t4.notes.get(0).body.contains("TP5") && t4.notes.get(0).body.contains("SL 98.20"),
             "H4 entry shows SL and the exit rule instead of TP levels");
         JSONObject laddered = new JSONObject(trend.toString()).put("tp1", "102.00").put("tp2", "104.00")

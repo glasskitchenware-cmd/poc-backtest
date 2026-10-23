@@ -51,7 +51,7 @@
     document.title = "RESULT " + JSON.stringify({ packets: __T.packets.length, posts: __T.posts.length, scanMinutes: __T.scanMinutes,
       spot: __T.requests.filter(function (r) { return r.indexOf("SPOT") === 0; }), status: (document.getElementById("scanStatus") || {}).textContent || "",
       scanCards: text("scanCards"), smMain: text("smMain"), coach: text("coach"), paper: text("ppSimple") + " | " + text("ppHero") + " | " + text("ppTrades"),
-      paperStatus: text("ppStatus"), paperTitle: text("ppTitle"), help: text("sgHelp"), chartPlan: text("cvAnalysis"), chart: !!document.querySelector("#smChart canvas"),
+      paperStatus: text("ppStatus"), paperTitle: text("ppTitle"), help: text("sgHelp"), chartPlan: text("cvAnalysis"), aiKeys: text("aiKeyList"), aiStatus: text("aiStatus"), chart: !!document.querySelector("#smChart canvas"),
       charts: Array.prototype.filter.call(document.querySelectorAll("#smMain .sm-chart"), function (el) { return !!el.querySelector("canvas"); }).length });
   }, cfg.waitMs || 12000);
 })();

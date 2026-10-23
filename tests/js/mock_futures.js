@@ -62,7 +62,7 @@
     scanMinutes: function () { return 15; },
     alertsEnabled: function () { return true; }, setAlerts: function () {}, notificationsAllowed: function () { return true; },
     lastScanStatus: function () { return JSON.stringify({ at: Date.now(), ok: false, text: "test status" }); },
-    debugFuturesBase: function () { return ""; }, clipboard: function () { return ""; }, testNotification: function () {},
+    debugFuturesBase: function () { return ""; }, clipboard: function () { return cfg.clipboard || ""; }, testNotification: function () {},
     batteryUnrestricted: function () { return true; }, openBatterySettings: function () {}, openNotificationSettings: function () {}
   };
   window.__CFG = cfg;
