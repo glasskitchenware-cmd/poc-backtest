@@ -302,7 +302,8 @@ def main():
     s = r["smMain"]
     check(r["holds"] == ["card hold l st-follow", "card hold s st-hold"] and "ตามได้ (เข้าช้า)" in s and "ถืออยู่ · ตามไม่ทันแล้ว 1" in s,
           "BTC 0.2R from its entry can still be followed; ETH +1R is holding, too late to follow")
-    check("ถ้ายังไม่ได้เข้า" in s and "ราคาห่างจุดเข้าเกิน 0.5R" in s, "a position already +1R away: do not join late")
+    check("ถ้าจะเข้าเอง (ครบ 7/9" in s and "ไม่ครบ: ราคาห่างจุดเข้าเกิน 0.5R" in s,
+          "a position already +1R away: still an order to join at the market, with how complete the rule is (7/9) and what is missing")
     check(("เข้าตามได้" in s) or ("ไม่แนะนำให้เข้าตาม" in s) or ("ยังไม่มีผลทดสอบการเข้าตาม" in s) or ("ผลทดสอบไม่ชัดว่ากำไร" in s), "a position 0.2R from its entry: the late-entry test decides")
     check("ผลทดสอบบวกน้อย" not in s, "joining late is offered only where the test was clearly profitable, never 'small and unclear'")
     check(r["charts"] >= 2 and "Stop Loss" in s and "TP1" in s, "each open position has its SL/TP and its chart")

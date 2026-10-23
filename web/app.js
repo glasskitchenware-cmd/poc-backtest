@@ -198,7 +198,7 @@
   }
   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return "&#" + c.charCodeAt(0) + ";"; }); }
   // The app version (android/app/build.gradle versionName; tests/js/run_tests.py checks they match).
-  var APP_VERSION = "6.8";
+  var APP_VERSION = "6.9";
   // One line-icon family for the screen (24px grid, 1.8 stroke, round ends), drawn in the text colour.
   var ICONS = { check: '<path d="M5 12.5l4.2 4.2L19 7"/>', alert: '<path d="M12 4 2.8 19.5h18.4z"/><path d="M12 10v4.5M12 17.3v.2"/>',
     news: '<rect x="3.5" y="5" width="13" height="14" rx="2"/><path d="M16.5 9h3v7.5a2.5 2.5 0 0 1-5 0"/><path d="M7 9h6M7 12.5h6M7 16h3.5"/>',
@@ -1307,15 +1307,17 @@
     // Whether someone without the position can still join it now (research/pro "late entry"): the evidence and the order
     // sized at the last 4-hour close; paintLive re-checks the price and re-sizes the order every second.
     function joinInfo(it, r) {
-      var x = r.position, lg = x.late, v = lateVerdict(it);
-      if (it.tpLevels.some(function (t) { return t.done; })) return { ok: false, html: "ไม่ต้องตาม: ระบบขาย TP ไปแล้ว รอไม้ใหม่" };
-      if (!lg) return { ok: false, html: "ไม่ต้องตาม: ราคาห่างจุดเข้าเกิน 0.5R แล้ว รอไม้ใหม่" };
+      var x = r.position, lg = x.late, v = lateVerdict(it), near = lg && Math.abs(it.now - it.entry) <= 0.5 * Math.abs(it.entry - it.stop);
+      var no = function (html) { return { ok: false, html: html, order: lg && !lg.below_minimum ? lg : null, ev: v }; };
+      if (it.tpLevels.some(function (t) { return t.done; })) return no("ไม่ครบ: ระบบขาย TP ไปแล้ว");
+      if (!lg) return { ok: false, html: "ราคาเลย SL แล้ว" };
+      if (!near) return no("ไม่ครบ: ราคาห่างจุดเข้าเกิน 0.5R");
       if (lg.below_minimum) return { ok: false, html: "ไม่ต้องตาม: " + esc(lg.reject) };
-      if (!v || !(v.n >= 30)) return { ok: false, html: "ยังไม่มีผลทดสอบการเข้าตามช่วงนี้ · รอไม้ใหม่" };
-      if (!(v.avgR > 0)) return { ok: false, html: "ไม่แนะนำให้เข้าตาม: ทดสอบเข้าช้า " + v.bars + " แท่ง เฉลี่ย " + fmt(v.avgR, 2, true) + "R" };
+      if (!v || !(v.n >= 30)) return no("ไม่ครบ: ยังไม่มีผลทดสอบการเข้าช้าเท่านี้");
+      if (!(v.avgR > 0)) return no("ไม่ครบ: ทดสอบเข้าช้า " + v.bars + " แท่ง เฉลี่ย " + fmt(v.avgR, 2, true) + "R");
       // Only where the test shows joining this late was clearly profitable (its 95% range above zero): 1-2 bars.
-      if (!(v.avgRCI && v.avgRCI[0] > 0)) return { ok: false, html: "ไม่ต้องตาม: เข้าช้า " + it.barsSince + " แท่งแล้ว ผลทดสอบไม่ชัดว่ากำไร (เข้าช้า " + v.bars + " แท่ง: เฉลี่ย " +
-        fmt(v.avgR, 2, true) + "R ช่วง 95% " + fmt(v.avgRCI[0], 2, true) + " ถึง " + fmt(v.avgRCI[1], 2, true) + "R) · รอไม้ใหม่" };
+      if (!(v.avgRCI && v.avgRCI[0] > 0)) return no("ไม่ครบ: เข้าช้า " + it.barsSince + " แท่งแล้ว ผลทดสอบไม่ชัดว่ากำไร (เข้าช้า " + v.bars + " แท่ง: เฉลี่ย " +
+        fmt(v.avgR, 2, true) + "R ช่วง 95% " + fmt(v.avgRCI[0], 2, true) + " ถึง " + fmt(v.avgRCI[1], 2, true) + "R)");
       return { ok: true, order: lg, ev: v };
     }
     // Joining in the 4-hour bar the system entered, after the 15 minutes: the test's nearest case is joining 1 bar late.
@@ -1350,9 +1352,9 @@
     function holdCard(it, r, i) {
       var long = it.dir > 0, coin = it.symbol.replace("USDT", ""), mv = it.dir * (it.now - it.entry) / it.entry * 100, k = Math.abs(it.entry - it.stop), j = joinInfo(it, r);
       var tp = it.tpLevels.filter(function (t) { return !t.done; })[0], done = it.tpLevels.filter(function (t) { return t.done; }).length, hid = "smHoldCard" + i;
-      LC[hid] = { kind: "hold", sym: r.symbol, dir: it.dir, e: it.entry, k: k, sl: it.stop, tp: tp ? tp.price : null, tpDone: done > 0, joinOk: j.ok, order: j.order,
+      LC[hid] = { kind: "hold", sym: r.symbol, dir: it.dir, e: it.entry, k: k, sl: it.stop, tp: tp ? tp.price : null, tpDone: done > 0, joinOk: j.ok, order: j.order, lateOk: !!(j.ev && j.ev.n >= 30 && j.ev.avgRCI && j.ev.avgRCI[0] > 0),
         since: it.entryTime, p0: it.now, ord: 100 + i };
-      var cap = money(), z = j.ok ? sized(j.order) : null;
+      var cap = money(), z = j.order ? sized(j.order) : null;
       return '<div class="card hold ' + (long ? "l" : "s") + '" id="' + hid + '"><div class="card-hd">' + sidePill(it.dir) + ' <b class="sym">' + coin + '</b> <b class="big ' + tone(mv) + '" data-livepos="' + r.symbol +
           '" data-e="' + it.entry + '" data-d="' + it.dir + '" data-k="' + k + '" data-big="1">' + fmt(mv, 2, true) + "% (" + fmt(it.dir * (it.now - it.entry) / k, 2, true) + "R)</b></div>" + liveHead(r.symbol, it.now) +
         '<div class="facts">' + fact("ระบบเข้า " + thai(it.entryTime).slice(0, 5) + " " + thai(it.entryTime).slice(9, 14), price(it.entry)) +
@@ -1361,11 +1363,12 @@
             : it.tpLevels.length ? fact("TP", "ขายครบแล้ว") : fact("TP", "ไม่ตั้ง")) +
           fact(it.locks ? "TP เลื่อน (ปิดแท่ง)" : "จุดออก (ปิดแท่ง)", it.exitOn ? price(it.exitLevel) : "—") + "</div>" +
         '<p class="fine">' + exitText(it) + " · ถ้าถืออยู่: ถือต่อ ห้ามเลื่อน SL</p>" +
-        (j.ok ? '<div class="follow ok join-yes">' + ic("check") + '<div><b>ถ้ายังไม่ได้เข้า</b> <b class="up">เข้าตามได้</b> ที่ราคาตลาด ≈ <span data-now="' + r.symbol + '">' + price(it.now) + "</span> · SL " +
-            price(j.order.stop) + (tp ? " · " + tp.label + " " + price(tp.price) : "") + " · x" + j.order.lev + ' · <span data-q>' + qtyTxt(z.qty) + "</span> " + coin + ' · Margin ≈ <span data-m>' + fmt(z.marginB, 0) +
-            '</span> ฿ · เสี่ยง <span data-rk>' + fmt(z.lossB / cap * 100, 2) + "%</span>" + (j.order.minSize ? " (ขนาดขั้นต่ำ Binance)" : "") + marginNote(z.marginB) +
-            "<small>ทดสอบเข้าช้า " + j.ev.bars + " แท่ง: " + j.ev.n + " ไม้ · ชนะ " + j.ev.win + "% · เฉลี่ย " + fmt(j.ev.avgR, 2, true) + "R</small></div></div>" : "") +
-        '<div class="follow no join-no">' + ic("minus") + "<div><b>ถ้ายังไม่ได้เข้า</b> <span data-jno>" + (j.ok ? "ไม่ต้องตาม: ราคาห่างจุดเข้าเกิน 0.5R แล้ว รอไม้ใหม่" : j.html) + "</span></div></div>" +
+        (j.order ? '<div class="follow join-order">' + ic("check") + '<div><b data-jhead>ถ้ายังไม่ได้เข้า</b> ที่ราคาตลาด ≈ <span data-now="' + r.symbol + '">' + price(it.now) + "</span> · SL " +
+            price(j.order.stop) + (tp ? " · " + tp.label + " " + price(tp.price) : " · ส่วนที่เหลือออกตามจุดออก") + " · x" + j.order.lev + ' · <span data-q>' + qtyTxt(z.qty) + "</span> " + coin +
+            ' · Margin ≈ <span data-m>' + fmt(z.marginB, 0) + '</span> ฿ · เสี่ยง <span data-rk>' + fmt(z.lossB / cap * 100, 2) + "%</span>" + (j.order.minSize ? " (ขนาดขั้นต่ำ Binance)" : "") +
+            marginNote(z.marginB) + (j.ev ? "<small>ทดสอบเข้าช้า " + j.ev.bars + " แท่ง: " + j.ev.n + " ไม้ · ชนะ " + j.ev.win + "% · เฉลี่ย " + fmt(j.ev.avgR, 2, true) + "R</small>" : "") +
+            (j.ok ? "" : '<small class="yel">' + esc(j.html) + "</small>") + "</div></div>"
+          : '<div class="follow no join-no">' + ic("minus") + "<div><b>ถ้ายังไม่ได้เข้า</b> <span data-jno>" + j.html + "</span></div></div>") +
         moodLine(r.symbol, it.dir) +
         '<details class="more-chart" data-draw="hold:' + i + '"><summary>กราฟ</summary><div id="smHold' + i + '" class="sm-chart" style="height:220px;margin-top:6px"></div></details></div>';
     }
@@ -1907,7 +1910,7 @@
           sl: "ราคาแตะ SL " + price(c.sl) + " ในแท่ง 4 ชม. นี้ (ไปถึง " + price(st.x) + ") · ระบบออกที่ราว −1R · ถ้ายังถือ เช็กใน Binance ว่าโดน SL แล้ว"
         }[st.why], "fine live-why" + (st.g === "ended" ? " down" : ""));
         // How completely the rule's conditions for entering now are met: a checklist, not a win chance.
-        var plan = Portfolio.plan(), zz = c.order ? liveSize(c.order, p) : null, inTime = c.kind === "entry" ? now < c.until || c.joinOk : c.joinOk;
+        var plan = Portfolio.plan(), zz = c.order ? liveSize(c.order, p) : null, inTime = c.kind === "entry" ? now < c.until || c.joinOk : c.lateOk;
         var items = [
           ["แท่ง 4 ชม. ปิดทะลุกรอบ 20 แท่ง (สัญญาณของสูตร)", true],
           ["อยู่ฝั่งเดียวกับ EMA200", true],
@@ -1925,15 +1928,19 @@
           '<li class="note">นี่คือความครบของเงื่อนไขสูตร ไม่ใช่โอกาสชนะ · ไม้ที่ครบ 100% ในอดีตชนะราว 1 ใน 3 กำไรมาจากไม้ใหญ่</li>';
         set("[data-dsl]", "ห่าง " + pc(c.sl));
         if (c.tp) set("[data-dtp]", "อีก " + pc(c.tp));
-        if (st.g === "follow" && c.order) {
+        if (st.g !== "ended" && c.order) {
           var z = liveSize(c.order, p), cap = money();
           set("[data-q]", qtyTxt(z.qty)); set("[data-m]", fmt(z.marginB, 0)); set("[data-rk]", fmt(z.lossB / cap * 100, 2) + "%"); set("[data-rb]", "≈ " + fmt(z.lossB, 0) + " บาท");
           set("[data-rb2]", "−" + fmt(z.lossB, 0) + " ฿");
         }
+        set("[data-jhead]", st.g === "follow" ? "ครบองค์ประกอบ · เข้าตามได้" : "ถ้าจะเข้าเอง (ครบ " + met + "/" + items.length + " · ดูข้อที่ขาดด้านบน)");
+        if (c.met !== met) { c.met = met; moved = true; }
         if (st.g === "hold" && st.why !== "nojoin") set("[data-jno]", st.why === "tp" ? "ไม่ต้องตาม: ระบบขาย TP ไปแล้ว รอไม้ใหม่" : st.why === "expired" ? "ไม่ต้องตาม: หมดเวลาเข้าแล้ว รอไม้ใหม่" : "ไม่ต้องตาม: ราคาห่างจุดเข้าเกิน 0.5R แล้ว รอไม้ใหม่");
       });
       if (moved) {
-        ids.forEach(function (id) { var el = $(id); if (el && grp[LC[id].at]) grp[LC[id].at].appendChild(el); });
+        // Within a group, the most complete first.
+        ids.slice().sort(function (a, b) { return (LC[b].met || 0) - (LC[a].met || 0) || LC[a].ord - LC[b].ord; })
+          .forEach(function (id) { var el = $(id); if (el && grp[LC[id].at]) grp[LC[id].at].appendChild(el); });
         // The system's note follows: a position that touched its stop is no longer "held", a signal that did is no entry.
         var gone = ids.filter(function (id) { return LC[id].ended; }).map(function (id) { return LC[id]; }), out = function (sym) { return gone.some(function (c) { return c.sym === sym; }); };
         if (gone.length && $("smNote")) $("smNote").innerHTML = traderNote(noteOf.list.filter(function (x) { return !out(x.symbol); }), noteOf.held.filter(function (it) { return !out(it.symbol); }), gone);
@@ -2170,7 +2177,9 @@
       if (res.pend && res.pend.exit) {
         out.exit = Object.assign({}, out.position, { candle: candle, expires: candle + tfMs, close: last.close,
           level: p.dir > 0 ? L.tested.exitLong : L.tested.exitShort });
-      } else if (!p.fills.length && Math.abs(last.close - p.entry) <= 0.5 * p.risk && p.dir * (last.close - p.stop) > 0) {
+      } else if (p.dir * (last.close - p.stop) > 0) {
+        // An order to join at the last close with the rule's SL and take profits, sized like a signal; whether joining
+        // now is within the late-entry test (within 0.5R, no take profit yet) is shown per condition on the card.
         // Joining late at the last close with the rule's SL and take profits (research/pro "late entry"), sized like a signal.
         var lg = sizeOrder(last.close, p.dir, Math.abs(last.close - p.stop), fx, lev, rule, riskPct);
         checkOrder(lg, rule);
