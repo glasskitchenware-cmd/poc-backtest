@@ -143,8 +143,8 @@
       "t": 3.25
      },
      "port": {
-      "cagr": null,
-      "maxDD": null
+      "cagr": 23.3,
+      "maxDD": 32.7
      }
     },
     {
@@ -173,8 +173,8 @@
       "t": 1.56
      },
      "port": {
-      "cagr": null,
-      "maxDD": null
+      "cagr": 6.6,
+      "maxDD": 20.9
      }
     },
     {
@@ -203,8 +203,8 @@
       "t": 3.98
      },
      "port": {
-      "cagr": null,
-      "maxDD": null
+      "cagr": 30.3,
+      "maxDD": 22.7
      }
     },
     {
@@ -233,8 +233,8 @@
       "t": 3.95
      },
      "port": {
-      "cagr": null,
-      "maxDD": null
+      "cagr": 30.4,
+      "maxDD": 21.4
      }
     },
     {
@@ -263,8 +263,8 @@
       "t": 1.75
      },
      "port": {
-      "cagr": null,
-      "maxDD": null
+      "cagr": 7.8,
+      "maxDD": 20.1
      }
     }
    ],
@@ -415,8 +415,8 @@
       "t": 3.2
      },
      "port": {
-      "cagr": null,
-      "maxDD": null
+      "cagr": 28.7,
+      "maxDD": 31.8
      }
     },
     {
@@ -445,8 +445,8 @@
       "t": 1.61
      },
      "port": {
-      "cagr": null,
-      "maxDD": null
+      "cagr": 8.4,
+      "maxDD": 24.2
      }
     },
     {
@@ -475,8 +475,8 @@
       "t": 3.65
      },
      "port": {
-      "cagr": null,
-      "maxDD": null
+      "cagr": 34.7,
+      "maxDD": 22.9
      }
     },
     {
@@ -505,8 +505,8 @@
       "t": 3.75
      },
      "port": {
-      "cagr": null,
-      "maxDD": null
+      "cagr": 36.3,
+      "maxDD": 25.2
      }
     },
     {
@@ -535,8 +535,8 @@
       "t": 1.99
      },
      "port": {
-      "cagr": null,
-      "maxDD": null
+      "cagr": 11.1,
+      "maxDD": 22.1
      }
     }
    ],

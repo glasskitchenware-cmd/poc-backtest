@@ -59,7 +59,9 @@
         var t0 = new Date(Date.now() - 20 * 60000).toUTCString(), t1 = new Date(Date.now() - 3 * 3600000).toUTCString();
         return reply(id, true, '<?xml version="1.0"?><rss version="2.0"><channel><title>' + u.host + "</title>" +
           "<item><title>Solana network outage halts block production on " + u.host + "</title><link>https://" + u.host + "/a1</link><pubDate>" + t0 + "</pubDate></item>" +
-          "<item><title>Markets wait for the Fed (" + u.host + ")</title><link>https://" + u.host + "/a2</link><pubDate>" + t1 + "</pubDate></item></channel></rss>");
+          "<item><title>Markets wait for the Fed (" + u.host + ")</title><link>https://" + u.host + "/a2</link><pubDate>" + t1 + "</pubDate></item>" +
+          (u.host === "www.coindesk.com" ? "<item><title>Bitcoin ETF inflows hit a record as BTC rallies</title><link>https://" + u.host + "/a3</link><pubDate>" + t1 + "</pubDate></item>" : "") +
+          "</channel></rss>");
       }
       if (cfg.newsDown && (u.host === "www.binance.com" || u.host === "nfs.faireconomy.media" || u.host === "api.alternative.me")) return reply(id, false, "HTTP 503 down");
       if (u.host === "www.binance.com") return reply(id, true, { code: "000000", data: { catalogs: [{ catalogId: 161, catalogName: "Delisting",

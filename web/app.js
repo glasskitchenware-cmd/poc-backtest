@@ -197,6 +197,12 @@
     return p(d.getUTCDate()) + "/" + p(d.getUTCMonth() + 1) + "/" + String(d.getUTCFullYear()).slice(2) + " " + p(d.getUTCHours()) + ":" + p(d.getUTCMinutes());
   }
   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return "&#" + c.charCodeAt(0) + ";"; }); }
+  // One line-icon family for the screen (24px grid, 1.8 stroke, round ends), drawn in the text colour.
+  var ICONS = { check: '<path d="M5 12.5l4.2 4.2L19 7"/>', alert: '<path d="M12 4 2.8 19.5h18.4z"/><path d="M12 10v4.5M12 17.3v.2"/>',
+    news: '<rect x="3.5" y="5" width="13" height="14" rx="2"/><path d="M16.5 9h3v7.5a2.5 2.5 0 0 1-5 0"/><path d="M7 9h6M7 12.5h6M7 16h3.5"/>',
+    x: '<path d="M6 6l12 12M18 6 6 18"/>', minus: '<path d="M6 12h12"/>', info: '<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8v.2"/>',
+    clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>' };
+  function ic(n) { return '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">' + ICONS[n] + "</svg>"; }
 
   function run() {
     var symbols = [];
@@ -710,23 +716,25 @@
       var m = Math.max(0, Math.round((Date.now() - t) / 60000));
       return m < 60 ? m + " นาที" : m < 1440 ? Math.round(m / 60) + " ชม." : Math.round(m / 1440) + " วัน";
     }
+    // A headline: green when the word list reads it as good news, red as bad news, plain otherwise.
     function row(x, mine) {
-      var flag = x.risk ? '<b class="down">⚠ </b>' : "", tags = x.coins.filter(function (k) { return mine.indexOf(k) >= 0; });
-      return '<div class="nw-row' + (x.risk ? " risk" : "") + '"><a href="' + esc(x.link) + '" target="_blank" rel="noopener">' + flag + esc(x.title) + "</a>" +
-        "<small>" + esc(x.src) + " · " + ago(x.time) + "ที่แล้ว" + (tags.length ? ' · <b class="yel">' + tags.join(" ") + "</b>" : "") + "</small></div>";
+      var t = toneOf(x.title), cls = t > 0 ? "good" : t < 0 ? "bad" : "", tags = x.coins.filter(function (k) { return mine.indexOf(k) >= 0; });
+      return '<div class="nw-row ' + cls + '"><a href="' + esc(x.link) + '" target="_blank" rel="noopener">' + esc(x.title) + '</a><div class="nw-meta">' +
+        (cls ? '<span class="chip ' + cls + '">' + (t > 0 ? "ข่าวดี" : "ข่าวร้าย") + "</span>" : "") + (tags.length ? '<span class="chip sym">' + tags.join(" ") + "</span>" : "") +
+        "<small>" + esc(x.src) + " · " + ago(x.time) + "ที่แล้ว</small></div></div>";
     }
     function eventsHtml(hours) {
       var list = upcoming(hours, true);
       return list.length ? list.map(function (e) {
-        return '<div class="nw-ev ' + (e.impact === "High" ? "high" : "") + '"><b>' + thai(e.time).slice(0, 14) + " น.</b> " + esc(e.title) + " (USD" + (e.impact === "High" ? " · แรง" : "") + ")" +
-          (e.forecast || e.previous ? "<small>คาด " + esc(e.forecast || "—") + " · ครั้งก่อน " + esc(e.previous || "—") + "</small>" : "") + "</div>";
+        return '<div class="nw-ev"><span class="ev-time">' + thai(e.time).slice(0, 5) + " " + thai(e.time).slice(9, 14) + '</span><div><b>' + esc(e.title) + '</b><div class="nw-meta"><span class="chip">USD</span>' +
+          (e.impact === "High" ? '<span class="chip bad">แรง</span>' : "") + (e.forecast || e.previous ? "<small>คาด " + esc(e.forecast || "—") + " · ครั้งก่อน " + esc(e.previous || "—") + "</small>" : "") + "</div></div></div>";
       }).join("") : '<small class="muted">ไม่มีข่าวเศรษฐกิจสหรัฐแรงๆ ใน ' + hours + " ชม. ข้างหน้า</small>";
     }
     // Main screen: high-impact releases soon (top), and the headlines with the user's coins first (bottom).
     function topHtml() {
       var soon = upcoming(24);
-      return soon.length ? '<div class="nw-alert">⚠️ ข่าวเศรษฐกิจแรงใน 24 ชม.: ' + soon.map(function (e) { return esc(e.title) + " " + thai(e.time).slice(9, 14) + " น."; }).join(" · ") +
-        "<small>ราคามักกระชากตอนข่าวออก · ใส่ SL ไว้ใน Binance เสมอ · สัญญาณไม่เปลี่ยนตามข่าว (สูตรไม่ได้ทดสอบกับข่าว)</small></div>" : "";
+      return soon.length ? '<div class="callout warn">' + ic("alert") + "<div><b>ข่าวเศรษฐกิจแรงใน 24 ชม.: " + soon.map(function (e) { return esc(e.title) + " " + thai(e.time).slice(9, 14) + " น."; }).join(" · ") +
+        "</b><small>ราคามักกระชากตอนข่าวออก · ใส่ SL ไว้ใน Binance เสมอ · สัญญาณไม่เปลี่ยนตามข่าว (สูตรไม่ได้ทดสอบกับข่าว)</small></div></div>" : "";
     }
     function listHtml(mine, n) {
       var day = Date.now() - 48 * HOUR, list = s.items.filter(function (x) { return x.time >= day; });
@@ -734,8 +742,8 @@
       var score = function (x) { return (/^Binance/.test(x.src) ? 2 : 0) + (x.risk || x.coins.some(function (k) { return mine.indexOf(k) >= 0; }) ? 1 : 0); };
       var first = list.filter(function (x) { return score(x) > 0; }).sort(function (a, b) { return score(b) - score(a) || b.time - a.time; }).slice(0, n);
       var rest = list.filter(function (x) { return first.indexOf(x) < 0; });
-      return '<div class="sm-bt nw"><b>ข่าว · ฟรี ไม่มี AI</b> <small>' + (s.at ? "อัปเดต " + thai(s.at).slice(9, 14) + " น. · " + list.length + " ข่าวใน 48 ชม." : "กำลังโหลด…") +
-        (s.errors.length ? " · โหลดไม่ได้ " + s.errors.length + " แหล่ง" : "") + "</small>" +
+      return '<div class="card nw"><div class="card-hd"><b>ข่าว</b><small>ฟรี ไม่มี AI · ' + (s.at ? "อัปเดต " + thai(s.at).slice(9, 14) + " น. · " + list.length + " ข่าวใน 48 ชม." : "กำลังโหลด…") +
+        (s.errors.length ? " · โหลดไม่ได้ " + s.errors.length + " แหล่ง" : "") + '</small></div><div class="chips"><span class="chip good">ข่าวดี = เขียว</span><span class="chip bad">ข่าวร้าย = แดง</span></div>' +
         '<div class="nw-sec">ปฏิทินเศรษฐกิจสหรัฐ 48 ชม.</div>' + eventsHtml(48) +
         '<div class="nw-sec">ข่าวที่เกี่ยวกับเหรียญของคุณ / ความเสี่ยง</div>' + (first.map(function (x) { return row(x, mine); }).join("") || '<small class="muted">ไม่มี</small>') +
         "<details><summary>ข่าวอื่น " + rest.length + " ข่าว</summary>" + rest.slice(0, 40).map(function (x) { return row(x, mine); }).join("") + "</details></div>";
@@ -1075,9 +1083,9 @@
       if (ddPct > nm.port.maxDD) level = "broken";
     }
     var text = { few: "ยังมีไม้ไม่ถึง 10 ไม้ เทียบกับผลทดสอบไม่ได้",
-      ok: "✅ ปกติ: อยู่ในช่วงที่ผลทดสอบเคยเจอ · เทรดต่อตามสูตร",
-      watch: "⚠️ ต่ำกว่าปกติ: แย่กว่า 95% ของช่วงในผลทดสอบ แต่ยังไม่เกินที่เคยเจอ · เทรดต่อได้ ห้ามเพิ่มความเสี่ยง",
-      broken: "⛔ แย่กว่าที่ผลทดสอบเคยเจอ: หลักฐานไม่ครอบคลุมแล้ว สูตรอาจเสื่อม · หยุดเข้าไม้ใหม่ ถือไม้เดิมตามสูตร แล้วทบทวน" }[level];
+      ok: "ปกติ: อยู่ในช่วงที่ผลทดสอบเคยเจอ · เทรดต่อตามสูตร",
+      watch: "ต่ำกว่าปกติ: แย่กว่า 95% ของช่วงในผลทดสอบ แต่ยังไม่เกินที่เคยเจอ · เทรดต่อได้ ห้ามเพิ่มความเสี่ยง",
+      broken: "แย่กว่าที่ผลทดสอบเคยเจอ: หลักฐานไม่ครอบคลุมแล้ว สูตรอาจเสื่อม · หยุดเข้าไม้ใหม่ ถือไม้เดิมตามสูตร แล้วทบทวน" }[level];
     return { level: level, text: text, rows: rows };
   }
   // One line of what is normal for the rule, so a losing run in that range is read as the rule working, not breaking.
@@ -1155,13 +1163,13 @@
     return c ? c.level + " (ผ่าน " + c.passed + "/" + c.total + " การทดสอบ)" + (c.year ? " · ปีที่กำไร ≈" + c.year.win + "%" : "") : "";
   }
   function confidenceHtml() {
-    var c = trendConfidence(), mark = { pass: "✓", warn: "⚠", fail: "✗" };
+    var c = trendConfidence(), mark = { pass: ic("check"), warn: ic("alert"), fail: ic("x") };
     if (!c) return "";
     return '<div class="conf-box ' + c.cls + '"><div class="conf-hd"><span>ความมั่นใจของสูตร</span><b>' + c.level + "</b><small>ผ่าน " + c.passed + "/" + c.total + " การทดสอบ</small></div>" +
       (c.year ? '<div class="conf-year">โอกาสปีที่กำไร <b>≈' + c.year.win + '%</b> · ปีที่ขาดทุนเกิน 10% ≈' + fmt(c.year.loss10, 0) + "% · ปีกลางๆ " + fmt(c.year.p50, 0, true) +
         "% <small>(เสี่ยง 0.5%/ไม้ 12 เหรียญ จำลองจากเดือนจริง 2023–2026 · 5% แย่สุด " + fmt(c.year.p5, 0, true) + "% · 5% ดีสุด " + fmt(c.year.p95, 0, true) + "%)</small></div>" : "") +
       "<details><summary>ดูผลทดสอบทีละข้อ</summary>" + c.rows.map(function (r) { return '<div class="conf-row ' + r.ok + '"><i>' + mark[r.ok] + "</i>" + esc(r.text) + "</div>"; }).join("") +
-      '<div class="conf-row info"><i>ℹ</i>กติกาลดความเสี่ยงและการจำกัดจำนวนไม้ที่เลือกจากปี 2020–2022 ทำกำไรปี 2023–2026 หายเกือบหมด จึงเทรดทุกสัญญาณ และหยุดเข้าไม้ใหม่เฉพาะเมื่อพอร์ตลงลึกกว่าที่ทดสอบเคยเจอ</div>' +
+      '<div class="conf-row info"><i>' + ic("info") + '</i>กติกาลดความเสี่ยงและการจำกัดจำนวนไม้ที่เลือกจากปี 2020–2022 ทำกำไรปี 2023–2026 หายเกือบหมด จึงเทรดทุกสัญญาณ และหยุดเข้าไม้ใหม่เฉพาะเมื่อพอร์ตลงลึกกว่าที่ทดสอบเคยเจอ</div>' +
       '<small class="muted">"มั่นใจ" = ความมั่นใจทางสถิติว่ากำไรเฉลี่ยต่อไม้ในข้อมูลทดสอบเป็นบวก (คิดแบบไม้อิสระ จึงอาจสูงเกินจริง) ไม่ใช่การรับประกันอนาคต</small></details></div>';
   }
   // Headline numbers for a trade: how often trades like it closed in profit in the test (win %), how much bigger the
@@ -1290,7 +1298,7 @@
     // Margin is more than the balance typed at the top: the numbers are for that balance, so say where to fix it.
     function marginNote(m) {
       var cap = money();
-      return m > cap ? '<div class="act-warn">⚠️ Margin ≈ ' + fmt(m, 0) + " ฿ มากกว่าทุนที่ใส่ไว้ (" + fmt(cap, 0) + " ฿) · ใส่ทุนจริงในช่องด้านบน ขนาดไม้จะคำนวณใหม่</div>" : "";
+      return m > cap ? '<div class="callout warn sm">' + ic("alert") + "<span>Margin ≈ " + fmt(m, 0) + " ฿ มากกว่าทุนที่ใส่ไว้ (" + fmt(cap, 0) + " ฿) · ใส่ทุนจริงในช่องด้านบน ขนาดไม้จะคำนวณใหม่</span></div>" : "";
     }
     // Whether someone without the position can still join it now (research/pro "late entry"), and the order if so.
     function joinInfo(it, r) {
@@ -1304,57 +1312,69 @@
       if (!(v.avgRCI && v.avgRCI[0] > 0)) return { ok: false, html: "ไม่ต้องตาม: เข้าช้า " + it.barsSince + " แท่งแล้ว ผลทดสอบไม่ชัดว่ากำไร (เข้าช้า " + v.bars + " แท่ง: เฉลี่ย " +
         fmt(v.avgR, 2, true) + "R ช่วง 95% " + fmt(v.avgRCI[0], 2, true) + " ถึง " + fmt(v.avgRCI[1], 2, true) + "R) · รอไม้ใหม่" };
       var z = sized(lg), tp1 = it.tpLevels[0];
-      return { ok: true, html: '<b class="up">✅ เข้าตามได้</b> ที่ ≈ ' + price(lg.entry) + " · SL " + price(lg.stop) +
+      return { ok: true, html: '<b class="up">เข้าตามได้</b> ที่ ≈ ' + price(lg.entry) + " · SL " + price(lg.stop) +
         (tp1 ? " · TP1 " + price(tp1.price) : "") + " · x" + lg.lev + " · " + qtyTxt(z.qty) + " " + r.symbol.replace("USDT", "") + " · Margin ≈ " + fmt(z.marginB, 0) + " ฿ · เสี่ยง " +
         fmt(z.lossB / cap * 100, 2) + "%" + (lg.minSize ? " (ขนาดขั้นต่ำ Binance)" : "") + marginNote(z.marginB) + "<small>ทดสอบเข้าช้า " + v.bars + " แท่ง: " + v.n + " ไม้ · ชนะ " + v.win + "% · เฉลี่ย " + fmt(v.avgR, 2, true) + "R</small>" };
     }
-    // One position the system holds: live move and R, its stop and exits, and whether to join it now. Chart on request.
+    function sidePill(dir, prefix, solid) {
+      var cls = dir === 0 ? "x" : dir > 0 ? "l" : "s";
+      return '<span class="side-pill ' + cls + (solid ? " solid" : "") + '">' + (prefix ? prefix + " " : "") + (dir === 0 ? "" : dir > 0 ? "LONG" : "SHORT") + "</span>";
+    }
+    function fact(k, v) { return "<div><small>" + k + "</small><b>" + v + "</b></div>"; }
+    // One position the system holds: live move and R, its levels and exit, and whether to join it now. Chart on request.
     function holdCard(it, r, i) {
       var long = it.dir > 0, coin = it.symbol.replace("USDT", ""), mv = it.dir * (it.now - it.entry) / it.entry * 100, k = Math.abs(it.entry - it.stop), j = joinInfo(it, r);
-      var tps = it.tpLevels.map(function (t) { return " · " + t.label + " " + price(t.price) + (t.done ? " ✓ขายแล้ว" : ""); }).join("");
-      return '<div class="hold ' + (long ? "l" : "s") + '"><div class="act-hd"><b>' + (long ? "🟢 LONG " : "🔴 SHORT ") + coin + '</b><b class="hold-pct ' + tone(mv) + '" data-livepos="' + r.symbol +
+      var tp = it.tpLevels[0];
+      return '<div class="card hold ' + (long ? "l" : "s") + '"><div class="card-hd">' + sidePill(it.dir) + ' <b class="sym">' + coin + '</b> <b class="big ' + tone(mv) + '" data-livepos="' + r.symbol +
           '" data-e="' + it.entry + '" data-d="' + it.dir + '" data-k="' + k + '" data-big="1">' + fmt(mv, 2, true) + "% (" + fmt(it.dir * (it.now - it.entry) / k, 2, true) + "R)</b></div>" +
-        '<div class="hold-line">เข้า ' + thai(it.entryTime).slice(0, 14) + " น. ที่ " + price(it.entry) + ' · ตอนนี้ <span data-now="' + r.symbol + '">' + price(it.now) + "</span></div>" +
-        '<div class="hold-line">SL ' + price(it.stop) + tps + " · " + exitText(it) + "</div>" +
-        '<div class="hold-follow ' + (j.ok ? "ok" : "no") + '">ถ้าถืออยู่: ถือต่อ ห้ามเลื่อน SL · ถ้ายังไม่ได้เข้า: ' + j.html + "</div>" + moodLine(r.symbol, it.dir) +
-        '<details class="act-more" data-draw="hold:' + i + '"><summary>กราฟ</summary><div id="smHold' + i + '" class="sm-chart" style="height:220px;margin-top:6px"></div></details></div>';
+        '<div class="facts">' + fact("เข้า " + thai(it.entryTime).slice(0, 5) + " " + thai(it.entryTime).slice(9, 14), price(it.entry)) +
+          fact("ตอนนี้", '<span data-now="' + r.symbol + '">' + price(it.now) + "</span>") + fact("Stop Loss", '<span class="down">' + price(it.stop) + "</span>") +
+          (tp ? fact(tp.label + (tp.done ? " (ขายแล้ว)" : ""), '<span class="up">' + price(tp.price) + "</span>") : fact("TP", "ไม่ตั้ง")) + "</div>" +
+        '<p class="fine">' + exitText(it) + " · ถ้าถืออยู่: ถือต่อ ห้ามเลื่อน SL</p>" +
+        '<div class="follow ' + (j.ok ? "ok" : "no") + '">' + ic(j.ok ? "check" : "minus") + "<div><b>ถ้ายังไม่ได้เข้า</b> " + j.html + "</div></div>" + moodLine(r.symbol, it.dir) +
+        '<details class="more-chart" data-draw="hold:' + i + '"><summary>กราฟ</summary><div id="smHold' + i + '" class="sm-chart" style="height:220px;margin-top:6px"></div></details></div>';
     }
     // A new signal as an order to copy: side, leverage, entry, SL, TP1, size, margin, risk, deadline. The full sheet folds.
     function orderCard(r, g, z, i) {
       var long = g.dir > 0, coin = r.symbol.replace("USDT", ""), cap = money(), v = verdictOf(r.symbol, TREND.tf, z.lossB / cap * 100), tp1 = g.ladder && g.ladder[0];
-      var cell = function (k, val, cls) { return "<div><small>" + k + '</small><b class="' + (cls || "") + '">' + val + "</b></div>"; };
-      return '<div class="act ' + (long ? "l" : "s") + '" id="smAct' + i + '"><div class="act-hd"><b>' + (long ? "🟢 เข้า LONG " : "🔴 เข้า SHORT ") + coin + " x" + g.lev + "</b>" +
-          (v.win !== null ? '<span class="act-win">โอกาสกำไร ' + fmt(v.win, 0) + "%</span>" : "") + "</div>" +
-        '<div class="act-grid">' + cell("ราคาเข้า ≈", price(g.entry)) + cell("Stop Loss", price(g.stop), "down") +
-          (tp1 ? cell("TP1 ขาย " + fracTxt(tp1.frac), price(tp1.price), "up") : cell("Take Profit", "ไม่ตั้ง")) + cell("ขนาด", qtyTxt(z.qty) + " " + coin) +
-          cell("Margin", fmt(z.marginB, 0) + " ฿") + cell("เสี่ยง", fmt(z.lossB / cap * 100, 2) + "% ≈ " + fmt(z.lossB, 0) + " ฿") + "</div>" +
-        "<small>Isolated x" + g.lev + " · เข้าภายใน " + thai(g.expires).slice(9, 14) + " น. · ตั้ง SL ใน Binance ทันที · ที่เหลือปิดเมื่อแอปเด้ง \"ปิดไม้\"" +
-          (g.minSize ? " · ขนาดขั้นต่ำของ Binance" : "") + "</small>" + marginNote(z.marginB) + moodLine(r.symbol, g.dir) +
-        '<details class="act-more" data-draw="sig:' + i + '"><summary>รายละเอียดทั้งหมด + กราฟ</summary>' + tradeSheet(r, g, z, TREND.tf, i) + "</details></div>";
+      return '<div class="card act ' + (long ? "l" : "s") + '" id="smAct' + i + '"><div class="card-hd">' + sidePill(g.dir, "เข้า", true) + ' <b class="sym">' + coin + '</b> <span class="lev">x' + g.lev + "</span>" +
+          (v.win !== null ? '<span class="chip">โอกาสกำไร ' + fmt(v.win, 0) + "%</span>" : "") + "</div>" +
+        '<div class="facts three">' + fact("ราคาเข้า ≈", price(g.entry)) + fact("Stop Loss", '<span class="down">' + price(g.stop) + "</span>") +
+          (tp1 ? fact("TP1 ขาย " + fracTxt(tp1.frac), '<span class="up">' + price(tp1.price) + "</span>") : fact("Take Profit", "ไม่ตั้ง")) + fact("ขนาด", qtyTxt(z.qty) + "<small>" + coin + "</small>") +
+          fact("Margin", fmt(z.marginB, 0) + "<small>บาท</small>") + fact("เสี่ยง", fmt(z.lossB / cap * 100, 2) + "%<small>≈ " + fmt(z.lossB, 0) + " บาท</small>") + "</div>" +
+        '<p class="fine">Isolated x' + g.lev + " · เข้าภายใน " + thai(g.expires).slice(9, 14) + " น. · ตั้ง SL ใน Binance ทันที · ที่เหลือปิดเมื่อแอปเด้ง \"ปิดไม้\"" +
+          (g.minSize ? " · ขนาดขั้นต่ำของ Binance" : "") + "</p>" + marginNote(z.marginB) + moodLine(r.symbol, g.dir) +
+        '<details class="more-chart" data-draw="sig:' + i + '"><summary>รายละเอียดทั้งหมด + กราฟ</summary>' + tradeSheet(r, g, z, TREND.tf, i) + "</details></div>";
     }
-    // A trade's news line: the mood, whether it points the trade's way, and what the system does about it.
+    // A trade's news read: the coin's good and bad headlines, whether they point the trade's way, and how the rule's past
+    // trades did in the same market mood. The market mood and what the mood study found are in the system's note.
     function moodLine(symbol, dir) {
-      var r = moodRead(symbol, dir);
-      return '<div class="mood ' + r.fit + '">📰 ' + esc(r.text) + " → <b>" + r.fitText + "</b>" + (r.past ? "<small>" + esc(r.past) + "</small>" : "") + "<small>" + esc(moodRule().text) + "</small></div>";
+      var r = moodRead(symbol, dir), m = r.m, coin = symbol.replace("USDT", "");
+      var fitCls = { with: "good", against: "warn", none: "" }[r.fit];
+      return '<div class="mood"><div class="mood-hd">' + ic("news") + "<b>ข่าว " + coin + " 24 ชม.</b>" +
+          (m.coin && m.coin.n ? '<span class="chip good">ดี ' + m.coin.good + '</span><span class="chip bad">ร้าย ' + m.coin.bad + "</span>" : '<span class="chip">ไม่มีข่าว</span>') +
+          '<span class="chip ' + fitCls + '">' + r.fitText + "</span></div>" + (r.past ? '<p class="fine">' + esc(r.past) + "</p>" : "") + "</div>";
     }
-    // The system's note for today, written from rules like a trader's morning read: market mood and headlines, releases
-    // due, then what it does with each signal, exit and position.
+    // The system's note for now, written from rules like a trader's read: market mood and headlines, releases due, then
+    // what it does with each signal, exit and position.
     function traderNote(list, held) {
       var m = News.mood(null), soon = News.upcoming(4), day = News.upcoming(24), lines = [], coin = function (s) { return s.replace("USDT", ""); };
-      var market = (m.fng ? "ตลาดโดยรวม<b>" + m.fng.label + " " + m.fng.v + "</b>" + (m.fng.change ? " (" + (m.fng.change > 0 ? "↑" : "↓") + Math.abs(m.fng.change) + " ใน 7 วัน)" : "") + " · " : "") +
-        "ข่าวคริปโต 24 ชม.: ดี " + m.market.good + " · ร้าย " + m.market.bad + " จาก " + m.market.n + " ข่าว";
-      if (m.fng && (m.fng.v < 25 || m.fng.v > 75)) lines.push("ตลาด" + m.fng.label + ": ราคามักแกว่งแรง ทุกไม้ต้องมี SL ใน Binance");
-      if (soon.length) lines.push("ข่าวแรงก่อนแท่งถัดไปปิด: " + soon.map(function (e) { return e.title + " " + thai(e.time).slice(9, 14) + " น."; }).join(", ") + " · ราคาอาจกระชาก");
-      else if (day.length) lines.push("ข่าวแรงใน 24 ชม.: " + day.map(function (e) { return e.title + " " + thai(e.time).slice(9, 14) + " น."; }).join(", "));
-      results.filter(function (r) { return r.exit; }).forEach(function (r) { lines.push("ปิด " + (r.exit.dir > 0 ? "LONG " : "SHORT ") + coin(r.symbol) + " ตามระบบ (ระบบได้ " + fmt(r.exit.r, 2, true) + "R)"); });
+      var add = function (kind, text) { lines.push('<li class="' + kind + '">' + esc(text) + "</li>"); };
+      if (m.fng && (m.fng.v < 25 || m.fng.v > 75)) add("warn", "ตลาด" + m.fng.label + ": ราคามักแกว่งแรง ทุกไม้ต้องมี SL ใน Binance");
+      if (soon.length) add("warn", "ข่าวแรงก่อนแท่งถัดไปปิด: " + soon.map(function (e) { return e.title + " " + thai(e.time).slice(9, 14) + " น."; }).join(", ") + " · ราคาอาจกระชาก");
+      else if (day.length) add("info", "ข่าวแรงใน 24 ชม.: " + day.map(function (e) { return e.title + " " + thai(e.time).slice(9, 14) + " น."; }).join(", "));
+      results.filter(function (r) { return r.exit; }).forEach(function (r) { add("x", "ปิด " + (r.exit.dir > 0 ? "LONG " : "SHORT ") + coin(r.symbol) + " ตามระบบ (ระบบได้ " + fmt(r.exit.r, 2, true) + "R)"); });
       list.forEach(function (x) {
         var g = x.signal, mr = moodRead(x.symbol, g.dir);
-        lines.push((g.dir > 0 ? "เข้า LONG " : "เข้า SHORT ") + coin(x.symbol) + " ตามระบบ · " + mr.fitText + (mr.fit === "against" ? " (ข่าวไม่ได้ทดสอบว่าช่วย จึงยังเข้า)" : ""));
+        add(g.dir > 0 ? "l" : "s", (g.dir > 0 ? "เข้า LONG " : "เข้า SHORT ") + coin(x.symbol) + " ตามระบบ · " + mr.fitText + (mr.fit === "against" ? " (ข่าวไม่ได้ทดสอบว่าช่วย จึงยังเข้า)" : ""));
       });
-      if (held.length) lines.push("ถือ " + held.length + " ไม้ต่อตามระบบ (" + held.map(function (it) { return coin(it.symbol) + " " + (it.dir > 0 ? "LONG" : "SHORT"); }).join(", ") + ") · ห้ามเลื่อน SL");
-      if (!list.length && !results.some(function (r) { return r.exit; })) lines.push("ไม่มีไม้ใหม่ · รอแท่ง 4 ชม. ถัดไป");
-      return '<div class="note"><div class="note-hd">📋 มุมมองของระบบตอนนี้</div><div class="note-mkt">' + market + "</div><ul>" +
-        lines.map(function (l) { return "<li>" + esc(l) + "</li>"; }).join("") + "</ul><small>" + esc(moodRule().text) + "</small></div>";
+      if (held.length) add("info", "ถือ " + held.length + " ไม้ต่อตามระบบ (" + held.map(function (it) { return coin(it.symbol) + " " + (it.dir > 0 ? "LONG" : "SHORT"); }).join(", ") + ") · ห้ามเลื่อน SL");
+      if (!list.length && !results.some(function (r) { return r.exit; })) add("info", "ไม่มีไม้ใหม่ · รอแท่ง 4 ชม. ถัดไป");
+      var moodCls = m.fng ? (m.fng.v < 45 ? "bad" : m.fng.v > 55 ? "good" : "") : "";
+      return '<div class="card note"><div class="card-hd"><b>มุมมองของระบบ</b><small>อ่านจากข่าวและอารมณ์ตลาด</small></div><div class="chips">' +
+          (m.fng ? '<span class="chip ' + moodCls + '">ตลาด' + m.fng.label + " " + m.fng.v + (m.fng.change ? " " + (m.fng.change > 0 ? "↑" : "↓") + Math.abs(m.fng.change) + " ใน 7 วัน" : "") + "</span>" : "") +
+          '<span class="chip good">ข่าวดี ' + m.market.good + '</span><span class="chip bad">ข่าวร้าย ' + m.market.bad + '</span><span class="chip">' + m.market.n + " ข่าว 24 ชม.</span></div>" +
+        '<ul class="note-list">' + lines.join("") + '</ul><p class="fine">' + esc(moodRule().text) + "</p></div>";
     }
     // The system's own record: its closed trades of the last 30 days on the selected coins, in R and in % at the set risk.
     function perfHtml() {
@@ -1366,64 +1386,64 @@
       var nm = trendNormal(), w = nm && nm.normal.windows, N = w ? [100, 50, 30, 20, 10].filter(function (k) { return closed.length >= k && w[k]; })[0] : null, verdict = "";
       if (N) {
         var b = w[N], last = closed.slice(0, N).reduce(function (a, t) { return a + t.r; }, 0);
-        var lvl = last < b.min ? "broken" : last < b.p5 ? "watch" : "ok";
-        verdict = '<div class="live-chk ' + lvl + '" style="margin:6px 0">' + { ok: "✅ อยู่ในช่วงปกติของผลทดสอบ", watch: "⚠️ ต่ำกว่าปกติ: แย่กว่า 95% ของช่วงในผลทดสอบ แต่ยังไม่แย่เท่าที่เคยเจอ",
-          broken: "⛔ แย่กว่าที่ผลทดสอบเคยเจอ: สูตรอาจเสื่อม หยุดเข้าไม้ใหม่และทบทวน" }[lvl] + "<small>" + N + " ไม้ล่าสุดรวม " + fmt(last, 1, true) + "R · ผลทดสอบ " + N +
+        var lvl = last < b.min ? "bad" : last < b.p5 ? "warn" : "ok";
+        verdict = '<div class="callout ' + lvl + '">' + ic(lvl === "ok" ? "check" : "alert") + "<div><b>" + { ok: "อยู่ในช่วงปกติของผลทดสอบ", warn: "ต่ำกว่าปกติ: แย่กว่า 95% ของช่วงในผลทดสอบ แต่ยังไม่แย่เท่าที่เคยเจอ",
+          bad: "แย่กว่าที่ผลทดสอบเคยเจอ: สูตรอาจเสื่อม หยุดเข้าไม้ใหม่และทบทวน" }[lvl] + "</b><small>" + N + " ไม้ล่าสุดรวม " + fmt(last, 1, true) + "R · ผลทดสอบ " + N +
           " ไม้ติดกัน: ปกติ " + fmt(b.p50, 1, true) + "R · แย่ 5% ล่างสุด " + fmt(b.p5, 1, true) + "R · แย่สุดที่เคยเจอ " + fmt(b.min, 1, true) + "R" +
-          (lvl === "ok" ? "" : " · ช่วงแบบนี้ควรเสี่ยงต่ำสุด (0.25%) หรือรอให้กลับเข้ากรอบปกติก่อนใช้เงินเพิ่ม") + "</small></div>";
+          (lvl === "ok" ? "" : " · ช่วงแบบนี้ควรเสี่ยงต่ำสุด (0.25%) หรือรอให้กลับเข้ากรอบปกติก่อนใช้เงินเพิ่ม") + "</small></div></div>";
       }
-      return '<div class="sec-hd">ผลงานระบบ 30 วัน</div><div class="perf">' + verdict +
-        (closed.length ? "<div>" + closed.length + " ไม้ที่ปิด · ชนะ " + wins + " · แพ้ " + (closed.length - wins) + ' · รวม <b class="' + tone(sumR) + '">' + fmt(sumR, 1, true) + "R</b> ≈ " +
-            '<b class="' + tone(sumR) + '">' + fmt(sumR * risk, 1, true) + "% ของทุน</b> <small>(เสี่ยง " + risk + "%/ไม้)</small></div>" +
+      return '<div class="sec-hd">ผลงานระบบ 30 วัน</div><div class="card perf">' +
+        (closed.length ? '<div class="card-hd"><b>' + closed.length + ' ไม้ที่ปิด</b><small>ชนะ ' + wins + " · แพ้ " + (closed.length - wins) + '</small><b class="big ' + tone(sumR) + '">' + fmt(sumR, 1, true) + "R</b></div>" +
+            '<p class="fine">≈ <b class="' + tone(sumR) + '">' + fmt(sumR * risk, 1, true) + "% ของทุน</b> ที่เสี่ยง " + risk + "%/ไม้</p>" + verdict +
             closed.slice(0, 8).map(function (t) {
-              return '<div class="perf-row"><span>' + (t.dir > 0 ? "🟢 " : "🔴 ") + t.symbol.replace("USDT", "") + " " + (t.dir > 0 ? "LONG" : "SHORT") + " <small>" + thai(t.entry_time).slice(0, 5) +
-                " → " + thai(t.exit_time).slice(0, 5) + " · " + (why[t.reason] || "") + '</small></span><b class="' + tone(t.r) + '">' + fmt(t.r, 2, true) + "R</b></div>";
+              return '<div class="perf-row">' + sidePill(t.dir) + " <b>" + t.symbol.replace("USDT", "") + "</b> <small>" + thai(t.entry_time).slice(0, 5) + " → " + thai(t.exit_time).slice(0, 5) +
+                " · " + (why[t.reason] || "") + '</small><b class="r ' + tone(t.r) + '">' + fmt(t.r, 2, true) + "R</b></div>";
             }).join("")
-          : "<div>ยังไม่มีไม้ที่ปิดใน 30 วันของเหรียญที่เลือก</div>") +
-        "<small>สูตรชนะราว 1 ใน 3 กำไรมาจากไม้ใหญ่ไม่กี่ไม้ · ดูยอดรวม ไม่ใช่จำนวนครั้งที่ชนะ</small></div>";
+          : "<p>ยังไม่มีไม้ที่ปิดใน 30 วันของเหรียญที่เลือก</p>") +
+        '<p class="fine">สูตรชนะราว 1 ใน 3 กำไรมาจากไม้ใหญ่ไม่กี่ไม้ · ดูยอดรวม ไม่ใช่จำนวนครั้งที่ชนะ</p></div>';
     }
-    // Trend 4H for someone who follows the system: its status, what to do now, what it holds (live), its last 30 days.
-    // Everything else (confidence details, news, plan and routine, what is normal) folds into one section.
+    // Trend 4H for someone who follows the system: its status, the system's read, what to do now, what it holds (live),
+    // its last 30 days. Everything else (confidence details, news, plan and routine, what is normal) folds into one section.
     function followView(list, items) {
       var sch = trendSchedule(Date.now()), c = trendConfidence(), bg = {}, lc = null, coin = function (r) { return r.symbol.replace("USDT", ""); };
       try { bg = window.NativeHttp && window.NativeHttp.lastScanStatus ? JSON.parse(window.NativeHttp.lastScanStatus() || "{}") : {}; } catch (e) { /* none */ }
       try { lc = JSON.parse(localStorage.getItem("liveCheck") || "null"); } catch (e) { /* none yet */ }
-      var bad = bg.at && bg.ok === false;
-      var h = '<div class="sys"><div class="sys-hd"><b>ระบบเทรด Trend 4H</b><span class="sys-dot ' + (bad || lastError ? "bad" : "ok") + '">● ' +
-          (bad || lastError ? "มีปัญหา" : busyNow ? "กำลังเช็ก…" : "ทำงานอยู่") + "</span></div>" +
-        "<div>เช็กครั้งถัดไป <b>" + thai(sch.next).slice(9, 14) + " น.</b> · " + selectedCoins().length + " เหรียญ · เสี่ยง " + trendRiskPct() + "%/ไม้" +
-          (lastScan ? " · เช็กล่าสุด " + thai(lastScan).slice(9, 14) + " น." : "") + "</div>" +
-        (c ? '<div>ความมั่นใจของสูตร <b class="yel">' + c.level + "</b>" + (c.year ? " · ปีที่กำไร ≈" + c.year.win + "%" : "") + "</div>" : "") +
-        (bad ? '<div class="down sys-err">แจ้งเตือนเบื้องหลัง: ' + esc(bg.text || "").slice(0, 140) + "</div>" : "") +
-        (lastError ? '<div class="down sys-err">เช็กไม่สำเร็จ: ' + esc(lastError).slice(0, 120) + "</div>" : "") +
-        (lc && (lc.level === "watch" || lc.level === "broken") ? '<div class="live-chk ' + lc.level + '" style="margin-top:6px">' + esc(lc.text) + "</div>" : "") + "</div>";
+      var bad = bg.at && bg.ok === false, problem = bad || lastError;
+      var h = '<div class="card sys"><div class="card-hd"><b>ระบบเทรด Trend 4H</b><span class="status ' + (problem ? "bad" : "ok") + '"><i></i>' +
+          (problem ? "มีปัญหา" : busyNow ? "กำลังเช็ก…" : "ทำงานอยู่") + "</span></div>" +
+        '<div class="facts four">' + fact("เช็กครั้งถัดไป", thai(sch.next).slice(9, 14) + " น.") + fact("เหรียญ", selectedCoins().length) + fact("เสี่ยงต่อไม้", trendRiskPct() + "%") +
+          fact("ความมั่นใจ", c ? '<span class="yel">' + c.level + "</span>" : "—") + "</div>" +
+        '<p class="fine">' + (c && c.year ? "โอกาสปีที่กำไร ≈" + c.year.win + "% · " : "") + (lastScan ? "เช็กล่าสุด " + thai(lastScan).slice(9, 14) + " น." : "") + "</p>" +
+        (bad ? '<p class="fine down">แจ้งเตือนเบื้องหลัง: ' + esc(bg.text || "").slice(0, 140) + "</p>" : "") +
+        (lastError ? '<p class="fine down">เช็กไม่สำเร็จ: ' + esc(lastError).slice(0, 120) + "</p>" : "") +
+        (lc && (lc.level === "watch" || lc.level === "broken") ? '<div class="callout ' + (lc.level === "broken" ? "bad" : "warn") + ' sm">' + ic("alert") + "<span>" + esc(lc.text) + "</span></div>" : "") + "</div>";
       var held = items.filter(function (it) { return it.kind === "hold"; });
       var todo = results.filter(function (r) { return r.exit; }).map(function (r) {
         var x = r.exit;
-        return '<div class="act x" id="smExit' + r.symbol + '"><div class="act-hd"><b>🟠 ปิด ' + (x.dir > 0 ? "LONG " : "SHORT ") + coin(r) + " ตอนนี้</b>" +
-          '<span class="act-win">ระบบได้ ' + fmt(x.r, 2, true) + "R</span></div><div>ปิดด้วย Market (ถ้าถืออยู่) · ถ้าไม่ได้ถือ ไม่ต้องทำอะไร</div>" +
-          "<small>แท่ง 4 ชม. ปิด " + price(x.close) + (x.dir > 0 ? " ต่ำกว่า " : " สูงกว่า ") + price(x.level) + " · ระบบเข้าเมื่อ " + thai(x.entry_time).slice(0, 14) + " น. ที่ " + price(x.entry) + "</small></div>";
+        return '<div class="card act x" id="smExit' + r.symbol + '"><div class="card-hd">' + sidePill(x.dir, "ปิด", true) + ' <b class="sym">' + coin(r) + "</b>" +
+          '<span class="chip ' + (x.r >= 0 ? "good" : "bad") + '">ระบบได้ ' + fmt(x.r, 2, true) + "R</span></div><p>ปิดด้วย Market ตอนนี้ (ถ้าถืออยู่) · ถ้าไม่ได้ถือ ไม่ต้องทำอะไร</p>" +
+          '<p class="fine">แท่ง 4 ชม. ปิด ' + price(x.close) + (x.dir > 0 ? " ต่ำกว่า " : " สูงกว่า ") + price(x.level) + " · ระบบเข้าเมื่อ " + thai(x.entry_time).slice(0, 14) + " น. ที่ " + price(x.entry) + "</p></div>";
       }).join("") + list.map(function (x, i) { return orderCard(x, x.signal, sized(x.signal), i); }).join("");
       if (!todo) {
-        todo = busyNow ? '<div class="act idle"><b>กำลังเช็ก ' + selectedCoins().length + " เหรียญ…</b></div>"
-          : '<div class="act idle"><b>✅ ตอนนี้ไม่ต้องทำอะไร</b><div>ไม่มีไม้ใหม่ · แอปจะเด้งแจ้งเตือนเองเมื่อมีไม้เข้าหรือต้องปิดไม้' +
-            (held.some(function (it) { return joinInfo(it, results.filter(function (r) { return r.symbol === it.symbol; })[0]).ok; }) ? " · หรือเข้าตามไม้ที่ระบบถืออยู่ได้ (ด้านล่าง)" : "") + "</div></div>";
+        todo = busyNow ? '<div class="card idle">' + ic("clock") + "<div><b>กำลังเช็ก " + selectedCoins().length + " เหรียญ…</b></div></div>"
+          : '<div class="card idle">' + ic("check") + "<div><b>ตอนนี้ไม่ต้องทำอะไร</b><p>ไม่มีไม้ใหม่ · แอปจะเด้งแจ้งเตือนเองเมื่อมีไม้เข้าหรือต้องปิดไม้" +
+            (held.some(function (it) { return joinInfo(it, results.filter(function (r) { return r.symbol === it.symbol; })[0]).ok; }) ? " · หรือเข้าตามไม้ที่ระบบถืออยู่ได้ (ด้านล่าง)" : "") + "</p></div></div>";
       }
       todo += results.filter(function (r) { return r.signal && r.signal.below_minimum; }).map(function (r) {
-        return '<div class="act-note">' + coin(r) + " " + (r.signal.dir > 0 ? "LONG" : "SHORT") + " มีสัญญาณแต่ไม่ผ่าน: " + esc(r.signal.reject) + "</div>";
+        return '<p class="fine">' + coin(r) + " " + (r.signal.dir > 0 ? "LONG" : "SHORT") + " มีสัญญาณแต่ไม่ผ่าน: " + esc(r.signal.reject) + "</p>";
       }).join("");
       h += '<div id="smNote">' + traderNote(list, held) + "</div>";
       h += '<div class="sec-hd">ตอนนี้ต้องทำอะไร</div><div id="smNewsTop">' + News.topHtml() + "</div>" + todo;
-      h += '<div class="sec-hd">ระบบถืออยู่ ' + held.length + " ไม้ <small>(ราคาสด)</small></div>" + (held.length ? held.map(function (it, i) {
+      h += '<div class="sec-hd">ระบบถืออยู่ ' + (held.length ? held.length + " ไม้ <small>ราคาสด</small>" : "") + "</div>" + (held.length ? held.map(function (it, i) {
         return holdCard(it, results.filter(function (r) { return r.symbol === it.symbol; })[0], i);
-      }).join("") : '<div class="act idle">ระบบยังไม่มีไม้เปิด</div>');
+      }).join("") : '<div class="card idle">' + ic("minus") + "<div><b>ระบบยังไม่มีไม้เปิด</b></div></div>");
       h += perfHtml();
       var T = window.EVIDENCE_TREND, port = T && T.portfolio && T.portfolio[String(trendRiskPct())];
       h += '<details class="sm-more" id="smMore"><summary>ข้อมูลเพิ่มเติม · ความมั่นใจ · ข่าว · แผนเทรด · ปกติของสูตร</summary>' + confidenceHtml() +
-        (normalText() ? '<div class="sm-bt" style="font-size:13px">' + esc(normalText()) + "<br><small>ผลจริงอยู่ในกรอบนี้ = สูตรทำงานปกติ ไม่ใช่สูตรพัง · เทียบผลจริงได้ที่ เมนู → พอร์ต → Paper" +
-          (lc ? " (ล่าสุด: " + esc(lc.text.split(":")[0]) + ", " + lc.n + " ไม้)" : "") + "</small></div>" : "") +
-        (port ? '<div class="sm-bt" style="font-size:13px">ผลทดสอบ ' + trendPeriod() + " (12 เหรียญ, walk-forward): เสี่ยง " + trendRiskPct() + "%/ไม้ → พอร์ตโตเฉลี่ยปีละ " +
-          fmt(port.cagr, 1, true) + "% · ช่วงแย่สุด −" + fmt(port.maxDD, 1) + "% · ชนะ " + fmt(T.all.win, 0) + "% ของไม้<br><small>ผลจริงมักแย่กว่าทดสอบ · สัญญาณไม่ใช่คำสั่งซื้อขาย</small></div>" : "") +
+        (normalText() ? '<div class="card"><p>' + esc(normalText()) + '</p><p class="fine">ผลจริงอยู่ในกรอบนี้ = สูตรทำงานปกติ ไม่ใช่สูตรพัง · เทียบผลจริงได้ที่ เมนู → พอร์ต → Paper' +
+          (lc ? " (ล่าสุด: " + esc(lc.text.split(":")[0]) + ", " + lc.n + " ไม้)" : "") + "</p></div>" : "") +
+        (port ? '<div class="card"><p>ผลทดสอบ ' + trendPeriod() + " (12 เหรียญ, walk-forward): เสี่ยง " + trendRiskPct() + "%/ไม้ → พอร์ตโตเฉลี่ยปีละ " +
+          fmt(port.cagr, 1, true) + "% · ช่วงแย่สุด −" + fmt(port.maxDD, 1) + "% · ชนะ " + fmt(T.all.win, 0) + '% ของไม้</p><p class="fine">ผลจริงมักแย่กว่าทดสอบ · สัญญาณไม่ใช่คำสั่งซื้อขาย</p></div>' : "") +
         Routine.html() + newsBox() + "</details>";
       return { html: h, held: held };
     }
@@ -1525,7 +1545,7 @@
     function newsFor(symbol) {
       var list = News.forCoin(symbol, 24), soon = News.upcoming(4), mine = selectedCoins().map(function (c) { return c.replace("USDT", ""); });
       return '<div class="sm-sec">ข่าว ' + symbol.replace("USDT", "") + " 24 ชม. · ข่าวไม่เปลี่ยนสัญญาณ</div>" +
-        (soon.length ? '<div class="nw-alert" style="margin:4px 0">⚠️ ข่าวแรงก่อนแท่งถัดไปปิด: ' + soon.map(function (e) { return esc(e.title) + " " + thai(e.time).slice(9, 14) + " น."; }).join(" · ") + "</div>" : "") +
+        (soon.length ? '<div class="callout warn sm">' + ic("alert") + "<span>ข่าวแรงก่อนแท่งถัดไปปิด: " + soon.map(function (e) { return esc(e.title) + " " + thai(e.time).slice(9, 14) + " น."; }).join(" · ") + "</span></div>" : "") +
         (list.length ? list.slice(0, 4).map(function (x) { return News.row(x, mine); }).join("") : '<small class="muted">ไม่มีข่าวที่พูดถึงเหรียญนี้</small>');
     }
     function newsBox() { return '<div id="smNews">' + newsList() + "</div>"; }
@@ -1597,14 +1617,14 @@
       results.filter(function (r) { return r.exit; }).forEach(function (r) {
         var x = r.exit, key = "X:" + tf + ":" + r.symbol + ":" + x.dir + ":" + x.candle;
         if (!floatSeen[key]) fresh.push({ key: key, cls: "x", go: "smExit" + r.symbol,
-          head: "🟠 ปิดไม้ " + (x.dir > 0 ? "LONG " : "SHORT ") + coin(r.symbol) + " ตอนนี้ (ถ้าถืออยู่)", body: "ปิดด้วย Market · ตอนนี้ " + fmt(x.r, 2, true) + "R · " + TF[tf].name });
+          head: "ปิดไม้ " + (x.dir > 0 ? "LONG " : "SHORT ") + coin(r.symbol) + " ตอนนี้ (ถ้าถืออยู่)", body: "ปิดด้วย Market · ตอนนี้ " + fmt(x.r, 2, true) + "R · " + TF[tf].name });
       });
       list.forEach(function (r, i) {
         var g = r.signal, key = "E:" + tf + ":" + r.symbol + ":" + g.dir + ":" + g.candle, long = g.dir > 0;
         if (floatSeen[key]) return;
         var v = verdictOf(r.symbol, tf, sized(g).lossB / cap * 100), tp1 = g.ladder && g.ladder[0] ? g.ladder[0].price : hasTp(g) ? g.tps[0] : null;
         fresh.push({ key: key, cls: long ? "l" : "s", go: isTrend(tf) ? "smAct" + i : "smSheet" + i,
-          head: (long ? "🟢 LONG " : "🔴 SHORT ") + coin(r.symbol) + " x" + g.lev + (v.win !== null ? " · โอกาสกำไร " + fmt(v.win, 0) + "%" : "") + " · เสี่ยง " + fmt(v.risk, 2) + "%",
+          head: (long ? "LONG " : "SHORT ") + coin(r.symbol) + " x" + g.lev + (v.win !== null ? " · โอกาสกำไร " + fmt(v.win, 0) + "%" : "") + " · เสี่ยง " + fmt(v.risk, 2) + "%",
           body: "เข้า " + price(g.entry) + " · SL " + price(g.stop) + (tp1 ? " · TP1 " + price(tp1) : " · ไม่มี TP") + " · " + TF[tf].name });
       });
       // The background scan's hidden page shares storage with the app and must not use up the in-app alert.
@@ -1616,7 +1636,7 @@
       el.innerHTML = fresh.slice(0, 3).map(function (f) {
         return '<div class="fa ' + f.cls + '" data-go="' + f.go + '"><b>' + esc(f.head) + "</b><small>" + esc(f.body) + " · แตะดู</small></div>";
       }).join("") + (fresh.length > 3 ? '<div class="fa more">+ อีก ' + (fresh.length - 3) + " สัญญาณด้านล่าง</div>" : "") +
-        '<button type="button" class="fa-x" aria-label="ปิด">✕</button>';
+        '<button type="button" class="fa-x" aria-label="ปิด">' + ic("x") + "</button>";
       el.classList.remove("hidden");
       el.querySelector(".fa-x").onclick = hide;
       Array.prototype.forEach.call(el.querySelectorAll("[data-go]"), function (d) {
@@ -1678,15 +1698,15 @@
     function liveHtml() {
       var open = Portfolio.openTrades();
       if (!open.length) return "";
-      return '<div class="lv"><div class="lv-hd"><b>ไม้ที่เข้าแล้ว ' + open.length + ' ไม้</b><b id="lvTotal">…</b><small id="lvFeed">กำลังต่อราคาสด…</small></div>' + open.map(function (t) {
+      return '<div class="card lv"><div class="card-hd"><b>ไม้ที่เข้าแล้ว ' + open.length + ' ไม้</b><b class="big" id="lvTotal">…</b></div><p class="fine" id="lvFeed">กำลังต่อราคาสด…</p>' + open.map(function (t) {
         var long = (t.dir || 1) > 0;
-        return '<div class="lv-card" id="lvCard' + t.id + '"><div class="lv-top"><span class="pill ' + (long ? "go" : "short") + '">' + (long ? "LONG" : "SHORT") + "</span><b>" + t.symbol.replace("USDT", "") +
-          (t.lev ? " x" + t.lev : "") + '</b><b class="lv-roi" id="lvRoi' + t.id + '">—</b></div>' +
+        return '<div class="lv-card" id="lvCard' + t.id + '"><div class="card-hd">' + sidePill(long ? 1 : -1) + ' <b class="sym">' + t.symbol.replace("USDT", "") + "</b>" +
+          (t.lev ? ' <span class="lev">x' + t.lev + "</span>" : "") + '<b class="lv-roi" id="lvRoi' + t.id + '">—</b></div>' +
           '<div class="lv-line" id="lvLine' + t.id + '">เข้า ' + price(t.entry) + " · รอราคาสด</div><div class=\"lv-line\" id=\"lvDist" + t.id + '"></div>' +
           '<details class="lv-act"><summary>แก้ราคาเข้าจริง · ปิดไม้</summary>' +
           '<div class="inline"><input type="number" inputmode="decimal" step="any" id="lvEntry' + t.id + '" value="' + t.entry + '"><button class="mini ghost" type="button" data-lvfix="' + t.id + '">บันทึกราคาเข้าจริง</button></div>' +
           '<div class="inline"><input type="number" inputmode="decimal" step="any" id="lvExit' + t.id + '" placeholder="ราคาที่ปิด (ว่าง = ราคาตอนนี้)"><button class="mini" type="button" data-lvclose="' + t.id + '">ปิดไม้</button></div></details></div>';
-      }).join("") + '<small class="muted">ROI = กำไร/ขาดทุนเทียบ Margin แบบใน Binance (ยังไม่หักค่าธรรมเนียม) · ราคา Mark ของ Binance · R และยอดรวมหักค่าธรรมเนียมแล้ว · ถ้าขาย TP1 ไปแล้ว ตัวเลขจริงจะต่างจากนี้</small></div>';
+      }).join("") + '<p class="fine">ROI = กำไร/ขาดทุนเทียบ Margin แบบใน Binance (ยังไม่หักค่าธรรมเนียม) · ราคา Mark ของ Binance · R และยอดรวมหักค่าธรรมเนียมแล้ว · ถ้าขาย TP1 ไปแล้ว ตัวเลขจริงจะต่างจากนี้</p></div>';
     }
     function setText(id, text, cls) { var el = $(id); if (!el) return; el.textContent = text; if (cls !== undefined) el.className = cls; }
     function paintLive() {
@@ -1709,12 +1729,12 @@
         setText("lvRoi" + t.id, fmt(x.roi, 2, true) + "%", "lv-roi " + c);
         setText("lvLine" + t.id, "ราคา " + price(t.entry) + " → " + price(p) + " (" + fmt(x.move, 2, true) + "%) · " + fmt(x.baht, 0, true) + " ฿" +
           (x.r !== null ? " · " + fmt(x.r, 2, true) + "R" : "") + " · " + fmt((x.baht - x.fee) / cap * 100, 2, true) + "% ของทุน");
-        setText("lvDist" + t.id, x.stopped ? "⛔ ราคาเลย SL " + price(t.stop) + " แล้ว: ใน Binance น่าจะโดน SL ไปแล้ว กดปิดไม้เพื่อบันทึก"
+        setText("lvDist" + t.id, x.stopped ? "ราคาเลย SL " + price(t.stop) + " แล้ว: ใน Binance น่าจะโดน SL ไปแล้ว กดปิดไม้เพื่อบันทึก"
           : "SL " + price(t.stop) + " (ห่าง " + fmt((t.stop / p - 1) * 100, 2, true) + "%)" +
             (t.tp1 || (t.tps && t.tps[0]) ? " · TP1 " + price(t.tp1 || t.tps[0]) + " (อีก " + fmt(((t.tp1 || t.tps[0]) / p - 1) * 100 * d, 2, true) + "%)" : ""), "lv-line" + (x.stopped ? " down" : ""));
       });
-      if (n) setText("lvTotal", "รวม " + fmt(tot, 0, true) + " ฿ (" + fmt(tot / cap * 100, 2, true) + "% ของทุน)", tot >= 0 ? "up" : "down");
-      if (open.length) setText("lvFeed", feed === "ws" ? "● ราคาสดทุก 1 วินาที (Binance Mark)" : feed === "rest" ? "● ราคาทุก 3 วินาที (Binance Mark)" : "กำลังต่อราคาสด…");
+      if (n) setText("lvTotal", "รวม " + fmt(tot, 0, true) + " ฿ (" + fmt(tot / cap * 100, 2, true) + "% ของทุน)", "big " + (tot >= 0 ? "up" : "down"));
+      if (open.length) setText("lvFeed", feed === "ws" ? "ราคาสดทุก 1 วินาที (Binance Mark)" : feed === "rest" ? "ราคาทุก 3 วินาที (Binance Mark)" : "กำลังต่อราคาสด…", "fine " + (feed ? "live" : ""));
     }
     function bindLive() {
       Array.prototype.forEach.call(document.querySelectorAll("[data-lvfix]"), function (b) {
@@ -2617,7 +2637,7 @@
         li("<b>ความเสี่ยง:</b> " + risk + "% ของทุนต่อไม้ (ไม่เกิน 1%) · Isolated · Leverage ตามที่แอปคำนวณ (Liquidation ไกลกว่า SL 1.5 เท่า)") +
         li("<b>ออก:</b> SL ตั้งใน Binance ทันที ห้ามเลื่อน · " + (lad ? "ขาย 50% ที่ +3R · ที่เหลือปิดเมื่อแอปเด้ง \"ปิดไม้\"" : "ไม่ตั้ง TP · ปิดเมื่อแอปเด้ง \"ปิดไม้\"")) +
         li("<b>เทรดทุกสัญญาณ:</b> สูตรชนะราว 1 ใน 3 กำไรมาจากไม้ใหญ่ไม่กี่ไม้ การเลือกข้ามไม้ทำให้พลาดไม้ใหญ่") +
-        li("<b>หยุด:</b> หยุดเข้าไม้ใหม่เมื่อพอร์ตลงเกิน " + dd + " จากจุดสูงสุด (เกินที่ทดสอบเคยเจอ) หรือสมุดผลจริงขึ้น ⛔ แล้วทบทวนก่อนเทรดต่อ") +
+        li("<b>หยุด:</b> หยุดเข้าไม้ใหม่เมื่อพอร์ตลงเกิน " + dd + " จากจุดสูงสุด (เกินที่ทดสอบเคยเจอ) หรือสมุดผลจริงขึ้นสีแดง (แย่กว่าที่ทดสอบเคยเจอ) แล้วทบทวนก่อนเทรดต่อ") +
         li("<b>ห้าม:</b> เพิ่มขนาดหลังแพ้ · เทรดนอกสูตร · เปลี่ยนกติกาเพราะแพ้ติดกัน (แพ้ติดกันหลายสิบไม้เคยเกิดขึ้นแล้วในทดสอบ)") + "</ol>";
     }
     function listHtml(kind, title) {

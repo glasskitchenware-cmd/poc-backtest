@@ -2,7 +2,7 @@
 """Headless-Chrome tests of the real index.html against a mock USD-M futures API (mock_futures.js).
 Each case loads the app, lets it scan, and checks the JSON packet the app hands to the Android alerts.
 Packets with signals are written to tests/js/out/ and re-checked by tools/java-tests (same contract).
-Usage: python3 tests/js/run_tests.py"""
+Usage: python3 tests/js/run_tests.py   (SOFT=1: report failed checks and go on; DUMP=<dir>: write each case's result there)"""
 import glob, html, json, os, re, shutil, subprocess, sys, tempfile, time, urllib.parse
 from pathlib import Path
 
@@ -66,6 +66,8 @@ def run(page, case, cfg, bg=True, virtual_ms=30000):
     res = json.loads(html.unescape(m.group(1)))
     p = re.search(r'<pre id="packet">(.*?)</pre>', r.stdout, re.S)
     res["packet"] = json.loads(html.unescape(p.group(1))) if p else None
+    if os.environ.get("DUMP"):
+        (Path(os.environ["DUMP"]) / (case + ".json")).write_text(json.dumps(res, ensure_ascii=False, indent=1), encoding="utf-8")
     return res
 
 
@@ -73,6 +75,8 @@ passed = 0
 def check(ok, what):
     global passed
     if not ok:
+        if os.environ.get("SOFT"):
+            print("FAIL -", what); return
         raise AssertionError("FAIL: " + what)
     passed += 1
     print("ok -", what)
@@ -240,21 +244,21 @@ def main():
     r = run(page, "h4_coach", {"storage": h4, "capital": 1_000_000, "trendForce": {"BTCUSDT": "LONG", "ETHUSDT": "SHORT", "SOLUSDT": "HOLD_LONG"}, "clickTf": "4h",
                                "waitMs": 15000, "justClosed": 14_400_000, "openDetails": 8000}, bg=False)
     shown = r["smMain"] + r["coach"]
-    check("ตอนนี้ต้องทำอะไร" in r["smMain"] and "🟢 เข้า LONG BTC x" in r["smMain"] and "🔴 เข้า SHORT ETH x" in r["smMain"] and "BTCUSDT Perp" in r["smMain"],
+    check("ตอนนี้ต้องทำอะไร" in r["smMain"] and "เข้า LONG BTC x" in r["smMain"] and "เข้า SHORT ETH x" in r["smMain"] and "BTCUSDT Perp" in r["smMain"],
           "what to do now: one order card per signal (BTC LONG, ETH SHORT), the full sheet folded inside")
     check(all(k in r["smMain"] for k in ["ราคาเข้า ≈", "Stop Loss", "TP1 ขาย 50%", "ขนาด", "Margin", "เสี่ยง", "เข้าภายใน"]), "the order card holds every number to type in Binance")
     check(r["charts"] >= 3, "charts draw when opened: one per signal and one for the held position (" + str(r["charts"]) + ")")
-    check("ระบบถืออยู่ 1 ไม้" in r["smMain"] and "🟢 LONG SOL" in r["smMain"], "the system's open SOL position listed")
+    check("ระบบถืออยู่ 1 ไม้" in r["smMain"] and "LONG SOL +" in r["smMain"], "the system's open SOL position listed")
     for must in ["LONG x", "SHORT x", "โอกาสกำไร", "เสี่ยง ", "ไม้ที่ชนะได้เฉลี่ย", "เป็นสถิติ ไม่ใช่การรับประกัน", "Leverage", "ความเสี่ยงต่อไม้", "Margin ที่วาง", "ทำไม x", "ความเสี่ยง", "LONG (Buy)", "SHORT (Sell)", "แท่งสัญญาณปิด", "เข้าภายใน", "ราคาเข้าอ้างอิง", "Stop Loss", "TP1 · ขาย", "ส่วนที่เหลือ", "Liquidation (ประมาณ)",
                  "Isolated", "Leverage", "ขนาด (Size)", "มูลค่าสัญญา", "Margin ที่ใช้", "ค่าธรรมเนียม+slippage", "ราคาขยับ 1%", "ผิดทาง: โดน SL ทั้งไม้",
                  "ถึง TP1 แล้วกลับมาโดน SL", "ถึงทุก TP แล้วส่วนที่เหลือวิ่งถึง +5R", "ปิดกำไร", "ราคาไปถึง +1R", "ไม่ถึง +1R เลย", "กำไรเฉลี่ยต่อไม้",
                  "เข้าแล้ว · บันทึกลงพอร์ต"]:
         check(must in r["smMain"], "trade sheet shows: " + must)
     fa = r["floatAlert"]
-    check(r["floatShown"] and "🟢 LONG BTC x" in fa and "🔴 SHORT ETH x" in fa and fa.count("เสี่ยง ") == 2 and "SL " in fa and "แตะดู" in fa,
+    check(r["floatShown"] and "LONG BTC x" in fa and "SHORT ETH x" in fa and fa.count("เสี่ยง ") == 2 and "SL " in fa and "แตะดู" in fa,
           "new signals pop a floating bar: side, coin, leverage, risk, entry/SL")
     check(sorted(r["floatCls"]) == ["fa l", "fa s"], "floating bars coloured by side (green LONG, red SHORT)")
-    check(sorted(r["sheets"]) == ["sm-sum sm-sheet l", "sm-sum sm-sheet s"] and r["holds"] == ["hold l"], "sheets and the held SOL LONG card in their side's colour")
+    check(sorted(r["sheets"]) == ["sm-sum sm-sheet l", "sm-sum sm-sheet s"] and r["holds"] == ["card hold l"], "sheets and the held SOL LONG card in their side's colour")
     check(r["tfButtons"] == 0 and "ระบบเทรด Trend 4H" in r["smMain"] and "เช็กครั้งถัดไป" in r["smMain"] and "ผลงานระบบ 30 วัน" in r["smMain"],
           "main screen: the system's status and next check, no timeframe buttons, its 30-day record")
     check("ขั้นที่" not in shown and "ภาพจำลองหน้า Binance" not in shown and "ทำตามภาพ" not in shown, "no coaching steps or Binance look-alike")
@@ -276,14 +280,16 @@ def main():
 
     r = run(page, "h4_float_exit", {"storage": h4, "capital": 1_000_000, "trendForce": {"BTCUSDT": "EXIT_LONG"}, "clickTf": "4h", "waitMs": 15000,
                                     "justClosed": 14_400_000}, bg=False)
-    check(r["floatShown"] and r["floatCls"] == ["fa x"] and "🟠 ปิดไม้ LONG BTC ตอนนี้" in r["floatAlert"] and "+1.00R" in r["floatAlert"],
+    check(r["floatShown"] and r["floatCls"] == ["fa x"] and "ปิดไม้ LONG BTC ตอนนี้" in r["floatAlert"] and "+1.00R" in r["floatAlert"],
           "an exit pops an orange floating bar: close BTC LONG now, R now")
-    check("🟠 ปิด LONG BTC ตอนนี้" in r["smMain"] and "ปิดด้วย Market (ถ้าถืออยู่)" in r["smMain"], "the exit is the first orange card under what to do now")
+    todo = r["smMain"].split("ตอนนี้ต้องทำอะไร", 1)[-1]
+    check(todo.find("ปิด LONG BTC") >= 0 and todo.find("ปิด LONG BTC") < 200 and "ปิดด้วย Market ตอนนี้ (ถ้าถืออยู่)" in todo and r["acts"][:1] == ["card act x"],
+          "the exit is the first orange card under what to do now")
 
     r = run(page, "h4_open", {"storage": h4, "capital": 1_000_000, "trendForce": {"BTCUSDT": "NEAR_LONG", "ETHUSDT": "HOLD_SHORT"}, "clickTf": "4h", "waitMs": 15000,
                               "justClosed": 14_400_000, "openDetails": 8000}, bg=False)
     s = r["smMain"]
-    check("✅ ตอนนี้ไม่ต้องทำอะไร" in s and "ระบบถืออยู่ 2 ไม้" in s, "nothing new to do, and the system's 2 open positions listed right after")
+    check("ตอนนี้ไม่ต้องทำอะไร" in s and "ระบบถืออยู่ 2 ไม้" in s, "nothing new to do, and the system's 2 open positions listed right after")
     check("ถ้ายังไม่ได้เข้า" in s and "ราคาห่างจุดเข้าเกิน 0.5R" in s, "a position already +1R away: do not join late")
     check(("เข้าตามได้" in s) or ("ไม่แนะนำให้เข้าตาม" in s) or ("ยังไม่มีผลทดสอบการเข้าตาม" in s) or ("ผลทดสอบไม่ชัดว่ากำไร" in s), "a position 0.2R from its entry: the late-entry test decides")
     check("ผลทดสอบบวกน้อย" not in s, "joining late is offered only where the test was clearly profitable, never 'small and unclear'")
@@ -309,16 +315,24 @@ def main():
     r = run(page, "news_main", {"storage": h4, "capital": 1_000_000, "trendForce": {"SOLUSDT": "LONG"}, "clickTf": "4h", "waitMs": 15000,
                                 "justClosed": 14_400_000}, bg=False)
     n, s = r["news"], r["smMain"]
-    check("⚠️ ข่าวเศรษฐกิจแรงใน 24 ชม.: CPI m/m" in r["newsTop"], "main screen: a high-impact US release in the next 24 h is flagged at the top")
+    check("ข่าวเศรษฐกิจแรงใน 24 ชม.: CPI m/m" in r["newsTop"], "main screen: a high-impact US release in the next 24 h is flagged at the top")
     check("ปฏิทินเศรษฐกิจสหรัฐ" in n and "CPI m/m" in n and "Unemployment Claims" in n and "GDP q/q" not in n, "calendar: US releases only, with their Thai times")
     check("Solana network outage" in n and "Binance · Delisting" in n and "SOL" in n and "ไม่มี AI" in n, "headlines from the free sources, coins tagged, no AI")
-    check("ข่าว SOL 24 ชม." in s and "⚠️ ข่าวแรงก่อนแท่งถัดไปปิด: CPI m/m" in s, "trade sheet: the coin's headlines and the release due before the next close")
+    check("ข่าว SOL 24 ชม." in s and "ข่าวแรงก่อนแท่งถัดไปปิด: CPI m/m" in s.split("รายละเอียดทั้งหมด", 1)[-1], "trade sheet: the coin's headlines and the release due before the next close")
+    tone = {t[1]: t for t in r["newsTone"]}
+    good, bad = tone.get("Bitcoin ETF inflows hit a record as BTC rallies"), tone.get("Solana network outage halts block production on www.coindesk.com")
+    neutral = tone.get("Markets wait for the Fed (www.coindesk.com)")
+    check(good and "good" in good[0].split() and good[2] == "rgb(14, 203, 129)" and bad and "bad" in bad[0].split() and bad[2] == "rgb(246, 70, 93)"
+          and neutral and neutral[2] not in (good[2], bad[2]), "news: good headlines green, bad headlines red, neutral ones plain")
+    check("ข่าวดี = เขียว" in n and "ข่าวร้าย = แดง" in n, "news: the colour key is shown")
     pk = r["packet"]["signals"][0]
     check("ข่าวแรง USD: CPI m/m" in pk["news"] and "Solana network outage" in pk["news"], "entry alert carries the news warning: " + pk["news"][:80])
-    check("📋 มุมมองของระบบตอนนี้" in s and "ตลาดโดยรวมกลัว 38 (↓9 ใน 7 วัน)" in s and "ข่าวคริปโต 24 ชม.: ดี" in s and "เข้า LONG SOL ตามระบบ · ข่าวสวนทางไม้นี้" in s,
+    check("มุมมองของระบบ" in s and "ตลาดกลัว 38 ↓9 ใน 7 วัน" in s and "ข่าวดี 1" in s and "ข่าวร้าย 11" in s and "เข้า LONG SOL ตามระบบ · ข่าวสวนทางไม้นี้" in s,
           "the system's note: market mood with its week, headline count, and what it does with the SOL signal")
-    check("📰 ตลาดกลัว 38 (↓9 ใน 7 วัน) · ข่าว SOL 24 ชม.: ดี 0 · ร้าย" in s and "การกรองด้วยอารมณ์ตลาด" in s or "ยังไม่ได้ทดสอบกับสูตร" in s,
-          "order card: the coin's news read and what the mood study found")
+    check("ข่าว SOL 24 ชม.ดี 0ร้าย 10ข่าวสวนทางไม้นี้" in s and s.count("ยังไม่ได้ทดสอบกับสูตร") + s.count("ทดสอบกับดัชนี Fear & Greed") == 1 and ("ทดสอบกับดัชนี Fear & Greed" in s or "ยังไม่ได้ทดสอบกับสูตร" in s),
+          "order card: the coin's news read; what the mood study found is said once, in the system's note")
+    check("ทำปี 2023–2026 แย่ลง" in s and "→ ข่าวใช้ประกอบ เข้าตามระบบ" in s and "ในอดีต (2020–2026) LONG ตอนตลาดกลัว: " in s,
+          "the mood study: the filter chosen on 2020-2022 did worse on 2023-2026, so news is context; past trades in this mood shown as history")
     check(pk["view"].startswith("ตลาดกลัว 38") and pk["view"].endswith("ข่าวสวนทางไม้นี้"), "entry alert carries the news read: " + pk["view"])
     check(r["conf"] and pk["confidence"].startswith(("สูง", "ปานกลาง", "ต่ำ")) and "การทดสอบ" in pk["confidence"], "confidence of the rule on the screen and in the alert: " + pk["confidence"])
     # The professional's routine: the written plan, ticks per day, and the backup through Android's share sheet.
@@ -363,11 +377,11 @@ def main():
     r = run(page, "paper_check_ok", {"storage": h4, "capital": 100_000, "clickId": "pp2026", "waitMs": 20000,
                                      "trendEvidence": evidence_with(dict(NORMAL, worstStreak=999), "none", 99.0)}, bg=False)
     chk = r["paperCheck"]
-    check("ผลจริงเทียบผลทดสอบ" in chk and "✅ ปกติ" in chk and "ทดสอบแพ้ติดกันสูงสุด 999 ไม้" in chk and "ทดสอบลงลึกสุด 99.0%" in chk and "100 ไม้ล่าสุดรวม" in chk,
+    check("ผลจริงเทียบผลทดสอบ" in chk and "ปกติ: อยู่ในช่วงที่ผลทดสอบเคยเจอ" in chk and "ทดสอบแพ้ติดกันสูงสุด 999 ไม้" in chk and "ทดสอบลงลึกสุด 99.0%" in chk and "100 ไม้ล่าสุดรวม" in chk,
           "Paper: live record checked against the test's normal range: " + chk[:90])
     check("แพ้ติดกันได้ถึง 999 ไม้" in chk and "อยู่ใต้จุดสูงสุดนานสุด 300 วัน" in chk, "Paper: what is normal for the rule (losing streak, time below the peak)")
     r = run(page, "paper_check_broken", {"storage": h4, "capital": 100_000, "clickId": "pp2026", "waitMs": 20000, "trendEvidence": evidence_with(NORMAL)}, bg=False)
-    check("⛔ แย่กว่าที่ผลทดสอบเคยเจอ" in r["paperCheck"] and "ทดสอบแพ้ติดกันสูงสุด 17 ไม้" in r["paperCheck"],
+    check("แย่กว่าที่ผลทดสอบเคยเจอ" in r["paperCheck"] and "ทดสอบแพ้ติดกันสูงสุด 17 ไม้" in r["paperCheck"],
           "Paper: a record worse than anything in the test says stop new entries and review")
     r = run(page, "main_normal", {"storage": h4, "capital": 1_000_000, "trendForce": {}, "clickTf": "4h", "waitMs": 15000, "trendEvidence": evidence_with(NORMAL)}, bg=False)
     check("ปกติของสูตรนี้" in r["smMain"] and "แพ้ติดกันได้ถึง 17 ไม้" in r["smMain"] and "ไม่ใช่สูตรพัง" in r["smMain"], "main screen: what is normal for the rule")

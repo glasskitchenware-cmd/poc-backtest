@@ -1,7 +1,7 @@
-# Trading Trend 4H as a profession — v6.0 (2026-10-23)
+# Trading Trend 4H as a profession — v6.3 (2026-10-23)
 
 What the app does for a full-time trader, and what the tests say about relying on it. Every number below comes from
-`research/pro/pro.js` and `research/pro/robust.js`, run on GitHub Actions on real Binance bars (results on branch
+`research/pro/pro.js`, `research/pro/robust.js` and `research/pro/sentiment.js`, run on GitHub Actions on real Binance bars (results on branch
 `research-results`, built into `web/evidence_trend.js` by `tools/make_evidence_trend.py`).
 
 ## How much the tests let us trust the rule
@@ -22,19 +22,19 @@ independent (they are not quite: the coins move together), so it reads higher th
 On the 25 unseen coins the same weakness shows: 2025 +0.027R, 2026 +0.034R.
 
 How a year can turn out (0.5% risk, 12 coins, 20,000 years built from 3-month blocks of the 45 months 2023-01..2026-09):
-profitable **81%** of years, a loss over 10% in **8%**, middle year **+21%**, worst 5% **−15%** or worse, best 5% **+72%**
+profitable **79%** of years, a loss over 10% in **10%**, middle year **+20%**, worst 5% **−16%** or worse, best 5% **+71%**
 or better. The worst 12 months that actually happened: −3.9%; 9% of rolling 12-month windows ended below zero.
 
-The app shows this as "ความมั่นใจของสูตร": **ปานกลาง–สูง (ผ่าน 4/6 การทดสอบ) · ปีที่กำไร ≈81%**, on the main screen,
+The app shows this as "ความมั่นใจของสูตร": **ปานกลาง–สูง (ผ่าน 4/6 การทดสอบ) · ปีที่กำไร ≈79%**, on the main screen,
 on every trade sheet and in every entry alert. A trade's own "โอกาสกำไร" is still the coin's test win rate (~33-43%).
 
 ## What is normal (so a bad run is not mistaken for a broken rule)
 
 12 coins, 2023-2026, in exit order: up to **45 losses in a row** (the coins turn together); the sum of 30 consecutive
-trades was below −15.2R in 5% of windows (worst −24.6R); at 0.5% risk: 42% of months losing, up to 3 losing months in a
-row, worst 3 months −20%, deepest drawdown 32.7%, up to 229 days below a previous peak.
-The Paper page ("สมุดผลจริง") compares the live record with these ranges: ✅ normal · ⚠️ below the worst 5% · ⛔ worse
-than anything in the test (stop new entries and review).
+trades was below −15.2R in 5% of windows (worst −24.6R); at 0.5% risk: 44% of months losing, up to 4 losing months in a
+row, worst 3 months −20%, deepest drawdown 32.7%, up to 233 days below a previous peak.
+The Paper page ("สมุดผลจริง") compares the live record with these ranges: normal · below the worst 5% · worse than
+anything in the test (stop new entries and review). The main screen does the same for the system's last 30 days.
 
 ## Stop rules: trade every signal
 
@@ -42,11 +42,11 @@ Rules listed before the run, chosen on 2020-2022 by CAGR / max drawdown, reporte
 
 | Rule | 2020-22 CAGR / DD | 2023-26 CAGR / DD | Trades taken 2023-26 |
 |---|---|---|---|
-| none (every signal) | 44.0% / 19.9% | **24.8% / 32.7%** | 1,999 |
-| the app's old rule (half at 4%, stop for good at 8%, daily 2%) — **chosen** | 33.1% / 8.3% | 3.1% / 8.3% | 175 |
-| daily loss stop 2% | 45.6% / 18.6% | 20.9% / 31.5% | 1,957 |
-| half risk below −10% / −15% / −20% | 40.5 / 42.7 / 44.0% | 11.9 / 21.8 / 20.8% | 1,999 |
-| at most 8 / 6 / 4 positions open (robust.js) — 8 chosen | 39.3 / 27.1 / 17.5% | 6.1 / 4.8 / 5.1% | 442 / 349 / 314 |
+| none (every signal) | 43.6% / 19.9% | **23.3% / 32.7%** | 1,999 |
+| the app's old rule (half at 4%, stop for good at 8%, daily 2%) — **chosen** | 32.7% / 8.3% | 3.1% / 8.3% | 175 |
+| daily loss stop 2% | 45.1% / 18.6% | 20.3% / 31.5% | 1,957 |
+| half risk below −10% / −15% / −20% | 40.1 / 42.3 / 43.6% | 10.1 / 18.7 / 19.3% | 1,999 |
+| at most 8 / 6 / 4 positions open (robust.js) — 8 chosen | 42.4 / 31.3 / 22.4% | 18.7 / 15.8 / 9.7% | 1,643 / 1,334 / 955 |
 
 The choices made on 2020-2022 kept almost none of the 2023-2026 profit. So the app trades every signal at the set
 risk and stops new entries only when the recorded portfolio falls further than the test's deepest drawdown at that risk
@@ -62,6 +62,31 @@ Binance announcements (listings, delistings), the Fed and the SEC (RSS), and thi
 Headlines naming a selected coin or a risk word (hack, delist, SEC, outage, ETF, CPI, FOMC…) are flagged. A high-impact
 US release before the next 4-hour close and a risk headline on the coin go into the entry alert. News never changes a
 signal: the rule was not tested with news.
+
+## Market mood and news as the system's view (v6.3)
+
+The main screen opens with "มุมมองของระบบ", written from rules, not AI: the Crypto Fear & Greed Index (alternative.me,
+free) with its change over 7 days, the count of good and bad crypto headlines in 24 hours (a word list: rally, inflow,
+approval… against hack, outage, delist, lawsuit…), US releases due before the next close, and what the system does with
+each signal, exit and position. Each order and position card shows the coin's good / bad headlines and whether they point
+the trade's way. News headlines are green when good, red when bad, plain when neither.
+
+Is mood worth trading on? `research/pro/sentiment.js` gives every Trend 4H trade (12 coins, 2020-01..2026-09) the index
+value published before its entry. Five filters were listed before the run and the best on 2020-2022 by t-statistic was
+chosen, then reported on 2023-2026 (scale-out, 0.5% risk):
+
+| Filter | 2023-26 avg R | t | CAGR / max DD |
+|---|---|---|---|
+| none (every signal) | +0.105R | 3.25 | 23.3% / 32.7% |
+| LONG only when the index ≥ 50, SHORT only ≤ 50 — **chosen on 2020-2022** | +0.064R | 1.56 | 6.6% / 20.9% |
+| no LONG at extreme greed (≥ 75), no SHORT at extreme fear (≤ 25) | +0.140R | 3.98 | 30.3% / 22.7% |
+| no entries at all at the extremes (≤ 20 or ≥ 80) | +0.137R | 3.95 | 30.4% / 21.4% |
+| LONG when the index rose over 7 days, SHORT when it fell | +0.072R | 1.75 | 7.8% / 20.1% |
+
+The filter chosen in advance did worse than trading every signal, so mood stays context and every signal is taken. The
+two extreme filters looked better on 2023-2026, but picking them now would be choosing on the test years; they are
+noted as candidates for a future test, not used. The app says this in one line on the main screen, and each card shows
+how the rule's past trades in the same mood and direction did (2020-2026, history).
 
 ## The professional's routine (main screen → "แผนเทรดและกิจวัตรแบบมืออาชีพ")
 
