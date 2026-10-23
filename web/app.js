@@ -199,7 +199,7 @@
   }
   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return "&#" + c.charCodeAt(0) + ";"; }); }
   // The app version (android/app/build.gradle versionName; tests/js/run_tests.py checks they match).
-  var APP_VERSION = "6.11";
+  var APP_VERSION = "6.12";
   // One line-icon family for the screen (24px grid, 1.8 stroke, round ends), drawn in the text colour.
   var ICONS = { check: '<path d="M5 12.5l4.2 4.2L19 7"/>', alert: '<path d="M12 4 2.8 19.5h18.4z"/><path d="M12 10v4.5M12 17.3v.2"/>',
     news: '<rect x="3.5" y="5" width="13" height="14" rx="2"/><path d="M16.5 9h3v7.5a2.5 2.5 0 0 1-5 0"/><path d="M7 9h6M7 12.5h6M7 16h3.5"/>',
@@ -1519,6 +1519,15 @@
         }).join("");
       h += '<div id="secEnded"><div class="sec-hd">จบสัญญาณแล้ว <span class="cnt" id="cntEnded"></span><small>ถ้ายังถืออยู่ ปิดตามนี้</small></div>' + exits + '<div id="grpEnded"></div>' +
         (endedRows ? '<div class="card ended-list"><div class="card-hd"><b>จบใน 24 ชม.</b></div>' + endedRows + "</div>" : "") + "</div>";
+      // Coins with nothing open: how far the price is from the close that would start a trade, live. A bar that is past the
+      // level now is not a signal until it closes there (the rule, tested; mid-bar entries on 15m-1h bars lost).
+      var watch = results.filter(function (r) { return r.watch && !r.position && !r.exit && !r.signal; });
+      if (watch.length) h += '<div class="sec-hd">ใกล้จุดเข้า <span class="cnt">' + watch.length + '</span><small>เข้าเมื่อแท่ง 4 ชม. ปิด ' + thai(watch[0].watch.closeAt).slice(9, 14) +
+        ' น. เลยเส้น</small></div><div class="card watch" id="smWatch">' + watch.map(function (r) {
+          var w = r.watch, dir = r.close >= w.ema ? 1 : -1, lvl = dir > 0 ? w.upper : w.lower;
+          return '<div class="watch-row" data-watch="' + r.symbol + '" data-lvl="' + lvl + '" data-dir="' + dir + '">' + sidePill(dir) + " <b>" + coin(r) + "</b>" +
+            '<small>ถ้าปิด' + (dir > 0 ? "เหนือ " : "ใต้ ") + price(lvl) + '</small><span class="watch-now" data-now="' + r.symbol + '">' + price(r.close) + '</span><b class="watch-d" data-wd>—</b></div>';
+        }).join("") + '<p class="fine">ระหว่างแท่งราคาอาจทะลุแล้วกลับ สูตรนับเฉพาะราคาปิด · แอปเด้งแจ้งเตือนเองทันทีที่แท่งปิดเข้าเงื่อนไข</p></div>';
       h += '<div id="secHold"><div class="sec-hd">ถืออยู่ · ตามไม่ทันแล้ว <span class="cnt" id="cntHold"></span><small>สำหรับคนที่เข้าไปแล้ว</small></div><div id="grpHold"></div></div>';
       var endedStatic = (exits ? results.filter(function (r) { return r.exit; }).length : 0) + ended.length;
       h += perfHtml();
@@ -1847,6 +1856,21 @@
         else { el.textContent = " · " + fmt(mv, 2, true) + "% · " + fmt(d * (v - e) / k, 2, true) + "R"; el.className = mv >= 0 ? "up" : "down"; }
       });
       placeCards();
+      // Distance from the live price to each watched level; closest first.
+      var wl = $("smWatch");
+      if (wl) {
+        var rows = Array.prototype.slice.call(wl.querySelectorAll("[data-watch]"));
+        rows.forEach(function (el) {
+          var v = px[el.getAttribute("data-watch")], lvl = +el.getAttribute("data-lvl"), d = +el.getAttribute("data-dir");
+          if (!(v > 0)) return;
+          var gap = d * (lvl - v) / v * 100, x = el.querySelector("[data-wd]");
+          el.setAttribute("data-gap", gap);
+          x.textContent = gap <= 0 ? "เลยเส้นแล้ว · รอปิดแท่ง" : "อีก " + fmt(gap, 2) + "%";
+          x.className = "watch-d " + (gap <= 0 ? "up" : gap < 1 ? "neu" : "");
+        });
+        var gapOf = function (el) { var g = parseFloat(el.getAttribute("data-gap")); return isNaN(g) ? 99 : g; };
+        rows.sort(function (a, b) { return gapOf(a) - gapOf(b); }).forEach(function (el) { wl.insertBefore(el, wl.querySelector(".fine")); });
+      }
       var cap = money(), tot = 0, n = 0, open = Portfolio.openTrades();
       open.forEach(function (t) {
         var p = px[t.symbol];
@@ -2174,6 +2198,8 @@
     if (!res.ready) throw new Error("แท่ง 4 ชม. ไม่พอ (" + n + " แท่ง)");
     var plan = Portfolio.plan(), riskPct = Math.min(TREND.maxRiskPct, plan.riskPct || LOCK.riskPct), week = last.close_time + 1 - 30 * 86400000;
     var out = { symbol: symbol, close: last.close, trend: last.close > L.ema ? 1 : last.close < L.ema ? -1 : 0, signal: null, exit: null, position: null,
+      // The levels the 4-hour bar now forming must close beyond for an entry (channel of the 20 bars before it).
+      watch: { upper: L.next.upper, lower: L.next.lower, ema: L.ema, closeAt: last.close_time + 1 + tfMs },
       bars: bars.slice(-90),
       // The rule's entries in the last 30 days, closed or still open: the system's own record on the main screen.
       recent: res.trades.filter(function (t) { return t.entry_time >= week; }).map(function (t) {

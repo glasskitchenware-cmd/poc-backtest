@@ -10,8 +10,8 @@ android {
         applicationId 'th.paperbot.backtest'
         minSdk 24
         targetSdk 34
-        versionCode 49
-        versionName '6.11'
+        versionCode 50
+        versionName '6.12'
     }
 
     signingConfigs {

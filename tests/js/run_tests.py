@@ -324,6 +324,8 @@ def main():
     check(r["holds"] == ["card hold l st-hold"] and "ราคาห่างจุดเข้า +0.80R (เกิน 0.5R)" in r["smMain"] and "ตอนนี้ไม่ต้องทำอะไร" in r["smMain"],
           "live: price 3% up = 0.8R from the entry -> too late to follow, nothing to follow now")
     check("ไม้ของระบบที่อยู่ +0.80R แบบนี้ จบกำไร 79%" in r["smMain"], "live odds follow the live R: +0.8R ended in profit 79% of the time")
+    check("ใกล้จุดเข้า" in r["smMain"] and re.search(r"ถ้าปิด(เหนือ|ใต้) [\d,.]+", r["smMain"]) and ("อีก " in r["smMain"] or "เลยเส้นแล้ว" in r["smMain"]),
+          "coins with nothing open: live distance to the close that would start a trade")
     check("ครบองค์ประกอบสูตร 8/9 (89%)" in r["smMain"], "a position 0.8R from its entry misses one condition (within 0.5R): 8/9")
     r = run(page, "live_late", {"storage": h4, "capital": 1_000_000, "trendForce": {"ETHUSDT": "SHORT"}, "clickTf": "4h", "waitMs": 15000,
                                 "justClosed": 14_400_000, "afterCloseMs": 20 * 60000}, bg=False)
