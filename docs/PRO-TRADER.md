@@ -14,7 +14,7 @@ independent (they are not quite: the coins move together), so it reads higher th
 |---|---|---|---|---|
 | App code = research code, and the live 1,500-bar window = full history | 3,461 / 19,196 bars | identical | — | pass |
 | Walk-forward evidence 2023-01..2026-09, 12 coins | 1,999 | +0.105R | 99.9% (t 3.25) | pass |
-| 25 coins the rule was never chosen on, 2020..2026 (MATIC and FTM since delisted) | 5,168 | +0.116R, 23 of 25 coins positive | >99.9% (t 5.39) | pass |
+| 25 coins the rule was never chosen on, 2020..2026 (MATIC and FTM since delisted) | 5,168 | +0.116R, 24 of 25 coins positive (23 without TP) | >99.9% (t 5.39) | pass |
 | Spot 2017-08..2019-12, before every year used to choose the rule, 15 coins | 815 | +0.282R, every year positive | >99.9% (t 5.38) | pass |
 | Fees and slippage doubled | 2,001 | +0.067R (no TP) | 95% (t 1.66) | warn: the edge is thin |
 | The last two years, 12 coins | 2025: 554 · 2026: 426 | +0.057R · +0.036R | 88% · 70% | warn: weaker lately |
