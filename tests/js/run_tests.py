@@ -197,6 +197,7 @@ def main():
 
     r = run(page, "h4_ladder", {"storage": h4, "capital": 10_000_000, "trendForce": {"BTCUSDT": "LONG"}})
     b = r["packet"]["signals"][0]
+    check(b["win_pct"] and 20 <= float(b["win_pct"]) <= 60 and b["grade"] in ("good", "weak", "bad"), "packet carries the coin's test win rate and grade (not an invented confidence)")
     check(b["tp_plan"].startswith("TP แบ่งขาย: TP1 ") and b["tp1"] and on_grid(b["tp1"], 0.1) and b["tp5"] == "" and b["exit_rule"].startswith("ส่วนที่เหลือ"),
           "scale-out mode: packet carries TP1 on the tick grid, the plan text and the runner's exit")
     check(float(b["tp1"].replace(",", "")) > float(b["entry"].replace(",", "")), "LONG take profit above the entry")
@@ -208,7 +209,7 @@ def main():
     check("สัญญาณน่าเข้า 2 ตัว" in r["smMain"] and "BTCUSDT Perp" in r["smMain"] and "ETHUSDT Perp" in r["smMain"], "every signal worth entering is shown (BTC and ETH)")
     check(r["charts"] >= 3, "a 4h chart per signal plus one for the held position (" + str(r["charts"]) + ")")
     check("ไม้ที่เปิดอยู่ตอนนี้ 1 ไม้" in r["smMain"] and "SOL" in r["smMain"], "open SOL position listed")
-    for must in ["Leverage", "ความเสี่ยงต่อไม้", "Margin ที่วาง", "ทำไม x", "ความเสี่ยง", "LONG (Buy)", "SHORT (Sell)", "แท่งสัญญาณปิด", "เข้าภายใน", "ราคาเข้าอ้างอิง", "Stop Loss", "TP1 · ขาย", "ส่วนที่เหลือ", "Liquidation (ประมาณ)",
+    for must in ["LONG x", "SHORT x", "โอกาสกำไร", "เสี่ยง ", "ไม้ที่ชนะได้เฉลี่ย", "เป็นสถิติ ไม่ใช่การรับประกัน", "Leverage", "ความเสี่ยงต่อไม้", "Margin ที่วาง", "ทำไม x", "ความเสี่ยง", "LONG (Buy)", "SHORT (Sell)", "แท่งสัญญาณปิด", "เข้าภายใน", "ราคาเข้าอ้างอิง", "Stop Loss", "TP1 · ขาย", "ส่วนที่เหลือ", "Liquidation (ประมาณ)",
                  "Isolated", "Leverage", "ขนาด (Size)", "มูลค่าสัญญา", "Margin ที่ใช้", "ค่าธรรมเนียม+slippage", "ราคาขยับ 1%", "ผิดทาง: โดน SL ทั้งไม้",
                  "ถึง TP1 แล้วกลับมาโดน SL", "ถึงทุก TP แล้วส่วนที่เหลือวิ่งถึง +5R", "ปิดกำไร", "ราคาไปถึง +1R", "ไม่ถึง +1R เลย", "กำไรเฉลี่ยต่อไม้",
                  "เข้าแล้ว · บันทึกลงพอร์ต"]:

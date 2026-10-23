@@ -1071,6 +1071,22 @@
     var row = symbol ? (L ? L.rows && L.rows[symbol] : T.rows && T.rows[symbol]) : (L ? L.test : T.all);
     return row ? Object.assign({}, row, { reach: (symbol ? T.reachRows && T.reachRows[symbol] : T.reach) || null }) : null;
   }
+  // Headline numbers for a trade: how often trades like it closed in profit in the test (win %), how much bigger the
+  // average win was than the average loss, a grade by the average result, and the risk band. Never an invented confidence.
+  function verdictOf(symbol, tf, riskPct) {
+    var st = isTrend(tf) ? trendStats(symbol) : null, E = !isTrend(tf) && window.EVIDENCE, o = E && E.rows && E.rows[symbol + "|" + tf] && E.rows[symbol + "|" + tf].oos;
+    var row = st || o, ok = row && row.n >= 30, w = ok ? row.win / 100 : NaN;
+    return { win: ok ? row.win : null, n: ok ? row.n : 0, avgR: ok ? row.avgR : null, payoff: ok && row.pf && w > 0 && w < 1 ? row.pf * (1 - w) / w : null,
+      grade: !ok ? "none" : row.avgR >= 0.1 ? "good" : row.avgR > 0 ? "weak" : "bad", risk: riskPct, riskBand: riskPct <= 0.5 ? "low" : riskPct <= 1 ? "mid" : "high" };
+  }
+  var GRADE_TXT = { good: "ดี", weak: "พอใช้", bad: "อ่อน", none: "ยังไม่มีข้อมูล" };
+  function headline(dir, lev, v) {
+    return '<div class="sm-head"><span class="side ' + (dir > 0 ? "l" : "s") + '">' + (dir > 0 ? "LONG" : "SHORT") + " x" + lev + "</span>" +
+      '<span class="conf ' + v.grade + '">' + (v.win !== null ? "โอกาสกำไร " + fmt(v.win, 0) + "%" : "ยังไม่มีสถิติ") + "<small>" + GRADE_TXT[v.grade] + "</small></span>" +
+      '<span class="risk ' + v.riskBand + '">เสี่ยง ' + fmt(v.risk, 2) + "%<small>ของทุน</small></span></div>" +
+      (v.win !== null ? '<small class="muted">โอกาสกำไร = ไม้แบบนี้ที่ปิดกำไรในช่วงทดสอบ (' + v.n + " ไม้)" + (v.payoff ? " · ไม้ที่ชนะได้เฉลี่ย " + fmt(v.payoff, 1) + " เท่าของไม้ที่แพ้" : "") +
+        " · เป็นสถิติ ไม่ใช่การรับประกัน</small>" : "");
+  }
   function fracTxt(f) { return Math.abs(f - 1 / 3) < 1e-6 ? "1/3" : fmt(f * 100, 0) + "%"; }
   function ladderText(lad) {
     return "TP แบ่งขาย: " + lad.map(function (t, k) { return "TP" + (k + 1) + " " + price(t.price) + " (+" + t.r + "R ขาย " + fracTxt(t.frac) + ")"; }).join(" · ") +
@@ -1201,7 +1217,8 @@
         row("จุดเข้า", price(it.entry)) + row("ราคาตอนนี้", '<span data-now="' + r.symbol + '">' + price(it.now) + "</span>") +
         row("Stop Loss", '<span class="down">' + price(it.stop) + "</span> (" + dist(it.stop) + ")") + tps +
         row(it.tpLevels.length ? "ส่วนที่เหลือออก" : "จุดออก", exitText(it)) + row("ถ้าถืออยู่", "ถือต่อ · ห้ามเลื่อน SL · แอปเด้งเมื่อถึงจุดออก") +
-        row("ถ้ายังไม่ได้เข้า", join) + "</div>" +
+        row("ถ้ายังไม่ได้เข้า", join) + "</div>" + (lg && !lg.below_minimum && v && v.avgR > 0 ? headline(lg.dir, lg.lev, Object.assign(verdictOf(r.symbol, TREND.tf, sized(lg).lossB / cap * 100),
+          { win: v.win, n: v.n, avgR: v.avgR, payoff: v.pf && v.win > 0 && v.win < 100 ? v.pf * (100 - v.win) / v.win : null, grade: v.avgR >= 0.1 ? "good" : "weak" })) : "") +
         '<div id="smHold' + i + '" class="sm-chart" style="height:220px;margin-top:8px"></div></div>';
     }
     // Trend 4H screen around the new signals: exits and refused signals above them; the rule's open positions, its last
@@ -1301,7 +1318,7 @@
             row("ไม้ที่ใช้คำนวณ", st.n + " ไม้ (" + coin + " · " + (trendLadder() ? "แบ่งขาย" : "ไม่ตั้ง TP") + ")")
           : row("ความมั่นใจ", "ยังไม่มีข้อมูลยืนยัน (ไม้ทดสอบน้อยกว่า 30)");
       return '<div class="sm-sum sm-sheet"><div class="sm-sheet-hd"><b>' + (i + 1) + ". " + r.symbol + ' <small>Perp</small></b><span class="pill ' + (long ? "go" : "short") + '">' +
-          (long ? "LONG" : "SHORT") + "</span></div>" + keyBox(g, z, cap) + "<div class=\"sm-order\">" +
+          (long ? "LONG" : "SHORT") + "</span></div>" + headline(g.dir, g.lev, verdictOf(r.symbol, tf, z.lossB / cap * 100)) + keyBox(g, z, cap) + "<div class=\"sm-order\">" +
         sec("สัญญาณ") +
         row("ฝั่ง", '<span class="' + (long ? "up" : "down") + '">' + (long ? "LONG (Buy)" : "SHORT (Sell)") + "</span>") +
         row("สูตร", esc(g.stratName)) + row("กรอบเวลา", TF[tf].name) +
@@ -1852,6 +1869,7 @@
       tp5: tp ? pxDp(g.tps[2], g.dp) : "", exit_rule: tp ? "" : g.exitRule, tp_plan: g.tpPlan || "",
       qty: String(g.qty), margin_usdt: g.margin.toFixed(2), margin_thb: String(Math.round(g.margin * fx)), risk_thb: String(Math.round(g.riskUsdt * fx)),
       risk_pct: (g.riskUsdt * fx / Math.max(1e-9, Portfolio.plan().balance) * 100).toFixed(2),
+      win_pct: (function (v) { return v.win !== null ? fmt(v.win, 0) : ""; })(verdictOf(r.symbol, tf, 0)), grade: verdictOf(r.symbol, tf, 0).grade,
       leverage: g.lev, leverage_cap: g.levCapUser, liq_est: pxDp(g.liq, g.dp), mark: g.mark ? pxDp(g.mark, g.dp) : "",
       rationale: g.why, evidence: ev.text, evidence_ok: ev.ok, experimental: true };
   }

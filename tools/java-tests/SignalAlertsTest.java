@@ -55,7 +55,12 @@ public class SignalAlertsTest {
         for (SignalAlerts.Note n : p.notes) ids.add(n.id());
         check(ids.size() == 12, "notification ids are distinct per coin");
         SignalAlerts.Note first = p.notes.get(0);
-        check(first.title.equals("เข้า LONG BTCUSDT · M15 · x10"), "title says the action: enter + side + symbol + timeframe + leverage");
+        check(first.title.equals("🟢 เข้า LONG BTCUSDT · M15 · x10"), "title: green for LONG, enter + side + symbol + timeframe + leverage");
+        check(first.color() == 0xFF0ECB81, "LONG notification accent is green");
+        JSONObject sw = item("ETHUSDT", "SHORT", "M15", candle).put("win_pct", "35");
+        SignalAlerts.Note sn = SignalAlerts.plan(packet(15, candle, new JSONArray().put(sw)), now, key -> -1L).notes.get(0);
+        check(sn.title.equals("🔴 เข้า SHORT ETHUSDT · M15 · x10 · โอกาสกำไร 35%") && sn.color() == 0xFFF6465D, "SHORT: red, with the test win rate in the title");
+        check(sn.body.contains("โอกาสกำไร 35% = สัดส่วนไม้แบบนี้ที่ปิดกำไรในช่วงทดสอบ"), "win rate explained as a test statistic, not a promise");
         check(first.body.startsWith("เข้า 100.00 · SL 98.20 · TP 101.80 / 103.60 / 109.00 · x10 · โดน SL เสีย ≈ 25 ฿"), "first line (collapsed view) is the whole order");
         JSONObject withPct = item("BTCUSDT", "LONG", "M15", candle).put("risk_pct", "0.25");
         String fp = SignalAlerts.plan(packet(15, candle, new JSONArray().put(withPct)), now, key -> -1L).notes.get(0).body;
@@ -123,7 +128,7 @@ public class SignalAlertsTest {
         JSONObject trend = item("BTCUSDT", "LONG", "H4", c4).put("strategy", "donchian4h").put("tp1", "").put("tp2", "").put("tp5", "")
             .put("exit_rule", "ไม่มี TP ตายตัว: ปิดเมื่อแท่ง 4 ชม. ปิดต่ำกว่าจุดต่ำสุด 10 แท่ง");
         SignalAlerts.Plan t4 = SignalAlerts.plan(packet(240, c4, new JSONArray().put(trend)), n4, key -> -1L);
-        check(t4.ok && t4.notes.size() == 1 && t4.notes.get(0).title.startsWith("เข้า LONG BTCUSDT · H4"), "H4 entry without TP is notified, title says H4");
+        check(t4.ok && t4.notes.size() == 1 && t4.notes.get(0).title.startsWith("🟢 เข้า LONG BTCUSDT · H4"), "H4 entry without TP is notified, title says H4");
         check(t4.notes.get(0).body.startsWith("เข้า 100.00 · SL 98.20 · ไม่มี TP (ออกตามสูตร) · x10"), "H4 without TP: the first line says so");
         check(t4.notes.get(0).body.contains("ไม่มี TP ตายตัว") && !t4.notes.get(0).body.contains("TP5") && t4.notes.get(0).body.contains("SL 98.20"),
             "H4 entry shows SL and the exit rule instead of TP levels");
@@ -143,7 +148,7 @@ public class SignalAlertsTest {
         SignalAlerts.Plan both = SignalAlerts.plan(packet(240, c4, new JSONArray().put(trend).put(exit)), n4, lookup4);
         check(both.notes.size() == 2 && !both.notes.get(0).key.equals(both.notes.get(1).key), "entry and exit of the same coin/side/candle are separate notifications");
         SignalAlerts.Note ex = both.notes.get(1);
-        check(ex.kind.equals("EXIT") && ex.title.equals("ปิดไม้ LONG BTCUSDT · H4"), "exit title says close + side + symbol + H4");
+        check(ex.kind.equals("EXIT") && ex.title.equals("🟠 ปิดไม้ LONG BTCUSDT · H4") && ex.color() == 0xFFFF9800, "exit title says close + side + symbol + H4, orange");
         check(ex.body.startsWith("ปิดด้วย Market ตอนนี้ (ถ้าถืออยู่) · ปิดแท่ง 66000.0 · ≈ +2.00R"), "exit first line says what to do");
         for (String must : new String[]{"ที่เข้า 60000.0", "ปิด 66000.0 ต่ำกว่า 66100.0", "≈ +2.00R", "SL เดิม 57000.0", "Close → Market", "ถ้าไม่ได้ถือ", "ไม่ใช่คำสั่งซื้อขาย"}) {
             check(ex.body.contains(must), "exit body contains: " + must);

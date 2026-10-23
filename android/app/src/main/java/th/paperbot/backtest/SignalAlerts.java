@@ -51,6 +51,11 @@ final class SignalAlerts {
         int id() {
             return (key + ":" + candle).hashCode();
         }
+
+        /** Accent colour of the notification: green LONG, red SHORT, orange for a close. */
+        int color() {
+            return kind.equals("EXIT") ? 0xFFFF9800 : side.equals("LONG") ? 0xFF0ECB81 : 0xFFF6465D;
+        }
     }
 
     static final class Plan {
@@ -153,7 +158,9 @@ final class SignalAlerts {
         int cap = item.optInt("leverage_cap", leverage);
         long expires = item.optLong("expires", 0);
         String key = "sent:" + tf + ":" + symbol + ":" + side;
-        String title = "เข้า " + side + " " + symbol + " · " + tf + (leverage > 0 ? " · x" + leverage : "");
+        String win = item.optString("win_pct", "");
+        String title = (side.equals("LONG") ? "🟢 " : "🔴 ") + "เข้า " + side + " " + symbol + " · " + tf + (leverage > 0 ? " · x" + leverage : "")
+                + (win.isEmpty() ? "" : " · โอกาสกำไร " + win + "%");
         StringBuilder b = new StringBuilder();
         // First line is what the collapsed notification shows: the whole order.
         b.append("เข้า ").append(entry).append(" · SL ").append(sl).append(" · ");
@@ -187,6 +194,7 @@ final class SignalAlerts {
         if (!why.isEmpty()) b.append(": ").append(cut(why, 160));
         String evidence = item.optString("evidence", "");
         b.append("\n").append(evidence.isEmpty() ? "ยังไม่มีข้อมูลยืนยัน" : cut(evidence, 220));
+        if (!win.isEmpty()) b.append("\nโอกาสกำไร ").append(win).append("% = สัดส่วนไม้แบบนี้ที่ปิดกำไรในช่วงทดสอบ (สถิติ ไม่ใช่การรับประกัน)");
         b.append("\nสัญญาณทดลอง ไม่ใช่คำสั่งซื้อขาย · Paper เท่านั้น · ตรวจราคาล่าสุดก่อนตัดสินใจ");
         return new Note(key, candle, symbol, side, tf, title, b.toString(), "ENTRY");
     }
@@ -200,7 +208,7 @@ final class SignalAlerts {
         String level = item.optString("exit_level", "");
         String r = item.optString("r_now", "");
         String key = "sent:EXIT:" + tf + ":" + symbol + ":" + side;
-        String title = "ปิดไม้ " + side + " " + symbol + " · " + tf;
+        String title = "🟠 ปิดไม้ " + side + " " + symbol + " · " + tf;
         StringBuilder b = new StringBuilder();
         b.append("ปิดด้วย Market ตอนนี้ (ถ้าถืออยู่) · ปิดแท่ง ").append(ref);
         String rNow = item.optString("r_now", "");

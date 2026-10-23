@@ -135,7 +135,7 @@ final class Alerts {
             }
             SharedPreferences.Editor edit = p.edit();
             for (SignalAlerts.Note note : plan.notes) {
-                showSignal(context, note.title, note.body, note.id(), note.candle);
+                showSignal(context, note.title, note.body, note.id(), note.candle, note.color());
                 edit.putLong(note.key, note.candle);
             }
             edit.apply();
@@ -165,7 +165,7 @@ final class Alerts {
         }
     }
 
-    private static void showSignal(Context context, String title, String text, int id, long when) {
+    private static void showSignal(Context context, String title, String text, int id, long when, int color) {
         try {
             NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
             if (manager == null) return;
@@ -183,12 +183,13 @@ final class Alerts {
                 .setDefaults(Notification.DEFAULT_ALL)
                 .setPriority(Notification.PRIORITY_HIGH)
                 .setGroup(GROUP);
+            if (color != 0) b.setColor(color);
             manager.notify(id, b.build());
         } catch (Exception ignored) {}
     }
 
     static void show(Context context, String title, String text) {
-        showSignal(context, title, text, (int)(System.currentTimeMillis() / 1000L), 0);
+        showSignal(context, title, text, (int)(System.currentTimeMillis() / 1000L), 0, 0);
     }
 
     private static void showSummary(Context context, String title, String text) {

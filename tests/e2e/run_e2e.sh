@@ -13,7 +13,7 @@ log() { echo "[$(date -u +%H:%M:%S)] $*" | tee -a "$LOG"; }
 check() { if [ "$1" = "1" ]; then log "PASS $2"; else log "FAIL $2"; FAILS=$((FAILS + 1)); fi; }
 mode() { curl -s "http://127.0.0.1:8765/__mode?m=$1" > /dev/null; log "mock mode -> $1"; }
 hook() { adb shell am broadcast -n "$PKG/.DebugHooks" -a "th.paperbot.backtest.$1" "${@:2}" > /dev/null; }
-titles() { adb shell dumpsys notification --noredact | grep -o 'android.title=String ([^)]*)' | sed 's/android.title=String (//; s/)$//' | grep -E '^(เข้า|ปิดไม้|ทุนไม่พอ) ' | sort -u; }
+titles() { adb shell dumpsys notification --noredact | grep -o 'android.title=String ([^)]*)' | sed 's/android.title=String (//; s/)$//' | grep -E '(เข้า|ปิดไม้|ทุนไม่พอ) ' | sort -u; }
 ntitles() { titles | grep -c . || true; }
 prefs() { adb shell run-as "$PKG" cat shared_prefs/alerts.xml 2>/dev/null; }
 status_text() { prefs | grep -o 'name="lastScanText">[^<]*' | sed 's/name="lastScanText">//'; }
@@ -90,7 +90,7 @@ adb shell input keyevent KEYCODE_HOME
 mode normal
 scan
 T=$(titles); log "titles:"; echo "$T" | tee -a "$LOG"
-check "$(echo "$T" | grep -c '^เข้า LONG .* · M15' | awk '{print ($1==3)}')" "3 coins signal on the same candle -> 3 separate LONG notifications"
+check "$(echo "$T" | grep -c 'เข้า LONG .* · M15' | awk '{print ($1==3)}')" "3 coins signal on the same candle -> 3 separate LONG notifications"
 adb shell cmd statusbar expand-notifications; sleep 3
 adb exec-out screencap -p > "$OUT/02_notifications_long.png"
 adb shell cmd statusbar collapse
@@ -101,7 +101,7 @@ check "$( [ "$(ntitles)" = "$N" ] && status_text | grep -q 'ซ้ำ 3' && echo
 
 # 3. Mirrored market: SHORT on the same candle is a different signal.
 mode short; scan
-check "$(titles | grep -c '^เข้า SHORT .* · M15' | awk '{print ($1==3)}')" "mirrored series -> 3 SHORT notifications"
+check "$(titles | grep -c 'เข้า SHORT .* · M15' | awk '{print ($1==3)}')" "mirrored series -> 3 SHORT notifications"
 adb shell cmd statusbar expand-notifications; sleep 3
 adb exec-out screencap -p > "$OUT/03_notifications_long_short.png"
 adb shell cmd statusbar collapse
@@ -133,8 +133,8 @@ check "$( titles | grep -q 'LONG DOGEUSDT' && echo 1 || echo 0)" "after granting
 # 7b. Trend 4H packet (no TP, exit rule) and its EXIT notification, through the same Alerts.onScan path.
 inject "$(packet_h4)"
 T=$(titles)
-check "$(echo "$T" | grep -q '^เข้า LONG BTCUSDT · H4' && echo 1 || echo 0)" "H4 Trend entry (no TP) is posted"
-check "$(echo "$T" | grep -q '^ปิดไม้ SHORT ETHUSDT · H4' && echo 1 || echo 0)" "H4 exit is posted as its own 'close position' notification"
+check "$(echo "$T" | grep -q 'เข้า LONG BTCUSDT · H4' && echo 1 || echo 0)" "H4 Trend entry (no TP) is posted"
+check "$(echo "$T" | grep -q 'ปิดไม้ SHORT ETHUSDT · H4' && echo 1 || echo 0)" "H4 exit is posted as its own 'close position' notification"
 adb shell cmd statusbar expand-notifications; sleep 3
 adb exec-out screencap -p > "$OUT/05_notifications_h4.png"
 adb shell cmd statusbar collapse
