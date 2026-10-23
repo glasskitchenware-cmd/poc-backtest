@@ -178,6 +178,23 @@ against +0.107R). So v6.8 shows the whole system's win rate and average on every
 per-coin figure that looked meaningful but was luck, and every order card carries a risk box (chance of losing, baht at
 the SL, the longest losing run and the deepest drawdown at the set risk, liquidation).
 
+## A confidence tier per signal (tested: win rate not separable)
+
+`research/pro/signalscore.js` (run 39968011646, `research/pro/signalscore_20261023.json`): a logistic score of "the trade
+won" on 10 traits known at the signal, fitted on 2020-2022, tiers A/B/C at that period's thirds; and tiers by stop
+distance alone. Rule fixed before: shown only if win rate A > B > C and A beats the average on all three later sets.
+
+| Set | All: win / avg R | A | B | C | Tight stop | Mid | Wide |
+|---|---|---|---|---|---|---|---|
+| 2023-26, 12 coins | 34.1% / +0.105 | 35.3% / +0.191 | 34.6% / +0.146 | 32.8% / +0.009 | 34.5% / +0.175 | 35.3% / −0.007 | 29.1% / −0.071 |
+| unseen coins | 36.6% / +0.116 | 36.3% / +0.204 | 36.2% / +0.139 | 37.3% / +0.045 | 37.2% / +0.274 | 33.6% / −0.018 | 39.0% / +0.102 |
+| spot 2017-19 | 38.0% / +0.282 | 39.3% / +0.272 | 38.7% / +0.354 | 36.5% / +0.232 | 39.5% / +0.468 | 37.8% / +0.188 | 36.2% / +0.118 |
+
+Win rates barely differ between tiers (32.8-37.3%), so no per-signal win chance is shown. What the tiers do separate
+is the size of the wins: tier A and tight stops earned more per trade on 2023-2026 and unseen coins (tight stops on all
+three). That was not the rule fixed before this run, so it is not used; it is the candidate to test again, stated in
+advance, when 2027 data exists.
+
 ## The professional's routine (main screen → "แผนเทรดและกิจวัตรแบบมืออาชีพ")
 
 - Written plan: one rule, the coins, risk per trade, exits, trade every signal, when to stop, what is forbidden.
