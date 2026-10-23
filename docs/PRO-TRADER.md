@@ -141,6 +141,24 @@ Win rate: the only lever that raises it is taking profit earlier, and that lower
 1/3 at +1R and 1/3 at +2R wins 40.4% of trades but averages +0.064R; the app's 50% at +3R wins 34.1% and averages
 +0.105R). The app keeps the plan that earns more.
 
+## Faster timeframes: 15m / 30m / 1h / 2h (tested, not added)
+
+`research/pro/tf.js` (GitHub Actions run 39965080700, `research/pro/tf_20261023.json`): the Trend rule family (8 Donchian
+rules per timeframe, entry 20/55, exit 10/20, stop 2/3 ATR, EMA200), walk-forward on the 12 coins, the same yearly picks
+on the 25 unseen coins, costs doubled, no take profit; rules fixed before the run. Trend 4H on the same terms: +0.131R per
+trade, CAGR 28.7% / max drawdown 31.8% at 0.5% risk (MAR 0.90), 1.5 trades a day.
+
+| Timeframe | Trades/day | 2023-26 avg R (95% range) | Unseen coins | Costs ×2 | CAGR / max DD at 0.5% |
+|---|---|---|---|---|---|
+| 15m | 15 | −0.104 (−0.131 .. −0.077) | −0.095 | −0.269 | −66.5% / 99.3% |
+| 30m | 10.2 | −0.041 (−0.079 .. −0.004) | −0.040 | −0.181 | −62.8% / 99.3% |
+| 1h | 5.6 | +0.015 (−0.049 .. +0.080) | +0.005 | −0.119 | −44.4% / 96.3% |
+| 2h | 1.8 | +0.101 (+0.009 .. +0.193) | +0.115 | +0.019 | +17.1% / 56.1% |
+
+15m to 1h lose: fees and slippage take more than the trend gives on short bars. 2h passes the profit checks but with
+almost twice Trend 4H's drawdown, a losing 2025, and an edge that is gone when costs double; run beside Trend 4H it makes
+the portfolio worse (CAGR 25.8%, drawdown 71.7%, MAR 0.36 against 0.90), so it is not added.
+
 ## The professional's routine (main screen → "แผนเทรดและกิจวัตรแบบมืออาชีพ")
 
 - Written plan: one rule, the coins, risk per trade, exits, trade every signal, when to stop, what is forbidden.
