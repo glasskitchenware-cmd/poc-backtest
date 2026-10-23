@@ -191,6 +191,10 @@
     return (v < 0 ? "-" : sign ? "+" : "") + s;
   }
   // Colours everywhere: positive green, negative red, neutral (zero, middle, no direction) yellow.
+  // Holdout status of a rule; every rule shows it, whether or not it was chosen.
+  function validBadge(ok) {
+    return ok ? '<b class="up">VALIDATED</b>' : '<b class="down">NOT VALIDATED</b><br><small class="muted">Holdout ไม่ผ่าน</small>';
+  }
   function tone(v) { return !isFinite(v) ? "" : Math.abs(v) < 0.005 ? "neu" : v > 0 ? "up" : "down"; }
   function thai(ms) {
     var d = new Date(ms + THAI_OFFSET_S * 1000);
@@ -337,10 +341,10 @@
       ? "ไม่มีกลยุทธ์ไหนผ่านเกณฑ์ (กำไรเฉลี่ยต่อไม้เป็นบวกทั้ง Dev และ Valid และ Valid ≥ 30 ไม้) — ยังไม่ควรใช้เงินจริง"
       : "เลือกจาก Valid: <b>" + esc(VARIANT_NAMES[rs.chosen]) + "</b> → ทดสอบ Holdout ครั้งเดียว: " + fmt(h.trade_count, 0) + " ไม้ · win " +
         fmt(h.win_rate_pct, 1) + '% · <span class="' + tone(h.return_pct) + '">' + fmt(h.return_pct, 2, true) + "%</span> · PF " + fmt(h.profit_factor, 2);
+    var vcell = function (m) { return m.trade_count + " · " + fmt(m.win_rate_pct, 0) + "%<br>PF " + fmt(m.profit_factor, 2); };
     $("variants").innerHTML = rs.variants.map(function (v) {
-      var d = v.development, a = v.validation;
-      return "<tr><td>" + esc(VARIANT_NAMES[v.name]) + (v.name === rs.chosen ? " ✓" : "") + "</td><td>" + fmt(d.win_rate_pct, 1) + "%</td><td>" +
-        fmt(d.profit_factor, 2) + "</td><td>" + a.trade_count + "</td><td>" + fmt(a.win_rate_pct, 1) + "%</td><td>" + fmt(a.profit_factor, 2) + "</td></tr>";
+      return "<tr><td>" + esc(VARIANT_NAMES[v.name]) + (v.name === rs.chosen ? '<br><small class="muted">ถูกเลือกจาก Valid</small>' : "") + "</td><td>" + vcell(v.development) + "</td><td>" +
+        vcell(v.validation) + "</td><td>" + vcell(v.holdout) + "</td><td>" + validBadge(v.validated) + "</td></tr>";
     }).join("");
   }
 
@@ -2627,6 +2631,8 @@
     scheduleAuto();
   };
   $("scan").onclick = scan;
+  // Squeeze v2 out-of-sample 2026-01..09, 12 coins (web/evidence.js): 1h 594 trades -0.09R, 15m 2,195 -0.11R, 5m 5,712 -0.37R per trade.
+  var SQZ_NOT_VALIDATED = " · NOT VALIDATED: ช่วงทดสอบนอกตัวอย่าง ม.ค.–ก.ย. 2026 ขาดทุนทุกกราฟ (1 ชม. 594 ไม้ −0.09R/ไม้) ใช้ดูเท่านั้น";
   function modeHelp() {
     var lock = locked();
     $("sgStrat").disabled = $("sgLev").disabled = lock;
@@ -2634,10 +2640,10 @@
     $("sgHelp").textContent = $("sgMode").value === "futures"
       ? (v2 ? "Squeeze v2 แท่ง 1 ชม.: เทรนด์ EMA20/50/200 + บีบตัวแล้วทะลุภายใน 3 ชม. + แท่งโมเมนตัม 2 แท่ง + Volume ≥ 1.8 เท่า · SL 1.8 ATR · TP1/2/3 = 1R/2R/5R · ถือไม่เกิน 48 ชม."
           : "Squeeze v1 แท่ง 1 ชม.: เทรนด์ EMA20/50/200 + บีบตัวแล้วทะลุภายใน 8 ชม. + แท่งโมเมนตัม · SL 2.5 ATR · TP1/2/3 = 1R/2R/5R · ถือไม่เกิน 24 ชม.") +
-        " · ขนาดไม้คิดจาก % เสี่ยงในแท็บพอร์ต ไม่ใช่จาก Leverage"
+        " · ขนาดไม้คิดจาก % เสี่ยงในแท็บพอร์ต ไม่ใช่จาก Leverage" + SQZ_NOT_VALIDATED
       : "Spot: สแกนแนวโน้ม 1 ชม. เลือกกลยุทธ์ที่ได้ผลดีสุดใน 90 วันล่าสุดของแต่ละเหรียญ แล้วดูแท่ง 15 นาทีที่เพิ่งปิด";
     if ($("sgMode").value !== "futures") $("sgLev").disabled = $("sgStrat").disabled = true;
-    if (lock && $("sgMode").value === "futures") $("sgHelp").textContent = "สูตร Squeeze v2 เดิมพัฒนาบน H1 · ใช้ M5/M15 เป็นสัญญาณทดลอง ผลย้อนหลังขาดทุน · เลือกเหรียญ/กราฟด้านบน · จำกัดเสี่ยงเป้าหมาย 0.25%/ไม้";
+    if (lock && $("sgMode").value === "futures") $("sgHelp").textContent = "สูตร Squeeze v2 เดิมพัฒนาบน H1 · ใช้ M5/M15 เป็นสัญญาณทดลอง ผลย้อนหลังขาดทุน · เลือกเหรียญ/กราฟด้านบน · จำกัดเสี่ยงเป้าหมาย 0.25%/ไม้" + SQZ_NOT_VALIDATED;
     if (isTrend(curTf())) $("sgHelp").textContent = "Trend 4H: Long เมื่อแท่ง 4 ชม. ปิดทะลุจุดสูงสุด 20 แท่งและอยู่เหนือ EMA200 · Short เมื่อปิดหลุดจุดต่ำสุด 20 แท่งและอยู่ใต้ EMA200 · " +
       "SL 3 ATR ไม่เลื่อน · ไม่มี TP ตายตัว ออกเมื่อแท่ง 4 ชม. ปิดหลุดจุดต่ำสุด/สูงสุด 10 แท่ง (แอปเด้งเตือน) · เสี่ยง " + trendRiskPct() +
       "%/ไม้ · Leverage = เพดานที่เลือก แต่แอปลดให้เองจน Liquidation ห่างกว่า SL 1.5 เท่า (SL 4H กว้าง 3–8% จึงมักได้ราว 8–15x)";
@@ -3145,17 +3151,19 @@
         html = '<div class="banner go">ผ่าน: ' + esc(best.name) + "</div><small>เลือกจาก Valid แล้วผ่าน Holdout: " + h.trades + " ไม้ · win " + fmt(h.win_rate, 1) +
           "% · เฉลี่ย " + fmt(h.exp_r, 2, true) + "R/ไม้ · PF " + fmt(h.pf, 2) + " · ถ้าเสี่ยง 1%/ไม้: " + fmt(h.return_pct, 1, true) + "% (DD " + fmt(h.max_dd_pct, 1) + "%)</small>";
       } else if (best) {
-        html = '<div class="banner wait">ยังไม่ผ่าน</div><small>' + esc(best.name) + " ดีสุดช่วง Valid แต่ Holdout: " + h.trades + " ไม้ · win " + fmt(h.win_rate, 1) +
+        html = '<div class="banner wait">NOT VALIDATED · ยังไม่ผ่าน</div><small>' + esc(best.name) + " ถูกเลือกจากช่วง Valid แต่ Holdout: " + h.trades + " ไม้ · win " + fmt(h.win_rate, 1) +
           "% · " + fmt(h.exp_r, 2, true) + "R/ไม้ · PF " + fmt(h.pf, 2) + "</small>";
       } else {
         html = '<div class="banner wait">ยังไม่มีเทคนิคที่ได้เปรียบ</div><small>ไม่มีเทคนิคไหนกำไรเฉลี่ยต่อไม้เป็นบวกทั้ง Dev และ Valid (และ Valid ≥ 30 ไม้) หลังหักค่าธรรมเนียม</small>';
       }
       $("swBest").innerHTML = html;
+      var cell = function (x) { return x.trades + " · " + fmt(x.win_rate, 0) + '%<br><span class="' + tone(x.exp_r) + '">' + fmt(x.exp_r, 2, true) + "R</span> · PF " + fmt(x.pf, 2); };
       $("swTable").innerHTML = r.techniques.map(function (t) {
-        var d = t.development, v = t.validation;
-        return "<tr><td>" + esc(t.name) + (t.id === r.chosen ? " ✓" : "") + '<br><small class="muted">' + esc(t.source) + "</small></td><td>" + d.trades + " · " + fmt(d.win_rate, 0) +
-          "%<br>" + fmt(d.exp_r, 2, true) + "R</td><td>" + v.trades + " · " + fmt(v.win_rate, 0) + "%<br>" + fmt(v.exp_r, 2, true) + "R</td><td>" + fmt(v.pf, 2) + "</td></tr>";
+        return "<tr><td>" + esc(t.name) + (t.id === r.chosen ? '<br><small class="muted">ถูกเลือกจากช่วง Valid (ก่อนดู Holdout)</small>' : "") + '<br><small class="muted">' + esc(t.source) +
+          "</small></td><td>" + cell(t.development) + "</td><td>" + cell(t.validation) + "</td><td>" + cell(t.holdout) + "</td><td>" + validBadge(t.validated) + "</td></tr>";
       }).join("");
+      $("swNote").textContent = "Holdout ของทุกเทคนิคแสดงเพื่อตรวจสอบเท่านั้น ไม่ได้ใช้เลือกหรือจัดอันดับ · VALIDATED = Dev และ Valid เป็นบวก (Valid ≥ 30 ไม้) และ Holdout ≥ 30 ไม้ R เฉลี่ยเป็นบวก PF > 1 · ทดสอบ " +
+        r.techniques.length + " เทคนิคพร้อมกัน ยิ่งลองมากยิ่งมีโอกาสผ่านโดยบังเอิญ";
       var years = {};
       r.techniques.forEach(function (t) { t.yearly.forEach(function (y) { years[y.year] = 1; }); });
       years = Object.keys(years).sort();

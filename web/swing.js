@@ -273,8 +273,11 @@
       all.forEach(function (t) { var y = new Date(t.entry_time).getUTCFullYear(); (years[y] = years[y] || []).push(t); });
       var yearly = Object.keys(years).sort().map(function (y) { return { year: +y, stats: stats(years[y], opt.risk) }; });
       return { id: tq.id, name: tq.name, source: tq.source, trades: parts, yearly: yearly,
-        development: stats(parts.development, opt.risk), validation: stats(parts.validation, opt.risk) };
+        development: stats(parts.development, opt.risk), validation: stats(parts.validation, opt.risk),
+        // Reported for every technique, never used to choose: a technique is VALIDATED only if its own holdout passes too.
+        holdout: stats(parts.holdout, opt.risk) };
     });
+    results.forEach(function (r) { r.validated = validated(r.development, r.validation, r.holdout); });
     var chosen = null;
     results.forEach(function (r) {
       var ok = r.validation.trades >= 30 && r.validation.exp_r > 0 && r.development.exp_r > 0;
@@ -283,8 +286,12 @@
     return { techniques: results, chosen: chosen ? chosen.id : null,
       holdout: chosen ? stats(chosen.trades.holdout, opt.risk) : null, options: opt };
   }
+  // Positive development and validation (>= 30 trades), then a holdout of >= 30 trades with positive R and PF > 1.
+  function validated(d, v, h) {
+    return d.exp_r > 0 && v.trades >= 30 && v.exp_r > 0 && h.trades >= 30 && h.exp_r > 0 && (h.pf || 0) > 1;
+  }
   function tag(symbol) { return function (t) { t.symbol = symbol; return t; }; }
 
   return { TECHNIQUES: TECHNIQUES, DEFAULTS: DEFAULTS, indicators: indicators, signal: signal,
-    runTechnique: runTechnique, stats: stats, evaluate: evaluate };
+    runTechnique: runTechnique, stats: stats, evaluate: evaluate, validated: validated };
 });

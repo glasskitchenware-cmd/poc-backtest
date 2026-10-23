@@ -493,6 +493,10 @@
     var variants = buildVariants(evaluated.prepared, cfg).map(function (v) {
       v.development = runWindow(v.prepared, WARMUP_BARS, a, v.config, rules).metrics;
       v.validation = runWindow(v.prepared, a, b, v.config, rules).metrics;
+      // Reported for every variant, never used to choose.
+      v.holdout = runWindow(v.prepared, b, n, v.config, rules).metrics;
+      v.validated = (v.development.expectancy || 0) > 0 && v.validation.trade_count >= MIN_VALIDATION_TRADES && (v.validation.expectancy || 0) > 0 &&
+        v.holdout.trade_count >= MIN_VALIDATION_TRADES && (v.holdout.expectancy || 0) > 0 && (v.holdout.profit_factor || 0) > 1;
       return v;
     });
     var chosen = null;

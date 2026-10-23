@@ -98,4 +98,13 @@ check(Math.abs(lt.mfeR - (tp1 + 0.1 - entry) / risk) < 1e-9, "MFE in R is the be
 const plain = Trend.run(twoBars).trades, laddered = Trend.run(twoBars, { tps: LADDER }).trades;
 check(plain.length === laddered.length && plain.every((t, i) => t.entry_time === laddered[i].entry_time && t.exit_time === laddered[i].exit_time),
   "scale-out keeps a runner, so entries and final exits are the same as without it");
+// Backtest page: every technique reports its own holdout and status; the chosen one is not the only one checked.
+const Swing = require("../../web/swing.js");
+check(Swing.validated({ exp_r: 0.2 }, { trades: 77, exp_r: 0.63 }, { trades: 111, exp_r: -0.4, pf: 0.54 }) === false,
+  "Valid 77 trades +0.63R but Holdout 111 trades -0.40R PF 0.54 is NOT VALIDATED");
+check(Swing.validated({ exp_r: 0.1 }, { trades: 40, exp_r: 0.2 }, { trades: 35, exp_r: 0.1, pf: 1.2 }) === true, "positive dev, valid and holdout (>= 30 trades, PF > 1) is VALIDATED");
+let sd = 3; const rnd = () => (sd = (sd * 16807) % 2147483647) / 2147483647; let swPx = 100;
+const sw = []; for (let i = 0; i < 2500; i++) { const o = swPx; swPx *= 1 + (rnd() - 0.5) * 0.02; sw.push({ time: i * 3600000, open: o, high: Math.max(o, swPx) * 1.004, low: Math.min(o, swPx) * 0.996, close: swPx, volume: 100 + rnd() * 300 }); }
+const ev = Swing.evaluate({ A: sw }, { fee: 0.0005, slippage: 0.0002, risk: 0.01 });
+check(ev.techniques.every(t => t.holdout && typeof t.holdout.trades === "number" && typeof t.validated === "boolean"), "every technique carries holdout stats and a VALIDATED flag");
 console.log(`PASSED ${passed} checks`);

@@ -413,7 +413,8 @@ a{color:var(--accent)}
   <div id="swStatus" class="status-line">ดูแถว Squeeze v2 ในตารางผลรายปี: ตัวเลขบวก = ปีนั้นได้กำไร</div>
   <div id="swResults" class="hidden" style="margin-top:12px">
     <div id="swBest"></div>
-    <div style="overflow-x:auto;margin-top:10px"><table><thead><tr><th>เทคนิค</th><th>Dev ไม้·win·R</th><th>Valid ไม้·win·R</th><th>Valid PF</th></tr></thead><tbody id="swTable"></tbody></table></div>
+    <div style="overflow-x:auto;margin-top:10px"><table><thead><tr><th>เทคนิค</th><th>Dev ไม้·win·R</th><th>Valid ไม้·win·R</th><th>Holdout ไม้·win·R</th><th>สถานะ</th></tr></thead><tbody id="swTable"></tbody></table></div>
+    <p class="muted" id="swNote" style="font-size:12px;margin:6px 0 0"></p>
     <h2 style="margin-top:14px">ผลรายปี <small class="muted">(R เฉลี่ยต่อไม้ หลังหักต้นทุน)</small></h2>
     <div style="overflow-x:auto"><table><thead id="swYearHead"></thead><tbody id="swYears"></tbody></table></div>
     <p class="muted" style="font-size:12px;margin:8px 0 0">เป็นกฎจำลองจากหลักการในคลิป ไม่ใช่สูตรตรงของผู้สอนทุกข้อ · ผลในอดีตไม่รับประกันอนาคต</p>
@@ -462,7 +463,7 @@ a{color:var(--accent)}
   <section>
     <h2>เทียบทุกกลยุทธ์</h2>
     <p class="muted" style="margin:0 0 10px;font-size:13px" id="researchVerdict"></p>
-    <div style="overflow-x:auto"><table><thead><tr><th>กลยุทธ์</th><th>Dev win</th><th>Dev PF</th><th>Val ไม้</th><th>Val win</th><th>Val PF</th></tr></thead><tbody id="variants"></tbody></table></div>
+    <div style="overflow-x:auto"><table><thead><tr><th>กลยุทธ์</th><th>Dev ไม้·win</th><th>Valid ไม้·win</th><th>Holdout ไม้·win</th><th>สถานะ</th></tr></thead><tbody id="variants"></tbody></table></div>
   </section>
 
   <section>
