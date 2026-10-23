@@ -330,7 +330,8 @@ console.log("\nper coin (walk-forward OOS):", COINS.map(c => { const s = stats(o
   const THAI = 7 * H;
   const simulate = (tr, risk, from, to, rule) => {
     const ev = [], stake = {}, months = {};
-    tr.filter(t => t.entry_time >= from && t.entry_time < to).forEach((t, i) => { ev.push({ time: t.entry_time, k: 1, t, i }); ev.push({ time: t.exit_time, k: 0, t, i }); });
+    // A trade stopped in the bar it entered exits at its entry time: book the exit just after the entry, so it counts.
+    tr.filter(t => t.entry_time >= from && t.entry_time < to).forEach((t, i) => { ev.push({ time: t.entry_time, k: 1, t, i }); ev.push({ time: Math.max(t.exit_time, t.entry_time + 1), k: 0, t, i }); });
     ev.sort((a, b) => a.time - b.time || a.k - b.k);
     let eq = 1, peak = 1, dd = 0, peakTime = from, under = 0, halted = false, day = "", dayStart = 1, dayPnl = 0, taken = 0, offered = 0;
     for (const e of ev) {

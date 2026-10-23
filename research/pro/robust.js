@@ -54,7 +54,8 @@ const byCoin = tr => {
 // Portfolio: each trade risks RISK of the realized equity at its entry, P&L at exit; at most maxOpen positions at once.
 const simulate = (tr, from, to, maxOpen) => {
   const ev = [], stake = {}, months = {};
-  tr.forEach((t, i) => { ev.push({ time: t.entry_time, k: 1, t, i }); ev.push({ time: t.exit_time, k: 0, t, i }); });
+  // A trade stopped in the bar it entered exits at its entry time: book the exit just after the entry, so it counts.
+  tr.forEach((t, i) => { ev.push({ time: t.entry_time, k: 1, t, i }); ev.push({ time: Math.max(t.exit_time, t.entry_time + 1), k: 0, t, i }); });
   ev.sort((a, b) => a.time - b.time || a.k - b.k);
   let eq = 1, peak = 1, dd = 0, open = 0, taken = 0;
   for (const e of ev) {

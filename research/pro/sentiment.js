@@ -28,7 +28,8 @@ const summary = tr => {
 };
 const port = (tr, from, to) => {
   const ev = [], stake = {}; let eq = 1, peak = 1, dd = 0;
-  tr.forEach((t, i) => { ev.push({ time: t.entry_time, k: 1, i }); ev.push({ time: t.exit_time, k: 0, i, r: t.r }); });
+  // A trade stopped in the bar it entered exits at its entry time: book the exit just after the entry, so it counts.
+  tr.forEach((t, i) => { ev.push({ time: t.entry_time, k: 1, i }); ev.push({ time: Math.max(t.exit_time, t.entry_time + 1), k: 0, i, r: t.r }); });
   ev.sort((a, b) => a.time - b.time || a.k - b.k);
   for (const e of ev) {
     if (e.k === 1) stake[e.i] = eq * RISK;
