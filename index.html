@@ -1703,7 +1703,7 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
   }
   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return "&#" + c.charCodeAt(0) + ";"; }); }
   // The app version (android/app/build.gradle versionName; tests/js/run_tests.py checks they match).
-  var APP_VERSION = "6.7";
+  var APP_VERSION = "6.8";
   // One line-icon family for the screen (24px grid, 1.8 stroke, round ends), drawn in the text colour.
   var ICONS = { check: '<path d="M5 12.5l4.2 4.2L19 7"/>', alert: '<path d="M12 4 2.8 19.5h18.4z"/><path d="M12 10v4.5M12 17.3v.2"/>',
     news: '<rect x="3.5" y="5" width="13" height="14" rx="2"/><path d="M16.5 9h3v7.5a2.5 2.5 0 0 1-5 0"/><path d="M7 9h6M7 12.5h6M7 16h3.5"/>',
@@ -2547,11 +2547,13 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
     return tpMode() === "ladder" && T && T.ladder && T.ladder.tps ? T.ladder : null;
   }
   // The rule's test record for the chosen take-profit mode, for one coin or (no symbol) all 12, with reach rates.
-  function trendStats(symbol) {
+  // The whole system's record (12 coins). A coin's own win rate and average R did not carry over from 2020-2022 to
+  // 2023-2026 (research/pro/winrate.js: rank correlation -0.07 and -0.14 over 32 coins), so no coin is shown as better.
+  function trendStats() {
     var T = window.EVIDENCE_TREND, L = trendLadder();
     if (!T) return null;
-    var row = symbol ? (L ? L.rows && L.rows[symbol] : T.rows && T.rows[symbol]) : (L ? L.test : T.all);
-    return row ? Object.assign({}, row, { reach: (symbol ? T.reachRows && T.reachRows[symbol] : T.reach) || null }) : null;
+    var row = L ? L.test : T.all;
+    return row ? Object.assign({}, row, { reach: T.reach || null }) : null;
   }
   // What the test showed as normal for the chosen take-profit mode (research/pro "normal"): losing streaks, the range of
   // N consecutive trades, and the portfolio at the user's risk; plus the stop rule research/pro chose on 2020-2022.
@@ -2682,7 +2684,7 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
   // Headline numbers for a trade: how often trades like it closed in profit in the test (win %), how much bigger the
   // average win was than the average loss, a grade by the average result, and the risk band. Never an invented confidence.
   function verdictOf(symbol, tf, riskPct) {
-    var st = isTrend(tf) ? trendStats(symbol) : null, E = !isTrend(tf) && window.EVIDENCE, o = E && E.rows && E.rows[symbol + "|" + tf] && E.rows[symbol + "|" + tf].oos;
+    var st = isTrend(tf) ? trendStats() : null, E = !isTrend(tf) && window.EVIDENCE, o = E && E.rows && E.rows[symbol + "|" + tf] && E.rows[symbol + "|" + tf].oos;
     var row = st || o, ok = row && row.n >= 30, w = ok ? row.win / 100 : NaN;
     return { win: ok ? row.win : null, n: ok ? row.n : 0, avgR: ok ? row.avgR : null, payoff: ok && row.pf && w > 0 && w < 1 ? row.pf * (1 - w) / w : null,
       grade: !ok ? "none" : row.avgR >= 0.1 ? "good" : row.avgR > 0 ? "weak" : "bad", risk: riskPct, riskBand: riskPct <= 0.5 ? "low" : riskPct <= 1 ? "mid" : "high" };
@@ -2726,7 +2728,7 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
     function money() { return readNumber("pfCapital", 10000); }
     function signals() {
       var now = Date.now();
-      var score = function (r) { var st = isTrend(curTf()) ? trendStats(r.symbol) : null; return st && st.n >= 30 ? st.avgR : -9; };
+      var score = function (r) { var st = isTrend(curTf()) ? trendStats() : null; return st && st.n >= 30 ? st.avgR : -9; };
       return results.filter(function (r) { return r.signal && !r.signal.below_minimum && now < r.signal.expires; })
         .sort(function (a, b) { return score(b) - score(a) || (b.symbol === LOCK.symbol) - (a.symbol === LOCK.symbol); });
     }
@@ -3043,7 +3045,7 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
       var dist = function (v) { return fmt((v / g.entry - 1) * 100, 2, true) + "%"; }, left = Math.max(0, Math.round((g.expires - Date.now()) / 60000));
       var baht = function (v) { return '<span class="' + (v >= 0 ? "up" : "down") + '">' + (v >= 0 ? "+" : "−") + fmt(Math.abs(v), 0) + " ฿</span> (" + fmt(v / cap * 100, 2, true) + "%)"; };
       var marginU = z.notional / g.lev, feeB = z.notional * 2 * (FUT.fee + FUT.slippage) * fx, oneR = z.lossB, trend = isTrend(tf);
-      var st = trend ? trendStats(r.symbol) : null, ev = evidenceFor(r.symbol, tf);
+      var st = trend ? trendStats() : null, ev = evidenceFor(r.symbol, tf);
       var risk = trend ? Math.min(TREND.maxRiskPct, Portfolio.plan().riskPct || LOCK.riskPct) : null;
       var floorQ = function (q) { return g.step > 0 ? toGrid(q, g.step, "floor") : q; };
       var lad = g.ladder ? g.ladder.map(function (t) { var q = floorQ(z.qty * t.frac); return Object.assign({ q: q, gain: q * Math.abs(t.price - g.entry) * fx }, t); }) : null;
@@ -3080,8 +3082,8 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
             (R ? row("ราคาไปถึง +1R", R[1] + "%") + row("ราคาไปถึง +2R", R[2] + "%") + row("ราคาไปถึง +3R", R[3] + "%") + row("ราคาไปถึง +5R", R[5] + "%") +
               row("ไม่ถึง +1R เลย", fmt(100 - R[1], 1) + "% (โดน SL " + R.slFirst + "% · ออกตามสูตร " + fmt(100 - R[1] - R.slFirst, 1) + "%)") : "") +
             row("กำไรเฉลี่ยต่อไม้", fmt(st.avgR, 2, true) + "R ≈ " + baht(st.avgR * oneR).replace(/ \(.*\)$/, "") + " (ช่วง 95%: " + fmt(st.avgRCI[0], 2, true) + " ถึง " + fmt(st.avgRCI[1], 2, true) + "R)") +
-            (isFinite(st.t) ? row("มั่นใจว่า " + coin + " กำไรเฉลี่ยเป็นบวก", sure(st.t) + " (เหรียญเดียว " + st.n + " ไม้ ข้อมูลน้อยกว่าทั้งสูตร)") : "") +
-            row("ไม้ที่ใช้คำนวณ", st.n + " ไม้ (" + coin + " · " + (trendLadder() ? "แบ่งขาย" : "ไม่ตั้ง TP") + ")")
+            (isFinite(st.t) ? row("มั่นใจว่ากำไรเฉลี่ยเป็นบวก", sure(st.t)) : "") +
+            row("ไม้ที่ใช้คำนวณ", st.n + " ไม้ (ทุกเหรียญรวม · " + (trendLadder() ? "แบ่งขาย" : "ไม่ตั้ง TP") + ") · สถิติรายเหรียญไม่ซ้ำเดิมในปีถัดไป จึงใช้ของทั้งระบบ")
           : row("ความมั่นใจ", "ยังไม่มีข้อมูลยืนยัน (ไม้ทดสอบน้อยกว่า 30)");
       return '<div class="sm-sum sm-sheet ' + (long ? "l" : "s") + '" id="smSheet' + i + '"><div class="sm-sheet-hd"><b>' + (i + 1) + ". " + r.symbol + ' <small>Perp</small></b><span class="pill ' + (long ? "go" : "short") + '">' +
           (long ? "LONG" : "SHORT") + "</span></div>" + headline(g.dir, g.lev, verdictOf(r.symbol, tf, z.lossB / cap * 100)) +
@@ -3109,7 +3111,7 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
         row("ราคาขยับ 1%", "≈ ±" + fmt(z.notional * 0.01 * fx, 1) + " ฿") +
         (g.sizeLimited ? row("หมายเหตุ", "ลดขนาดให้ Margin ไม่เกิน " + LOCK.marginShare * 100 + "% ของทุน") : "") +
         sec("ผลลัพธ์ถ้าถูกทาง / ผิดทาง") + outcomes +
-        sec("ความมั่นใจ · สถิติไม้แบบนี้ของ " + coin + (trend ? " (walk-forward " + trendPeriod() + ")" : "")) + conf + "</div>" +
+        sec(trend ? "ความมั่นใจ · สถิติไม้ของระบบ (walk-forward " + trendPeriod() + ")" : "ความมั่นใจ · สถิติไม้แบบนี้ของ " + coin) + conf + "</div>" +
         '<small class="muted">ความมั่นใจคือสถิติของไม้ลักษณะเดียวกันในช่วงทดสอบ ไม่ใช่การรับประกันไม้นี้ · ผลลัพธ์คิดจากขนาดไม้นี้ รวมค่าธรรมเนียมโดยประมาณ</small>' +
         newsFor(r.symbol) +
         '<div class="sm-chart-hd" style="margin-top:8px">กราฟ 4 ชม. · ' + coin + '</div><div id="smChart' + i + '" class="sm-chart"></div>' +
@@ -3556,7 +3558,7 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
     return y.length ? y[0] + (y.length > 1 ? "–" + y[y.length - 1] : "") + (y[y.length - 1] === 2026 ? " (ถึง ก.ย.)" : "") : "";
   }
   function trendEvidenceFor(symbol) {
-    var o = trendStats(symbol), R = o && o.reach;
+    var o = trendStats(), R = o && o.reach;
     if (!o || !(o.n >= 30)) return { ok: false, n: o ? o.n : 0, text: "ยังไม่มีข้อมูลยืนยัน" + (o ? " (ช่วงทดสอบมีแค่ " + o.n + " ไม้)" : "") };
     return { ok: true, n: o.n, win: o.win, avgR: o.avgR, pf: o.pf,
       text: "สถิติไม้แบบนี้ (walk-forward " + trendPeriod() + "): " + o.n + " ไม้ · ปิดกำไร " + o.win + "% (CI " + o.winCI[0] + "–" + o.winCI[1] + "%) · " +

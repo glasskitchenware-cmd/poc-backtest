@@ -1,4 +1,4 @@
-# Trading Trend 4H as a profession — v6.5 (2026-10-23)
+# Trading Trend 4H as a profession — v6.8 (2026-10-23)
 
 What the app does for a full-time trader, and what the tests say about relying on it. Every number below comes from
 `research/pro/pro.js`, `research/pro/robust.js` and `research/pro/sentiment.js`, run on GitHub Actions on real Binance bars (results on branch
@@ -158,6 +158,25 @@ trade, CAGR 28.7% / max drawdown 31.8% at 0.5% risk (MAR 0.90), 1.5 trades a day
 15m to 1h lose: fees and slippage take more than the trend gives on short bars. 2h passes the profit checks but with
 almost twice Trend 4H's drawdown, a losing 2025, and an edge that is gone when costs double; run beside Trend 4H it makes
 the portfolio worse (CAGR 25.8%, drawdown 71.7%, MAR 0.36 against 0.90), so it is not added.
+
+## Only the coins that win often? (tested: no)
+
+`research/pro/winrate.js` (GitHub Actions run 39965794562, `research/pro/winrate_20261023.json`): coins ranked by their
+2020-2022 win rate under Trend 4H (scale-out plan), the top half / third kept, checked on 2023-2026; rules fixed before.
+
+| Coins | 2023-26 win | avg R | CAGR / max DD at 0.5% |
+|---|---|---|---|
+| all 12 | 34.1% | +0.105 | 23.3% / 32.7% |
+| top half by 2020-22 win rate (AVAX, LTC, BTC, DOT, SOL, XRP) | 34.6% | +0.103 | 12.4% / 18.8% |
+| top third (AVAX, LTC, BTC, DOT) | 34.5% | +0.075 | 6.0% / 15.2% |
+| all 25 unseen | 36.5% | +0.109 | 40.2% / 42.7% |
+| unseen, top half | 36.0% | +0.080 | 15.0% / 32.6% |
+
+A coin's win rate in 2020-2022 said nothing about 2023-2026 (rank correlation −0.07 over 32 coins; average R −0.14):
+LTC won 43% then 31%, XRP 40% then 26%, TRX 31% then 38%. Coin and side together did no better (top half: +0.039R
+against +0.107R). So v6.8 shows the whole system's win rate and average on every signal (34%, +0.105R) instead of a
+per-coin figure that looked meaningful but was luck, and every order card carries a risk box (chance of losing, baht at
+the SL, the longest losing run and the deepest drawdown at the set risk, liquidation).
 
 ## The professional's routine (main screen → "แผนเทรดและกิจวัตรแบบมืออาชีพ")
 

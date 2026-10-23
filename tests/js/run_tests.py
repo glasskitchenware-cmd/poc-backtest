@@ -249,6 +249,8 @@ def main():
           "can follow now: one order card per signal (BTC LONG, ETH SHORT), the full sheet folded inside")
     check("เหลือเวลาเข้า 13:" in follow and re.search(r"\(ถึง \d\d:15 น\.\)", follow) and re.search(r"ตอนนี้ [\d,.]+ \([+-]0\.00% · [+-]0\.00R จากจุดเข้า\)", follow),
           "live: entry countdown and the price against the entry, every second")
+    wins = re.findall(r"โอกาสกำไร (\d+)%", follow)
+    check(len(wins) >= 2 and len(set(wins)) == 1, "every coin shows the system's win rate (" + ",".join(sorted(set(wins))) + "%): coin win rates did not carry over in the test")
     check(all(k in follow for k in ["ความเสี่ยงของไม้นี้", "% ของไม้แบบนี้ในผลทดสอบ", "ถ้าโดน SL", "ระบบเคยแพ้ติดกัน", "พอร์ตเคยลงลึกสุด", "Liquidation (ประมาณ)"]),
           "each order card says what the trade can cost: chance of losing, baht at the SL, the worst losing run and drawdown, liquidation")
     card_q, sheet_q = re.search(r"ขนาด([\d.]+)BTC", follow), re.search(r"ขนาด \(Size\)([\d.]+) BTC", follow)
