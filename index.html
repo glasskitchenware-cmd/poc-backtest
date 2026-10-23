@@ -242,7 +242,7 @@ a{color:var(--accent)}
 @media (prefers-reduced-motion:reduce){.float-alert{animation:none}}
 /* Live statuses: a card sits under "follow now", "holding, too late" or "ended" as the price moves. */
 .live-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px}.live-px{font-size:13px;color:var(--muted)}.live-px b{color:var(--ink);font-size:15px;font-variant-numeric:tabular-nums}
-.live-row .chip{margin:0}.card .live-why{margin-top:4px}
+.live-row .chip{margin:0;max-width:100%;white-space:normal;overflow-wrap:anywhere}.card .live-why{margin-top:4px}
 .sec-hd .cnt{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:20px;padding:0 6px;border-radius:10px;background:var(--deep);font-size:12px;font-weight:700}.sec-hd .cnt:empty{display:none}
 .facts b small[data-dsl],.facts b small[data-dtp]{color:var(--muted)}
 .st-ended .join-order,.st-ended .join-no{display:none}.join-order>.ic{color:var(--up)}.st-hold .join-order>.ic{color:var(--yel)}.join-order small.yel{color:var(--yel)}
@@ -3047,8 +3047,13 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
         var g = x.signal, mr = moodRead(x.symbol, g.dir);
         add(g.dir > 0 ? "l" : "s", (g.dir > 0 ? "เข้า LONG " : "เข้า SHORT ") + coin(x.symbol) + " ตามระบบ · " + mr.fitText + (mr.fit === "against" ? " (ข่าวไม่ได้ทดสอบว่าช่วย จึงยังเข้า)" : ""));
       });
+      // Valid signals that cannot be opened are named, so "no new trade" never hides them.
+      var cantOpen = results.filter(function (r) { return r.signal && (r.signal.noCapital || (systemPaused() && !r.signal.below_minimum)); });
+      cantOpen.forEach(function (r) {
+        add("warn", "สัญญาณ " + (r.signal.dir > 0 ? "LONG " : "SHORT ") + coin(r.symbol) + " ถูกต้องตามสูตร แต่ NO TRADE: " + (r.signal.noCapital ? "ทุนไม่พอตามความเสี่ยงที่ตั้ง" : "ระบบเฝ้าระวัง หยุดเข้าไม้ใหม่"));
+      });
       if (held.length) add("info", "ถือ " + held.length + " ไม้ต่อตามระบบ (" + held.map(function (it) { return coin(it.symbol) + " " + (it.dir > 0 ? "LONG" : "SHORT"); }).join(", ") + ") · ห้ามเลื่อน SL");
-      if (!list.length && !results.some(function (r) { return r.exit; }) && !(stopped || []).length) add("info", "ไม่มีไม้ใหม่ · รอแท่ง 4 ชม. ถัดไป");
+      if (!list.length && !cantOpen.length && !results.some(function (r) { return r.exit; }) && !(stopped || []).length) add("info", "ไม่มีไม้ใหม่ · รอแท่ง 4 ชม. ถัดไป");
       var moodCls = m.fng ? (m.fng.v < 45 ? "bad" : m.fng.v > 55 ? "good" : "warn") : "";
       return '<div class="card note"><div class="card-hd"><b>มุมมองของระบบ</b><small>อ่านจากข่าวและอารมณ์ตลาด</small></div><div class="chips">' +
           (m.fng ? '<span class="chip ' + moodCls + '">ตลาด' + m.fng.label + " " + m.fng.v + (m.fng.change ? " " + (m.fng.change > 0 ? "↑" : "↓") + Math.abs(m.fng.change) + " ใน 7 วัน" : "") + "</span>" : "") +

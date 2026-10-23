@@ -242,7 +242,7 @@ a{color:var(--accent)}
 @media (prefers-reduced-motion:reduce){.float-alert{animation:none}}
 /* Live statuses: a card sits under "follow now", "holding, too late" or "ended" as the price moves. */
 .live-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px}.live-px{font-size:13px;color:var(--muted)}.live-px b{color:var(--ink);font-size:15px;font-variant-numeric:tabular-nums}
-.live-row .chip{margin:0}.card .live-why{margin-top:4px}
+.live-row .chip{margin:0;max-width:100%;white-space:normal;overflow-wrap:anywhere}.card .live-why{margin-top:4px}
 .sec-hd .cnt{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:20px;padding:0 6px;border-radius:10px;background:var(--deep);font-size:12px;font-weight:700}.sec-hd .cnt:empty{display:none}
 .facts b small[data-dsl],.facts b small[data-dtp]{color:var(--muted)}
 .st-ended .join-order,.st-ended .join-no{display:none}.join-order>.ic{color:var(--up)}.st-hold .join-order>.ic{color:var(--yel)}.join-order small.yel{color:var(--yel)}
