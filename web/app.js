@@ -190,7 +190,8 @@
     var s = Math.abs(v).toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
     return (v < 0 ? "-" : sign ? "+" : "") + s;
   }
-  function tone(v) { return !isFinite(v) || v === 0 ? "" : v > 0 ? "up" : "down"; }
+  // Colours everywhere: positive green, negative red, neutral (zero, middle, no direction) yellow.
+  function tone(v) { return !isFinite(v) ? "" : Math.abs(v) < 0.005 ? "neu" : v > 0 ? "up" : "down"; }
   function thai(ms) {
     var d = new Date(ms + THAI_OFFSET_S * 1000);
     function p(n) { return String(n).padStart(2, "0"); }
@@ -198,7 +199,7 @@
   }
   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return "&#" + c.charCodeAt(0) + ";"; }); }
   // The app version (android/app/build.gradle versionName; tests/js/run_tests.py checks they match).
-  var APP_VERSION = "6.9";
+  var APP_VERSION = "6.10";
   // One line-icon family for the screen (24px grid, 1.8 stroke, round ends), drawn in the text colour.
   var ICONS = { check: '<path d="M5 12.5l4.2 4.2L19 7"/>', alert: '<path d="M12 4 2.8 19.5h18.4z"/><path d="M12 10v4.5M12 17.3v.2"/>',
     news: '<rect x="3.5" y="5" width="13" height="14" rx="2"/><path d="M16.5 9h3v7.5a2.5 2.5 0 0 1-5 0"/><path d="M7 9h6M7 12.5h6M7 16h3.5"/>',
@@ -1377,10 +1378,10 @@
     function riskBox(g, z, v) {
       var cap = money(), nm = trendNormal(), streak = nm && nm.normal.worstStreak, dd = nm && nm.port && nm.port.maxDD, pct = z.lossB / cap * 100;
       var rows = [
-        ["โอกาสแพ้", v.win !== null ? fmt(100 - v.win, 0) + "% ของไม้แบบนี้ในผลทดสอบ" : "ยังไม่มีข้อมูลพอ"],
+        ["โอกาสแพ้", v.win !== null ? '<span class="down">' + fmt(100 - v.win, 0) + "%</span> ของไม้แบบนี้ในผลทดสอบ" : "ยังไม่มีข้อมูลพอ"],
         ["ถ้าโดน SL", '<span class="down" data-rb2>−' + fmt(z.lossB, 0) + " ฿</span> (" + fmt(pct, 2) + "% ของทุน)"],
-        streak ? ["ระบบเคยแพ้ติดกัน", streak + " ไม้ ≈ −" + fmt(streak * pct, 1) + "% ของทุน"] : null,
-        dd ? ["พอร์ตเคยลงลึกสุด", "−" + fmt(dd, 1) + "% (เสี่ยง " + trendRiskPct() + "%/ไม้)"] : null,
+        streak ? ["ระบบเคยแพ้ติดกัน", streak + ' ไม้ ≈ <span class="down">−' + fmt(streak * pct, 1) + "%</span> ของทุน"] : null,
+        dd ? ["พอร์ตเคยลงลึกสุด", '<span class="down">−' + fmt(dd, 1) + "%</span> (เสี่ยง " + trendRiskPct() + "%/ไม้)"] : null,
         g.liq ? ["Liquidation (ประมาณ)", price(g.liq) + " (ห่าง " + fmt(Math.abs(g.liq / g.entry - 1) * 100, 1) + "% · SL ห่าง " + fmt(g.stopPct, 1) + "%)"] : null
       ].filter(Boolean);
       return '<div class="risk-box"><div class="risk-hd">' + ic("alert") + "<b>ความเสี่ยงของไม้นี้</b></div>" +
@@ -1409,9 +1410,9 @@
     // trades did in the same market mood. The market mood and what the mood study found are in the system's note.
     function moodLine(symbol, dir) {
       var r = moodRead(symbol, dir), m = r.m, coin = symbol.replace("USDT", "");
-      var fitCls = { with: "good", against: "warn", none: "" }[r.fit];
+      var fitCls = { with: "good", against: "bad", none: "warn" }[r.fit];
       return '<div class="mood"><div class="mood-hd">' + ic("news") + "<b>ข่าว " + coin + " 24 ชม.</b>" +
-          (m.coin && m.coin.n ? '<span class="chip good">ดี ' + m.coin.good + '</span><span class="chip bad">ร้าย ' + m.coin.bad + "</span>" : '<span class="chip">ไม่มีข่าว</span>') +
+          (m.coin && m.coin.n ? '<span class="chip good">ดี ' + m.coin.good + '</span><span class="chip bad">ร้าย ' + m.coin.bad + "</span>" : '<span class="chip warn">ไม่มีข่าว</span>') +
           '<span class="chip ' + fitCls + '">' + r.fitText + "</span></div>" + (r.past ? '<p class="fine">' + esc(r.past) + "</p>" : "") + "</div>";
     }
     // The system's note for now, written from rules like a trader's read: market mood and headlines, releases due, then
@@ -1430,7 +1431,7 @@
       });
       if (held.length) add("info", "ถือ " + held.length + " ไม้ต่อตามระบบ (" + held.map(function (it) { return coin(it.symbol) + " " + (it.dir > 0 ? "LONG" : "SHORT"); }).join(", ") + ") · ห้ามเลื่อน SL");
       if (!list.length && !results.some(function (r) { return r.exit; }) && !(stopped || []).length) add("info", "ไม่มีไม้ใหม่ · รอแท่ง 4 ชม. ถัดไป");
-      var moodCls = m.fng ? (m.fng.v < 45 ? "bad" : m.fng.v > 55 ? "good" : "") : "";
+      var moodCls = m.fng ? (m.fng.v < 45 ? "bad" : m.fng.v > 55 ? "good" : "warn") : "";
       return '<div class="card note"><div class="card-hd"><b>มุมมองของระบบ</b><small>อ่านจากข่าวและอารมณ์ตลาด</small></div><div class="chips">' +
           (m.fng ? '<span class="chip ' + moodCls + '">ตลาด' + m.fng.label + " " + m.fng.v + (m.fng.change ? " " + (m.fng.change > 0 ? "↑" : "↓") + Math.abs(m.fng.change) + " ใน 7 วัน" : "") + "</span>" : "") +
           '<span class="chip good">ข่าวดี ' + m.market.good + '</span><span class="chip bad">ข่าวร้าย ' + m.market.bad + '</span><span class="chip">' + m.market.n + " ข่าว 24 ชม.</span></div>" +
@@ -1834,7 +1835,7 @@
         var v = px[el.getAttribute("data-livepos")], e = +el.getAttribute("data-e"), d = +el.getAttribute("data-d"), k = +el.getAttribute("data-k");
         if (!(v > 0)) return;
         var mv = d * (v - e) / e * 100;
-        if (el.getAttribute("data-big")) { el.textContent = fmt(mv, 2, true) + "% (" + fmt(d * (v - e) / k, 2, true) + "R)"; el.className = "big " + (mv >= 0 ? "up" : "down"); }
+        if (el.getAttribute("data-big")) { el.textContent = fmt(mv, 2, true) + "% (" + fmt(d * (v - e) / k, 2, true) + "R)"; el.className = "big " + tone(Math.round(mv * 100) / 100); }
         else { el.textContent = " · " + fmt(mv, 2, true) + "% · " + fmt(d * (v - e) / k, 2, true) + "R"; el.className = mv >= 0 ? "up" : "down"; }
       });
       placeCards();
@@ -1896,8 +1897,8 @@
         el.classList.remove("st-follow", "st-hold", "st-ended"); el.classList.add("st-" + st.g);
         var q = function (sel) { return el.querySelector(sel); }, set = function (sel, text, cls) { var x = q(sel); if (x) { x.textContent = text; if (cls !== undefined) x.className = cls; } };
         var chip = { follow: st.why === "window" ? "ตามได้" : "ตามได้ (เข้าช้า)", hold: st.why === "tp" ? "ถืออยู่ · ขาย TP1 แล้ว" : "ถืออยู่ · ตามไม่ทัน", ended: "จบแล้ว · แตะ SL" }[st.g];
-        set("[data-st]", chip, "chip " + { follow: "good", hold: "", ended: "bad" }[st.g]);
-        set("[data-off]", "(" + fmt(c.dir * (p / c.e - 1) * 100, 2, true) + "% · " + fmt(st.off, 2, true) + "R จากจุดเข้า)", st.off >= 0 ? "up" : "down");
+        set("[data-st]", chip, "chip " + { follow: "good", hold: "warn", ended: "bad" }[st.g]);
+        set("[data-off]", "(" + fmt(c.dir * (p / c.e - 1) * 100, 2, true) + "% · " + fmt(st.off, 2, true) + "R จากจุดเข้า)", tone(Math.round(st.off * 100) / 100));
         var left = c.until - now, mm = function (ms) { var t = Math.max(0, Math.round(ms / 1000)); return Math.floor(t / 60) + ":" + ("0" + t % 60).slice(-2); };
         set("[data-why]", {
           window: "เหลือเวลาเข้า " + mm(left) + " นาที (ถึง " + thai(c.until).slice(9, 14) + " น.) · ตามได้ถ้าราคาห่างจุดเข้าไม่เกิน 0.5R",
