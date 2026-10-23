@@ -136,6 +136,19 @@ body.simple #guideBar{display:none!important}body.simple main{padding-bottom:24p
 .sm-sched{margin-top:6px;padding:8px 12px;border-radius:10px;background:var(--panel);font-size:13px}.sm-sched b{color:var(--yel)}
 .live-chk{margin-top:10px;padding:10px 12px;border-radius:12px;font-size:14px;background:var(--panel);border:2px solid var(--line)}.live-chk>div{font-weight:700;margin:4px 0}.live-chk small{display:block;margin-top:4px}
 .live-chk.ok{border-color:#0ecb81}.live-chk.watch{border-color:#f0b90b;background:rgba(240,185,11,.12)}.live-chk.broken{border-color:#f6465d;background:rgba(246,70,93,.15)}
+.sys{margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--panel);font-size:13.5px;line-height:1.6}.sys-hd{display:flex;justify-content:space-between;align-items:center}.sys-hd b{font-size:16px}
+.sys-dot{font-size:12.5px;font-weight:700}.sys-dot.ok{color:#0ecb81}.sys-dot.bad{color:#f6465d}.sys-err{font-size:12.5px;line-height:1.4}
+.sec-hd{font-size:15px;font-weight:800;margin:16px 2px 4px}.sec-hd small{font-weight:400;color:var(--muted);font-size:12px}
+.act,.hold{margin-top:8px;padding:10px 12px;border-radius:12px;background:var(--panel);border-left:6px solid var(--line);font-size:13.5px}.act small,.hold small{display:block;color:var(--muted);font-size:12px;margin-top:4px}
+.act.l,.hold.l{border-left-color:#0ecb81}.act.s,.hold.s{border-left-color:#f6465d}.act.x{border-left-color:#ff9800;background:rgba(255,152,0,.12)}.act.idle{border-left-color:#0ecb81}
+.act-hd{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px}.act-hd b{font-size:17px}.act.l .act-hd>b:first-child{color:#0ecb81}.act.s .act-hd>b:first-child{color:#f6465d}.act.x .act-hd>b:first-child{color:#ff9800}
+.act-win{font-size:12.5px;font-weight:700;padding:3px 8px;border-radius:8px;background:var(--deep);color:var(--yel)}
+.act-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:6px 0}.act-grid>div{background:var(--deep);border-radius:8px;padding:6px;text-align:center}.act-grid small{margin:0!important}.act-grid b{font-size:14.5px;display:block}
+.act-warn{margin-top:6px;padding:6px 8px;border-radius:8px;background:rgba(240,185,11,.14);color:var(--yel);font-size:12.5px}
+.act-more summary{font-size:12.5px;color:var(--muted);margin-top:6px;cursor:pointer}.act-note{font-size:12px;color:var(--muted);margin-top:6px}
+.hold-pct{font-size:20px!important}.hold-line{margin-top:3px}.hold-follow{margin-top:6px;padding:6px 8px;border-radius:8px;background:var(--deep);font-size:13px}.hold-follow.ok{border:1px solid #0ecb81}
+.perf{padding:10px 12px;border-radius:12px;background:var(--panel);font-size:13.5px}.perf-row{display:flex;justify-content:space-between;padding:5px 0;border-top:1px solid var(--line);margin-top:5px}.perf>small{display:block;color:var(--muted);font-size:11.5px;margin-top:6px}
+.sm-more{margin-top:14px}.sm-more>summary{padding:10px 12px;border-radius:12px;background:var(--panel);font-size:13.5px;color:var(--muted);cursor:pointer}
 .lv{margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--panel);border:2px solid var(--yel)}.lv>small{display:block;margin-top:6px;font-size:11.5px}
 .lv-hd{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px}.lv-hd b{font-size:16px}.lv-hd small{width:100%;color:var(--muted);font-size:12px}
 .lv-card{margin-top:8px;padding:10px;border-radius:10px;background:var(--deep);border-left:5px solid var(--line)}.lv-card.up{border-left-color:#0ecb81}.lv-card.down{border-left-color:#f6465d}
@@ -201,7 +214,7 @@ a{color:var(--accent)}
 <main>
 <div class="topbar"><div class="brand"><i>P</i>POC Signal</div><button id="menuBtn" type="button" class="mini ghost" style="margin:0">☰ เมนู</button></div>
 <div id="simpleView">
-  <div class="sm-cap"><label for="smCap">💰 เงินของผมใน Binance Futures (บาท)</label><input id="smCap" type="number" inputmode="decimal" min="0"></div>
+  <div class="sm-cap"><label for="smCap">💰 ทุนใน Binance Futures (บาท)</label><input id="smCap" type="number" inputmode="decimal" min="0"></div>
   <div id="smMain"></div>
   <button id="smScan" class="mini ghost" type="button" style="width:100%;margin-top:10px">เช็กสัญญาณอีกครั้ง</button>
 </div>
@@ -238,7 +251,7 @@ a{color:var(--accent)}
   <div style="background:#101820;border:1px solid #334155;border-radius:12px;padding:12px;margin-bottom:10px">
     <b>Crypto Signal · เลือกเหรียญสำหรับแจ้งเตือน</b>
     <div class="row" style="margin-top:8px">
-      <label>กราฟสัญญาณ
+      <label class="hidden">กราฟสัญญาณ
         <select id="alertTf"><option value="4h" selected>H4 · Trend (สูตรหลัก)</option><option value="1h">H1 · Squeeze เดิม</option><option value="15m">M15 · ทดลอง</option><option value="5m">M5 · ทดลอง</option></select>
       </label>
       <label>เพดาน Leverage (Isolated)

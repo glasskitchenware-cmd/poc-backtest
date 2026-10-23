@@ -95,6 +95,8 @@
     alertsEnabled: function () { return true; }, setAlerts: function () {}, notificationsAllowed: function () { return true; },
     lastScanStatus: function () { return JSON.stringify({ at: Date.now(), ok: false, text: "test status" }); },
     debugFuturesBase: function () { return ""; }, testNotification: function () {},
+    // Debug builds may pin a trial timeframe (the legacy cases store it); cfg.releaseTf behaves like the release app.
+    debugTradeTf: function () { return cfg.releaseTf ? "" : (localStorage.getItem("tradeTf") || ""); },
     batteryUnrestricted: function () { return true; }, openBatterySettings: function () {}, openNotificationSettings: function () {}
   };
   window.__CFG = cfg;

@@ -74,6 +74,16 @@ signal: the rule was not tested with news.
   no rule changes after a short losing run, never above 1% risk.
 - Backup and restore of trades, the live record and settings as one text through Android's share sheet.
 
+## Follow the system (v6.2 main screen)
+
+One timeframe (Trend 4H) for every install; the timeframe buttons are gone. The main screen is what a follower needs:
+the system's status (next 4-hour check, coins, risk, confidence), **what to do now** (an orange card to close a position,
+an order card per new signal with leverage, entry, SL, TP1, size, margin, risk and the deadline; or "nothing to do"),
+**what the system holds** with its live move and R and whether to join it now, and **the system's last 30 days**
+(closed trades in R and in % at the set risk). Confidence details, news, the plan and routine, and what is normal fold
+into one section; full trade sheets and charts open on tap. Opening the app mid-bar no longer reports "stale": Android
+now tells that apart from a lagging exchange.
+
 ## Live P&L of the trades entered (v6.1)
 
 Trades recorded with "เข้าแล้ว · บันทึกลงพอร์ต" sit at the top of the main screen with their P&L at Binance's mark price

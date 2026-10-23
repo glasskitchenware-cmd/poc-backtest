@@ -102,6 +102,10 @@ public class SignalAlertsTest {
         // Stale: older than one candle (M5) or 15 minutes (M15/H1) -> nothing, and the status says so.
         SignalAlerts.Plan stale = SignalAlerts.plan(packet(15, candle, all), candle + m15 + 1, key -> -1L);
         check(!stale.ok && stale.notes.isEmpty() && stale.status.contains("ไม่สด"), "stale M15 candle is refused");
+        long h4c = (candle / 14_400_000L) * 14_400_000L;
+        SignalAlerts.Plan mid = SignalAlerts.plan(packet(240, h4c, new JSONArray()), h4c + 3 * 3_600_000L, key -> -1L);
+        check(mid.ok && mid.notes.isEmpty() && mid.status.startsWith("ปกติ · รอแท่ง H4 ถัดไปปิด"),
+                "app opened mid-bar: the newest H4 candle past its alert window is normal, not an error (" + mid.status + ")");
         check(SignalAlerts.plan(packet(5, c5, five), c5 + m5 + 1, key -> -1L).notes.isEmpty(), "stale M5 candle (>5 min) is refused");
         long h1 = 3_600_000L, ch = candle / h1 * h1;
         JSONArray hour = new JSONArray().put(item("BTCUSDT", "LONG", "H1", ch));

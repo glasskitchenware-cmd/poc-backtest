@@ -107,6 +107,13 @@ final class SignalAlerts {
         }
         long candle = packet.optLong("candle", 0);
         long maxAge = Math.min(minutes * 60_000L, MAX_AGE_CAP_MS);
+        // The newest closed candle, only past its alert window (the app opened mid-bar): normal, nothing to send.
+        long step = minutes * 60_000L;
+        if (candle > 0 && candle == (now / step) * step && now - candle > maxAge) {
+            plan.ok = true;
+            plan.status = "ปกติ · รอแท่ง " + tf + " ถัดไปปิด " + bangkok(candle + step, "HH:mm") + " น. (แจ้งเตือนเฉพาะ " + maxAge / 60_000L + " นาทีแรกหลังแท่งปิด)";
+            return plan;
+        }
         if (candle <= 0 || candle > now + 60_000L || now - candle > maxAge) {
             plan.status = "แท่ง " + tf + " ไม่สด (ปิดเมื่อ " + (candle > 0 ? bangkok(candle, "dd/MM HH:mm") : "?") + ") · ไม่แจ้งเตือนของเก่า";
             return plan;

@@ -163,9 +163,9 @@ def main():
                             "capital": 1_000_000, "force": {"BTCUSDT": "LONG"}})
     check(r["aiLeft"] is None and len(r["packet"]["signals"]) >= 1, "v6 has no AI: Gemini keys left by older versions are erased, the scan still alerts")
 
-    r = run(page, "foreground_tf", {"storage": store12, "capital": 1_000_000, "force": {}, "clickTf": "5m", "waitMs": 15000}, bg=False)
-    check(5 in r["scanMinutes"], "main-screen 5m button also moves the Android alarm to 5 minutes")
-    check("Paper เท่านั้น" in r["smMain"], "main screen states trial / paper only")
+    r = run(page, "release_4h", {"storage": store12, "capital": 1_000_000, "trendForce": {}, "waitMs": 15000, "releaseTf": True}, bg=False)
+    check(r["tfButtons"] == 0 and 240 in r["scanMinutes"] and 15 not in r["scanMinutes"] and "ระบบเทรด Trend 4H" in r["smMain"],
+          "v6.2: no timeframe choice; an install that had M15 runs Trend 4H, alarm every 240 minutes")
     check(r["spot"] == [], "foreground screen uses futures endpoints only")
     # ---- Trend 4H (main strategy since v4.4) ----
     three = ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
@@ -226,7 +226,7 @@ def main():
     check(r["packet"]["note"] == "" and len(sg) == 1 and sg[0]["risk_pct"] == "0.25",
           "Trend: whatever rule 2020-2022 picked, the app trades every signal at the set risk (risk-cutting rules lost the 2023-2026 profit)")
 
-    r = run(page, "h4_default", {"storage": {"alertCoins": json.dumps(["BTCUSDT"]), "tradeTf": "15m"}, "capital": 1_000_000, "trendForce": {}})
+    r = run(page, "h4_default", {"storage": {"alertCoins": json.dumps(["BTCUSDT"]), "tradeTf": "15m"}, "capital": 1_000_000, "trendForce": {}, "releaseTf": True})
     check(r["packet"]["interval_minutes"] == 240 and 240 in r["scanMinutes"], "update moves an old M15 install to Trend 4H once, alarm to 240 minutes")
 
     r = run(page, "h4_ladder", {"storage": h4, "capital": 10_000_000, "trendForce": {"BTCUSDT": "LONG"}})
@@ -238,11 +238,13 @@ def main():
     (OUT / "h4_ladder.json").write_text(json.dumps(r["packet"], ensure_ascii=False), encoding="utf-8")
 
     r = run(page, "h4_coach", {"storage": h4, "capital": 1_000_000, "trendForce": {"BTCUSDT": "LONG", "ETHUSDT": "SHORT", "SOLUSDT": "HOLD_LONG"}, "clickTf": "4h",
-                               "waitMs": 15000, "justClosed": 14_400_000}, bg=False)
+                               "waitMs": 15000, "justClosed": 14_400_000, "openDetails": 8000}, bg=False)
     shown = r["smMain"] + r["coach"]
-    check("สัญญาณน่าเข้า 2 ตัว" in r["smMain"] and "BTCUSDT Perp" in r["smMain"] and "ETHUSDT Perp" in r["smMain"], "every signal worth entering is shown (BTC and ETH)")
-    check(r["charts"] >= 3, "a 4h chart per signal plus one for the held position (" + str(r["charts"]) + ")")
-    check("ไม้ที่เปิดอยู่ตอนนี้ 1 ไม้" in r["smMain"] and "SOL" in r["smMain"], "open SOL position listed")
+    check("ตอนนี้ต้องทำอะไร" in r["smMain"] and "🟢 เข้า LONG BTC x" in r["smMain"] and "🔴 เข้า SHORT ETH x" in r["smMain"] and "BTCUSDT Perp" in r["smMain"],
+          "what to do now: one order card per signal (BTC LONG, ETH SHORT), the full sheet folded inside")
+    check(all(k in r["smMain"] for k in ["ราคาเข้า ≈", "Stop Loss", "TP1 ขาย 50%", "ขนาด", "Margin", "เสี่ยง", "เข้าภายใน"]), "the order card holds every number to type in Binance")
+    check(r["charts"] >= 3, "charts draw when opened: one per signal and one for the held position (" + str(r["charts"]) + ")")
+    check("ระบบถืออยู่ 1 ไม้" in r["smMain"] and "🟢 LONG SOL" in r["smMain"], "the system's open SOL position listed")
     for must in ["LONG x", "SHORT x", "โอกาสกำไร", "เสี่ยง ", "ไม้ที่ชนะได้เฉลี่ย", "เป็นสถิติ ไม่ใช่การรับประกัน", "Leverage", "ความเสี่ยงต่อไม้", "Margin ที่วาง", "ทำไม x", "ความเสี่ยง", "LONG (Buy)", "SHORT (Sell)", "แท่งสัญญาณปิด", "เข้าภายใน", "ราคาเข้าอ้างอิง", "Stop Loss", "TP1 · ขาย", "ส่วนที่เหลือ", "Liquidation (ประมาณ)",
                  "Isolated", "Leverage", "ขนาด (Size)", "มูลค่าสัญญา", "Margin ที่ใช้", "ค่าธรรมเนียม+slippage", "ราคาขยับ 1%", "ผิดทาง: โดน SL ทั้งไม้",
                  "ถึง TP1 แล้วกลับมาโดน SL", "ถึงทุก TP แล้วส่วนที่เหลือวิ่งถึง +5R", "ปิดกำไร", "ราคาไปถึง +1R", "ไม่ถึง +1R เลย", "กำไรเฉลี่ยต่อไม้",
@@ -252,20 +254,22 @@ def main():
     check(r["floatShown"] and "🟢 LONG BTC x" in fa and "🔴 SHORT ETH x" in fa and fa.count("เสี่ยง ") == 2 and "SL " in fa and "แตะดู" in fa,
           "new signals pop a floating bar: side, coin, leverage, risk, entry/SL")
     check(sorted(r["floatCls"]) == ["fa l", "fa s"], "floating bars coloured by side (green LONG, red SHORT)")
-    check(sorted(r["sheets"]) == ["sm-sum sm-sheet l", "sm-sum sm-sheet l", "sm-sum sm-sheet s"], "trade sheets and the open SOL LONG card are framed in their side's colour")
-    check("⏰ แท่ง 4 ชม. ปิด 03:00 · 07:00 · 11:00 · 15:00 · 19:00 · 23:00 น." in r["smMain"] and "รอบถัดไป" in r["smMain"], "main screen: the day's 4h closes in Thai time and the next one")
+    check(sorted(r["sheets"]) == ["sm-sum sm-sheet l", "sm-sum sm-sheet s"] and r["holds"] == ["hold l"], "sheets and the held SOL LONG card in their side's colour")
+    check(r["tfButtons"] == 0 and "ระบบเทรด Trend 4H" in r["smMain"] and "เช็กครั้งถัดไป" in r["smMain"] and "ผลงานระบบ 30 วัน" in r["smMain"],
+          "main screen: the system's status and next check, no timeframe buttons, its 30-day record")
     check("ขั้นที่" not in shown and "ภาพจำลองหน้า Binance" not in shown and "ทำตามภาพ" not in shown, "no coaching steps or Binance look-alike")
     check("NaN" not in shown and "undefined" not in shown, "main screen has no NaN/undefined for a signal without TP")
 
     r = run(page, "h4_small", {"storage": h4, "capital": 37, "trendForce": {"ETHUSDT": "SHORT", "SOLUSDT": "HOLD_SHORT"}, "clickTf": "4h", "waitMs": 15000,
-                               "justClosed": 14_400_000}, bg=False)
+                               "justClosed": 14_400_000, "openDetails": 8000}, bg=False)
     sg = r["packet"]["signals"]
     check(len(sg) == 1 and sg[0]["kind"] == "ENTRY" and sg[0]["symbol"] == "ETHUSDT" and float(sg[0]["qty"]) >= 0.001 and float(sg[0]["risk_pct"]) > 1,
           "37 THB: the signal is still sent, sized at Binance's smallest order")
     check("ETHUSDT Perp" in r["smMain"] and "(ขั้นต่ำที่ Binance ยอม)" in r["smMain"] and "ทุนไม่พอ" not in r["smMain"] and "ยังเทรดตามสูตรไม่ได้" not in r["smMain"],
           "37 THB: full trade sheet at the smallest order, no capital lecture")
-    check("ไม้ที่เปิดอยู่ตอนนี้ 1 ไม้" in r["smMain"] and "สัญญาณ 7 วันล่าสุด" in r["smMain"] and "สแกนล่าสุด" in r["smMain"],
-          "open positions, the last 7 days and the status line are shown")
+    check("มากกว่าทุนที่ใส่ไว้ (37 ฿) · ใส่ทุนจริงในช่องด้านบน" in r["smMain"], "37 THB: the card says the margin is above the balance typed, and where to fix it")
+    check("ระบบถืออยู่ 1 ไม้" in r["smMain"] and "ผลงานระบบ 30 วัน" in r["smMain"] and "เช็กล่าสุด" in r["smMain"],
+          "the system's open position, its 30-day record and the status line are shown")
     check(r["chart"] or r["charts"] >= 2, "charts drawn for the signal and the open position")
     check("NaN" not in r["smMain"] and "undefined" not in r["smMain"], "37 THB: no NaN/undefined")
     (OUT / "h4_minsize.json").write_text(json.dumps(r["packet"], ensure_ascii=False), encoding="utf-8")
@@ -274,12 +278,12 @@ def main():
                                     "justClosed": 14_400_000}, bg=False)
     check(r["floatShown"] and r["floatCls"] == ["fa x"] and "🟠 ปิดไม้ LONG BTC ตอนนี้" in r["floatAlert"] and "+1.00R" in r["floatAlert"],
           "an exit pops an orange floating bar: close BTC LONG now, R now")
-    check("🟠 ปิดไม้ BTC LONG" in r["smMain"], "the exit is the orange bar on the main screen")
+    check("🟠 ปิด LONG BTC ตอนนี้" in r["smMain"] and "ปิดด้วย Market (ถ้าถืออยู่)" in r["smMain"], "the exit is the first orange card under what to do now")
 
     r = run(page, "h4_open", {"storage": h4, "capital": 1_000_000, "trendForce": {"BTCUSDT": "NEAR_LONG", "ETHUSDT": "HOLD_SHORT"}, "clickTf": "4h", "waitMs": 15000,
-                              "justClosed": 14_400_000}, bg=False)
+                              "justClosed": 14_400_000, "openDetails": 8000}, bg=False)
     s = r["smMain"]
-    check("สัญญาณเข้าใหม่: ไม่มี" in s and "ไม้ที่เปิดอยู่ตอนนี้ 2 ไม้" in s, "no new entry, but the 2 open positions are listed right after")
+    check("✅ ตอนนี้ไม่ต้องทำอะไร" in s and "ระบบถืออยู่ 2 ไม้" in s, "nothing new to do, and the system's 2 open positions listed right after")
     check("ถ้ายังไม่ได้เข้า" in s and "ราคาห่างจุดเข้าเกิน 0.5R" in s, "a position already +1R away: do not join late")
     check(("เข้าตามได้" in s) or ("ไม่แนะนำให้เข้าตาม" in s) or ("ยังไม่มีผลทดสอบการเข้าตาม" in s), "a position 0.2R from its entry: the late-entry test decides")
     check(r["charts"] >= 2 and "Stop Loss" in s and "TP1" in s, "each open position has its SL/TP and its chart")
