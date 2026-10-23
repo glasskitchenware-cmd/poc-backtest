@@ -61,9 +61,12 @@
           "<item><title>Solana network outage halts block production on " + u.host + "</title><link>https://" + u.host + "/a1</link><pubDate>" + t0 + "</pubDate></item>" +
           "<item><title>Markets wait for the Fed (" + u.host + ")</title><link>https://" + u.host + "/a2</link><pubDate>" + t1 + "</pubDate></item></channel></rss>");
       }
-      if (cfg.newsDown && (u.host === "www.binance.com" || u.host === "nfs.faireconomy.media")) return reply(id, false, "HTTP 503 down");
+      if (cfg.newsDown && (u.host === "www.binance.com" || u.host === "nfs.faireconomy.media" || u.host === "api.alternative.me")) return reply(id, false, "HTTP 503 down");
       if (u.host === "www.binance.com") return reply(id, true, { code: "000000", data: { catalogs: [{ catalogId: 161, catalogName: "Delisting",
         articles: [{ code: "abc123", title: "Binance Futures Will Delist XYZUSDT USDⓈ-M Perpetual Contract", releaseDate: Date.now() - 3600000 }] }] } });
+      // Fear & Greed: today cfg.fng (default 38, "fear"), 47 a week ago.
+      if (u.host === "api.alternative.me") return reply(id, true, { data: [cfg.fng || 38, 40, 42, 44, 45, 46, 46, 47].map(function (v, k) {
+        return { value: String(v), value_classification: "x", timestamp: String(Math.floor((Date.now() - k * 86400000) / 1000)) }; }) });
       if (u.host === "nfs.faireconomy.media") return reply(id, true, [
         { title: "CPI m/m", country: "USD", date: new Date(Date.now() + 2 * 3600000).toISOString(), impact: "High", forecast: "0.3%", previous: "0.4%" },
         { title: "Unemployment Claims", country: "USD", date: new Date(Date.now() + 30 * 3600000).toISOString(), impact: "Medium", forecast: "220K", previous: "218K" },

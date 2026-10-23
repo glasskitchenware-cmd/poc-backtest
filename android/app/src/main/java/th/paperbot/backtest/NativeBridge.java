@@ -32,7 +32,8 @@ final class NativeBridge {
     private static final List<String> ALLOWED_HOSTS = Arrays.asList(
             "data-api.binance.vision", "api.binance.com", "fapi.binance.com", "fapi1.binance.com", "api.bitkub.com", "open.er-api.com",
             "www.coindesk.com", "cointelegraph.com", "decrypt.co", "bitcoinmagazine.com", "www.theblock.co", "cryptoslate.com",
-            "siamblockchain.com", "bitcoinaddict.org", "www.binance.com", "www.federalreserve.gov", "www.sec.gov", "nfs.faireconomy.media");
+            "siamblockchain.com", "bitcoinaddict.org", "www.binance.com", "www.federalreserve.gov", "www.sec.gov", "nfs.faireconomy.media",
+            "api.alternative.me");
     // Emulator tests only: the host machine as seen from the Android emulator, used when the APK is debuggable.
     private static final String DEBUG_MOCK_HOST = "10.0.2.2";
 

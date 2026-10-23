@@ -144,6 +144,9 @@ body.simple #guideBar{display:none!important}body.simple main{padding-bottom:24p
 .act-hd{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px}.act-hd b{font-size:17px}.act.l .act-hd>b:first-child{color:#0ecb81}.act.s .act-hd>b:first-child{color:#f6465d}.act.x .act-hd>b:first-child{color:#ff9800}
 .act-win{font-size:12.5px;font-weight:700;padding:3px 8px;border-radius:8px;background:var(--deep);color:var(--yel)}
 .act-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:6px 0}.act-grid>div{background:var(--deep);border-radius:8px;padding:6px;text-align:center}.act-grid small{margin:0!important}.act-grid b{font-size:14.5px;display:block}
+.note{margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--panel);border:1px solid var(--line);font-size:13.5px}.note-hd{font-weight:800;font-size:15px}.note-mkt{margin:4px 0;color:var(--ink)}.note-mkt b{color:var(--yel);margin:0 4px}
+.note ul{margin:4px 0 0;padding-left:18px;line-height:1.55}.note>small{display:block;color:var(--muted);font-size:11.5px;margin-top:6px}
+.mood{margin-top:6px;padding:6px 8px;border-radius:8px;background:var(--deep);font-size:12.5px}.mood b{font-weight:700}.mood.with b{color:#0ecb81}.mood.against b{color:#f0b90b}.mood small{display:block;color:var(--muted);font-size:11.5px;margin-top:2px}
 .act-warn{margin-top:6px;padding:6px 8px;border-radius:8px;background:rgba(240,185,11,.14);color:var(--yel);font-size:12.5px}
 .act-more summary{font-size:12.5px;color:var(--muted);margin-top:6px;cursor:pointer}.act-note{font-size:12px;color:var(--muted);margin-top:6px}
 .hold-pct{font-size:20px!important}.hold-line{margin-top:3px}.hold-follow{margin-top:6px;padding:6px 8px;border-radius:8px;background:var(--deep);font-size:13px}.hold-follow.ok{border:1px solid #0ecb81}
@@ -2072,6 +2075,12 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
       ["SEC", "https://www.sec.gov/news/pressreleases.rss"]
     ];
     var BINANCE = "https://www.binance.com/bapi/composite/v1/public/cms/article/list/query?type=1&pageNo=1&pageSize=10";
+    // Market mood: the Crypto Fear & Greed Index (free, daily), and a fixed word list that reads each headline as good or
+    // bad news (no AI: the same words always give the same reading).
+    var FNG = "https://api.alternative.me/fng/?limit=8";
+    var BULL = /surg|soar|rall(y|ies)|jump|record high|all-time high|\bATH\b|breakout|bullish|approv|inflow|adopt|partnership|upgrade|buys?\b|buying|accumulat|rate cut|เพิ่มขึ้น|พุ่ง|ทะยาน|ทำสถิติ|อนุมัติ|ไหลเข้า|ขาขึ้น/i;
+    var BEAR = /plung|crash|tumbl|outage|\bhalt|\bdrops?\b|\bfalls?\b|slump|sell-?off|bearish|hack|exploit|lawsuit|\bsues?\b|charged|\bban(s|ned)?\b|delist|outflow|liquidat|bankrupt|fraud|probe|rate hike|tariff|ร่วง|ดิ่ง|ทรุด|ลดลง|ขาลง|แฮ็ก|ฟ้อง|ถอดถอน|ไหลออก/i;
+    function toneOf(title) { var b = BULL.test(title) ? 1 : 0, d = BEAR.test(title) ? 1 : 0; return b - d; }
     var CALENDAR = "https://nfs.faireconomy.media/ff_calendar_thisweek.json";
     var NAMES = { BTC: "bitcoin", ETH: "ethereum", BNB: "bnb", SOL: "solana", XRP: "xrp|ripple", DOGE: "dogecoin", ADA: "cardano",
       AVAX: "avalanche", LINK: "chainlink", DOT: "polkadot", TRX: "tron", LTC: "litecoin" };
@@ -2116,6 +2125,10 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
         return httpGet(f[1]).then(function (t) { items = items.concat(rss(f[0], t)); }, function (e) { errors.push(f[0] + ": " + String(e.message).slice(0, 60)); });
       });
       jobs.push(httpGet(BINANCE).then(function (t) { items = items.concat(binance(t)); }, function (e) { errors.push("Binance: " + String(e.message).slice(0, 60)); }));
+      if (wantCal || !s.fng) jobs.push(httpGet(FNG).then(function (t) {
+        var d = (JSON.parse(t).data || []).map(function (x) { return +x.value; });
+        if (d.length) s.fng = { v: d[0], prev7: d[7] !== undefined ? d[7] : d[d.length - 1], at: Date.now() };
+      }, function (e) { errors.push("Fear & Greed: " + String(e.message).slice(0, 60)); }));
       if (wantCal) jobs.push(httpGet(CALENDAR).then(function (t) { s.events = calendar(t); s.calAt = Date.now(); }, function (e) { errors.push("ปฏิทินเศรษฐกิจ: " + String(e.message).slice(0, 60)); }));
       return (inflight = Promise.all(jobs).then(function () {
         if (items.length) {
@@ -2183,7 +2196,22 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
       clearInterval(timer); timer = setInterval(tick, 120000); tick();
       document.addEventListener("visibilitychange", tick);
     }
-    return { refresh: refresh, forCoin: forCoin, upcoming: upcoming, warnFor: warnFor, topHtml: topHtml, listHtml: listHtml, row: row, start: start, state: function () { return s; } };
+    function fngLabel(v) { return v < 25 ? "กลัวสุดขีด" : v < 45 ? "กลัว" : v <= 55 ? "กลาง" : v <= 75 ? "โลภ" : "โลภสุดขีด"; }
+    // The mood a trader reads before acting: the index today and its week, and good / bad headlines (24 h) for the market
+    // and for one coin.
+    function mood(symbol) {
+      var day = Date.now() - 24 * HOUR, count = function (list) {
+        var o = { good: 0, bad: 0, n: list.length };
+        list.forEach(function (x) { var t = toneOf(x.title); if (t > 0) o.good++; else if (t < 0) o.bad++; });
+        o.tone = o.good > o.bad ? 1 : o.bad > o.good ? -1 : 0;
+        return o;
+      };
+      var f = s.fng;
+      return { fng: f ? { v: f.v, label: fngLabel(f.v), change: f.v - f.prev7 } : null,
+        market: count(s.items.filter(function (x) { return x.time >= day; })), coin: symbol ? count(forCoin(symbol, 24)) : null };
+    }
+    return { refresh: refresh, forCoin: forCoin, upcoming: upcoming, warnFor: warnFor, topHtml: topHtml, listHtml: listHtml, row: row, start: start, mood: mood, toneOf: toneOf,
+      fngLabel: fngLabel, state: function () { return s; } };
   })();
   // v6 removed the AI: forget the keys and settings it kept on this phone.
   try { ["aiKeys", "aiKeyIdx", "aiModel", "aiAuto", "aiKey"].forEach(function (k) { localStorage.removeItem(k); }); } catch (e) { /* nothing stored */ }
@@ -2544,6 +2572,26 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
       passed: rows.length - fails - warns, total: rows.length,
       year: Y ? { win: Math.round(100 - Y.pLoss), loss10: Y.pLoss10, p5: Y.p5, p50: Y.p50, p95: Y.p95, worst12: Y.worst12 } : null };
   }
+  // How the news reads for one trade, as a trader would put it: market mood (Fear & Greed and its week), the coin's good
+  // and bad headlines of 24 h, and whether they point the way of the trade. Facts from the free sources and the word list.
+  function moodRead(symbol, dir) {
+    var m = News.mood(symbol), coin = symbol.replace("USDT", ""), parts = [];
+    if (m.fng) parts.push("ตลาด" + m.fng.label + " " + m.fng.v + (m.fng.change ? " (" + (m.fng.change > 0 ? "↑" : "↓") + Math.abs(m.fng.change) + " ใน 7 วัน)" : ""));
+    parts.push(m.coin && m.coin.n ? "ข่าว " + coin + " 24 ชม.: ดี " + m.coin.good + " · ร้าย " + m.coin.bad : "ไม่มีข่าว " + coin + " ใน 24 ชม.");
+    var fit = m.coin && m.coin.tone ? (m.coin.tone === dir ? "with" : "against") : "none";
+    return { text: parts.join(" · "), fit: fit, fitText: { with: "ข่าวไปทางเดียวกับไม้นี้", against: "ข่าวสวนทางไม้นี้", none: "ข่าวไม่ชี้ทาง" }[fit], m: m };
+  }
+  // What the mood study found (research/pro/sentiment.js, filters chosen on 2020-2022, checked on 2023-2026): a filter is
+  // used only if it beat "no filter" on 2023-2026 in average R and in portfolio growth; otherwise the news is context.
+  function moodRule() {
+    var S = window.EVIDENCE_TREND && window.EVIDENCE_TREND.sentiment, k = trendLadder() ? "ladder" : "rule", M = S && S.modes && S.modes[k];
+    if (!M) return { apply: false, text: "ข่าวและอารมณ์ตลาดยังไม่ได้ทดสอบกับสูตร จึงใช้ประกอบเท่านั้น · เข้าตามระบบ" };
+    var none = M.rows.filter(function (x) { return x.id === "none"; })[0], ch = M.rows.filter(function (x) { return x.id === M.chosen; })[0];
+    var apply = ch && ch.id !== "none" && ch.test.avgR > none.test.avgR && ch.port.cagr > none.port.cagr;
+    return { apply: apply, filter: apply ? ch.id : null, row: ch, none: none,
+      text: apply ? "ใช้อารมณ์ตลาดกรองตามผลทดสอบ: " + ch.name
+        : "ทดสอบ " + S.days + " วันของดัชนี Fear & Greed: การกรองด้วยอารมณ์ตลาดไม่ได้ทำให้ผลปี 2023–2026 ดีขึ้น → ข่าวใช้ประกอบ เข้าตามระบบ" };
+  }
   // One line for alerts and sheets: "ปานกลาง–สูง (ผ่าน 4/6 การทดสอบ) · ปีที่กำไร ≈81%".
   function confidenceLine() {
     var c = trendConfidence();
@@ -2708,7 +2756,7 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
           '" data-e="' + it.entry + '" data-d="' + it.dir + '" data-k="' + k + '" data-big="1">' + fmt(mv, 2, true) + "% (" + fmt(it.dir * (it.now - it.entry) / k, 2, true) + "R)</b></div>" +
         '<div class="hold-line">เข้า ' + thai(it.entryTime).slice(0, 14) + " น. ที่ " + price(it.entry) + ' · ตอนนี้ <span data-now="' + r.symbol + '">' + price(it.now) + "</span></div>" +
         '<div class="hold-line">SL ' + price(it.stop) + tps + " · " + exitText(it) + "</div>" +
-        '<div class="hold-follow ' + (j.ok ? "ok" : "no") + '">ถ้าถืออยู่: ถือต่อ ห้ามเลื่อน SL · ถ้ายังไม่ได้เข้า: ' + j.html + "</div>" +
+        '<div class="hold-follow ' + (j.ok ? "ok" : "no") + '">ถ้าถืออยู่: ถือต่อ ห้ามเลื่อน SL · ถ้ายังไม่ได้เข้า: ' + j.html + "</div>" + moodLine(r.symbol, it.dir) +
         '<details class="act-more" data-draw="hold:' + i + '"><summary>กราฟ</summary><div id="smHold' + i + '" class="sm-chart" style="height:220px;margin-top:6px"></div></details></div>';
     }
     // A new signal as an order to copy: side, leverage, entry, SL, TP1, size, margin, risk, deadline. The full sheet folds.
@@ -2721,8 +2769,32 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
           (tp1 ? cell("TP1 ขาย " + fracTxt(tp1.frac), price(tp1.price), "up") : cell("Take Profit", "ไม่ตั้ง")) + cell("ขนาด", qtyTxt(z.qty) + " " + coin) +
           cell("Margin", fmt(z.marginB, 0) + " ฿") + cell("เสี่ยง", fmt(z.lossB / cap * 100, 2) + "% ≈ " + fmt(z.lossB, 0) + " ฿") + "</div>" +
         "<small>Isolated x" + g.lev + " · เข้าภายใน " + thai(g.expires).slice(9, 14) + " น. · ตั้ง SL ใน Binance ทันที · ที่เหลือปิดเมื่อแอปเด้ง \"ปิดไม้\"" +
-          (g.minSize ? " · ขนาดขั้นต่ำของ Binance" : "") + "</small>" + marginNote(z.marginB) +
+          (g.minSize ? " · ขนาดขั้นต่ำของ Binance" : "") + "</small>" + marginNote(z.marginB) + moodLine(r.symbol, g.dir) +
         '<details class="act-more" data-draw="sig:' + i + '"><summary>รายละเอียดทั้งหมด + กราฟ</summary>' + tradeSheet(r, g, z, TREND.tf, i) + "</details></div>";
+    }
+    // A trade's news line: the mood, whether it points the trade's way, and what the system does about it.
+    function moodLine(symbol, dir) {
+      var r = moodRead(symbol, dir);
+      return '<div class="mood ' + r.fit + '">📰 ' + esc(r.text) + " → <b>" + r.fitText + "</b><small>" + esc(moodRule().text) + "</small></div>";
+    }
+    // The system's note for today, written from rules like a trader's morning read: market mood and headlines, releases
+    // due, then what it does with each signal, exit and position.
+    function traderNote(list, held) {
+      var m = News.mood(null), soon = News.upcoming(4), day = News.upcoming(24), lines = [], coin = function (s) { return s.replace("USDT", ""); };
+      var market = (m.fng ? "ตลาดโดยรวม<b>" + m.fng.label + " " + m.fng.v + "</b>" + (m.fng.change ? " (" + (m.fng.change > 0 ? "↑" : "↓") + Math.abs(m.fng.change) + " ใน 7 วัน)" : "") + " · " : "") +
+        "ข่าวคริปโต 24 ชม.: ดี " + m.market.good + " · ร้าย " + m.market.bad + " จาก " + m.market.n + " ข่าว";
+      if (m.fng && (m.fng.v < 25 || m.fng.v > 75)) lines.push("ตลาด" + m.fng.label + ": ราคามักแกว่งแรง ทุกไม้ต้องมี SL ใน Binance");
+      if (soon.length) lines.push("ข่าวแรงก่อนแท่งถัดไปปิด: " + soon.map(function (e) { return e.title + " " + thai(e.time).slice(9, 14) + " น."; }).join(", ") + " · ราคาอาจกระชาก");
+      else if (day.length) lines.push("ข่าวแรงใน 24 ชม.: " + day.map(function (e) { return e.title + " " + thai(e.time).slice(9, 14) + " น."; }).join(", "));
+      results.filter(function (r) { return r.exit; }).forEach(function (r) { lines.push("ปิด " + (r.exit.dir > 0 ? "LONG " : "SHORT ") + coin(r.symbol) + " ตามระบบ (ระบบได้ " + fmt(r.exit.r, 2, true) + "R)"); });
+      list.forEach(function (x) {
+        var g = x.signal, mr = moodRead(x.symbol, g.dir);
+        lines.push((g.dir > 0 ? "เข้า LONG " : "เข้า SHORT ") + coin(x.symbol) + " ตามระบบ · " + mr.fitText + (mr.fit === "against" ? " (ข่าวไม่ได้ทดสอบว่าช่วย จึงยังเข้า)" : ""));
+      });
+      if (held.length) lines.push("ถือ " + held.length + " ไม้ต่อตามระบบ (" + held.map(function (it) { return coin(it.symbol) + " " + (it.dir > 0 ? "LONG" : "SHORT"); }).join(", ") + ") · ห้ามเลื่อน SL");
+      if (!list.length && !results.some(function (r) { return r.exit; })) lines.push("ไม่มีไม้ใหม่ · รอแท่ง 4 ชม. ถัดไป");
+      return '<div class="note"><div class="note-hd">📋 มุมมองของระบบตอนนี้</div><div class="note-mkt">' + market + "</div><ul>" +
+        lines.map(function (l) { return "<li>" + esc(l) + "</li>"; }).join("") + "</ul><small>" + esc(moodRule().text) + "</small></div>";
     }
     // The system's own record: its closed trades of the last 30 days on the selected coins, in R and in % at the set risk.
     function perfHtml() {
@@ -2771,6 +2843,7 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
       todo += results.filter(function (r) { return r.signal && r.signal.below_minimum; }).map(function (r) {
         return '<div class="act-note">' + coin(r) + " " + (r.signal.dir > 0 ? "LONG" : "SHORT") + " มีสัญญาณแต่ไม่ผ่าน: " + esc(r.signal.reject) + "</div>";
       }).join("");
+      h += '<div id="smNote">' + traderNote(list, held) + "</div>";
       h += '<div class="sec-hd">ตอนนี้ต้องทำอะไร</div><div id="smNewsTop">' + News.topHtml() + "</div>" + todo;
       h += '<div class="sec-hd">ระบบถืออยู่ ' + held.length + " ไม้ <small>(ราคาสด)</small></div>" + (held.length ? held.map(function (it, i) {
         return holdCard(it, results.filter(function (r) { return r.symbol === it.symbol; })[0], i);
@@ -2891,6 +2964,7 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
     // New headlines every 2 minutes: only the news boxes change, so the sheets, charts and scroll position stay.
     function redrawNews() {
       if ($("smNewsTop")) $("smNewsTop").innerHTML = News.topHtml();
+      if ($("smNote") && isTrend(curTf())) $("smNote").innerHTML = traderNote(signals(), planItems().filter(function (it) { return it.kind === "hold"; }));
       if ($("smNews")) $("smNews").innerHTML = newsList();
     }
     // Proof of life: when the app last scanned here, what it found, and the last background scan Android ran.
@@ -3526,6 +3600,7 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
       risk_pct: (g.riskUsdt * fx / Math.max(1e-9, Portfolio.plan().balance) * 100).toFixed(2),
       win_pct: (function (v) { return v.win !== null ? fmt(v.win, 0) : ""; })(verdictOf(r.symbol, tf, 0)), grade: verdictOf(r.symbol, tf, 0).grade,
       news: News.warnFor(r.symbol), confidence: isTrend(tf) ? confidenceLine() : "",
+      view: (function (v) { return v.text + " → " + v.fitText; })(moodRead(r.symbol, g.dir)),
       leverage: g.lev, leverage_cap: g.levCapUser, liq_est: pxDp(g.liq, g.dp), mark: g.mark ? pxDp(g.mark, g.dp) : "",
       rationale: g.why, evidence: ev.text, evidence_ok: ev.ok, experimental: true };
   }

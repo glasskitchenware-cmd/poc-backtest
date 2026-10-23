@@ -187,6 +187,9 @@ final class SignalAlerts {
         // A high-impact US release before the next close, or a risk headline on the coin (free news, no AI).
         String news = item.optString("news", "");
         if (!news.isEmpty()) b.append("\n⚠️ ").append(cut(news, 160));
+        // How the news reads for this trade: market mood, the coin's good and bad headlines, and their direction.
+        String view = item.optString("view", "");
+        if (!view.isEmpty()) b.append("\n📰 ").append(cut(view, 160));
         b.append("\nแท่งปิด ").append(bangkok(candle, "dd/MM HH:mm")).append(" น. (เวลาไทย UTC+7)");
         if (expires > candle) b.append(" · ยกเลิกถ้ายังไม่เข้าภายใน ").append(bangkok(expires, "HH:mm")).append(" น.");
         if (!tp5.isEmpty()) b.append("\nTP1 ").append(tp1).append(" (1R) · TP2 ").append(tp2).append(" (2R) · TP5 ").append(tp5).append(" (5R)");

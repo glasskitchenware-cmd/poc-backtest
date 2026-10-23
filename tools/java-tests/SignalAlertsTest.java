@@ -61,9 +61,11 @@ public class SignalAlertsTest {
         SignalAlerts.Note sn = SignalAlerts.plan(packet(15, candle, new JSONArray().put(sw)), now, key -> -1L).notes.get(0);
         check(sn.title.equals("🔴 เข้า SHORT ETHUSDT · M15 · x10 · โอกาสกำไร 35%") && sn.color() == 0xFFF6465D, "SHORT: red, with the test win rate in the title");
         check(SignalAlerts.barTitle(sn.title).equals("🔴 SHORT ETH · M15 · x10 · โอกาสกำไร 35%"), "coloured bar: side, coin, leverage and win chance without \"เข้า\"/USDT so it fits one line");
-        JSONObject nw = item("SOLUSDT", "LONG", "M15", candle).put("news", "ข่าวแรง USD: CPI m/m 19:30 น.").put("confidence", "ปานกลาง–สูง (ผ่าน 4/6 การทดสอบ) · ปีที่กำไร ≈81%");
+        JSONObject nw = item("SOLUSDT", "LONG", "M15", candle).put("news", "ข่าวแรง USD: CPI m/m 19:30 น.").put("confidence", "ปานกลาง–สูง (ผ่าน 4/6 การทดสอบ) · ปีที่กำไร ≈81%")
+                .put("view", "ตลาดกลัว 38 · ข่าว SOL 24 ชม.: ดี 0 · ร้าย 2 → ข่าวสวนทางไม้นี้");
         SignalAlerts.Note nn = SignalAlerts.plan(packet(15, candle, new JSONArray().put(nw)), now, key -> -1L).notes.get(0);
         String[] nl = nn.body.split("\n");
+        check(nl[2].equals("📰 ตลาดกลัว 38 · ข่าว SOL 24 ชม.: ดี 0 · ร้าย 2 → ข่าวสวนทางไม้นี้"), "entry: the news read (market mood, the coin's headlines, their direction) under the warning");
         check(nl[1].equals("⚠️ ข่าวแรง USD: CPI m/m 19:30 น.") && nn.body.contains("\nความมั่นใจของสูตร: ปานกลาง–สูง (ผ่าน 4/6 การทดสอบ) · ปีที่กำไร ≈81%"),
                 "entry: the news warning right under the order, and the strategy's confidence from the tests");
         check(!SignalAlerts.plan(packet(15, candle, new JSONArray().put(item("SOLUSDT", "LONG", "M15", candle))), now, key -> -1L).notes.get(0).body.contains("⚠️"),

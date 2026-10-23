@@ -314,6 +314,11 @@ def main():
     check("ข่าว SOL 24 ชม." in s and "⚠️ ข่าวแรงก่อนแท่งถัดไปปิด: CPI m/m" in s, "trade sheet: the coin's headlines and the release due before the next close")
     pk = r["packet"]["signals"][0]
     check("ข่าวแรง USD: CPI m/m" in pk["news"] and "Solana network outage" in pk["news"], "entry alert carries the news warning: " + pk["news"][:80])
+    check("📋 มุมมองของระบบตอนนี้" in s and "ตลาดโดยรวมกลัว 38 (↓9 ใน 7 วัน)" in s and "ข่าวคริปโต 24 ชม.: ดี" in s and "เข้า LONG SOL ตามระบบ · ข่าวสวนทางไม้นี้" in s,
+          "the system's note: market mood with its week, headline count, and what it does with the SOL signal")
+    check("📰 ตลาดกลัว 38 (↓9 ใน 7 วัน) · ข่าว SOL 24 ชม.: ดี 0 · ร้าย" in s and "การกรองด้วยอารมณ์ตลาด" in s or "ยังไม่ได้ทดสอบกับสูตร" in s,
+          "order card: the coin's news read and what the mood study found")
+    check(pk["view"].startswith("ตลาดกลัว 38") and pk["view"].endswith("ข่าวสวนทางไม้นี้"), "entry alert carries the news read: " + pk["view"])
     check(r["conf"] and pk["confidence"].startswith(("สูง", "ปานกลาง", "ต่ำ")) and "การทดสอบ" in pk["confidence"], "confidence of the rule on the screen and in the alert: " + pk["confidence"])
     # The professional's routine: the written plan, ticks per day, and the backup through Android's share sheet.
     saved = {"trades": [{"id": 1, "symbol": "SOLUSDT", "entry": 150, "stop": 140, "qty": 1, "fx": 33, "risk": 330, "dir": 1, "fee": 0.0007, "lev": 10,
