@@ -257,6 +257,7 @@ a{color:var(--accent)}
 @media (prefers-reduced-motion:reduce){.tick-up,.tick-down{animation:none}}
 .card .odds{margin:6px 0 0;font-size:13.5px;font-weight:700}.card .odds:empty{display:none}.odds.up{color:var(--up)}.odds.down{color:var(--down)}.odds.neu{color:var(--yel)}
 .watch-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-top:1px solid var(--line);font-size:13.5px}.watch-row:first-child{border-top:0}.watch-row small{color:var(--muted);font-size:12px;flex:1}.watch-now{font-variant-numeric:tabular-nums}.watch-d{min-width:86px;text-align:right;font-size:12.5px}
+.periods .tbl{overflow-x:auto;margin-top:8px}.periods table{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums}.periods th{color:var(--muted);font-weight:600;text-align:left;padding:4px 6px 4px 0;white-space:nowrap}.periods td{padding:5px 6px 5px 0;border-top:1px solid var(--line);vertical-align:top}.periods td small{display:block;color:var(--muted);font-size:11px}
 .fit{margin-top:6px}.fit summary{font-size:13px;font-weight:700;cursor:pointer}.fit summary.fit-all{color:var(--up)}.fit summary.fit-part{color:var(--yel)}
 .fit-list{list-style:none;margin:6px 0 0;padding:0;font-size:12.5px}.fit-list li{display:flex;gap:6px;align-items:flex-start;padding:2px 0}.fit-list li.ok .ic{color:var(--up)}.fit-list li.no{color:var(--down)}.fit-list li.note{color:var(--muted);padding-top:4px}
 .fit-list .ic{width:15px;height:15px;margin-top:2px}
@@ -270,7 +271,7 @@ a{color:var(--accent)}
 <main>
 <div class="topbar"><div class="brand"><i>P</i>POC Signal</div><button id="menuBtn" type="button" class="mini ghost" style="margin:0">☰ เมนู</button></div>
 <div id="simpleView">
-  <div class="sm-cap"><label for="smCap">ทุนใน Binance Futures <small>บาท</small></label><input id="smCap" type="number" inputmode="decimal" min="0"></div>
+  <div class="sm-cap"><label for="smCap">ทุนใน Binance Futures <small>บาท · กรอกเอง ไม่ได้ตรวจจากบัญชี</small></label><input id="smCap" type="number" inputmode="decimal" min="0"></div>
   <div id="smMain"></div>
   <button id="smScan" class="mini ghost" type="button" style="width:100%;margin-top:10px">เช็กสัญญาณอีกครั้ง</button>
 </div>
