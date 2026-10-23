@@ -36,6 +36,22 @@
       if (cfg.offline) return reply(id, false, "UnknownHostException: fapi.binance.com");
       if (cfg.hang && u.pathname === cfg.hang) return;   // the native side never answers
       if (u.host === "api.bitkub.com") return reply(id, true, { THB_USDT: { last: 33 } });
+      // Free news: every RSS host gets two headlines (one names SOL with a risk word), Binance one delisting notice,
+      // the calendar a high-impact US CPI two hours from now. cfg.newsDown: every news source fails.
+      if (/coindesk|cointelegraph|decrypt|bitcoinmagazine|theblock|cryptoslate|siamblockchain|bitcoinaddict|federalreserve|sec\.gov/.test(u.host)) {
+        if (cfg.newsDown) return reply(id, false, "HTTP 503 down");
+        var t0 = new Date(Date.now() - 20 * 60000).toUTCString(), t1 = new Date(Date.now() - 3 * 3600000).toUTCString();
+        return reply(id, true, '<?xml version="1.0"?><rss version="2.0"><channel><title>' + u.host + "</title>" +
+          "<item><title>Solana network outage halts block production on " + u.host + "</title><link>https://" + u.host + "/a1</link><pubDate>" + t0 + "</pubDate></item>" +
+          "<item><title>Markets wait for the Fed (" + u.host + ")</title><link>https://" + u.host + "/a2</link><pubDate>" + t1 + "</pubDate></item></channel></rss>");
+      }
+      if (cfg.newsDown && (u.host === "www.binance.com" || u.host === "nfs.faireconomy.media")) return reply(id, false, "HTTP 503 down");
+      if (u.host === "www.binance.com") return reply(id, true, { code: "000000", data: { catalogs: [{ catalogId: 161, catalogName: "Delisting",
+        articles: [{ code: "abc123", title: "Binance Futures Will Delist XYZUSDT USDⓈ-M Perpetual Contract", releaseDate: Date.now() - 3600000 }] }] } });
+      if (u.host === "nfs.faireconomy.media") return reply(id, true, [
+        { title: "CPI m/m", country: "USD", date: new Date(Date.now() + 2 * 3600000).toISOString(), impact: "High", forecast: "0.3%", previous: "0.4%" },
+        { title: "Unemployment Claims", country: "USD", date: new Date(Date.now() + 30 * 3600000).toISOString(), impact: "Medium", forecast: "220K", previous: "218K" },
+        { title: "GDP q/q", country: "EUR", date: new Date(Date.now() + 3600000).toISOString(), impact: "High", forecast: "", previous: "" }]);
       if (u.host === "open.er-api.com") return reply(id, true, { rates: { THB: 33 } });
       if (u.pathname === "/fapi/v1/time") return reply(id, true, { serverTime: Date.now() });
       if (u.pathname === "/fapi/v1/exchangeInfo") return reply(id, true, { symbols: Object.keys(SPEC).map(function (s) {
@@ -56,13 +72,13 @@
       if (u.pathname.indexOf("/api/v3/") === 0) { __T.requests.push("SPOT " + u.pathname); return reply(id, false, "spot endpoint used in test"); }
       reply(id, false, "unmocked " + url);
     },
-    post: function (id, url, body) { __T.posts.push(url); reply(id, false, "HTTP 429 quota"); },
     scanDone: function (json) { __T.packets.push(JSON.parse(json)); },
+    share: function (subject, text) { __T.shared = text; },
     setScanMinutes: function (m) { __T.scanMinutes.push(m); },
     scanMinutes: function () { return 15; },
     alertsEnabled: function () { return true; }, setAlerts: function () {}, notificationsAllowed: function () { return true; },
     lastScanStatus: function () { return JSON.stringify({ at: Date.now(), ok: false, text: "test status" }); },
-    debugFuturesBase: function () { return ""; }, clipboard: function () { return cfg.clipboard || ""; }, testNotification: function () {},
+    debugFuturesBase: function () { return ""; }, testNotification: function () {},
     batteryUnrestricted: function () { return true; }, openBatterySettings: function () {}, openNotificationSettings: function () {}
   };
   window.__CFG = cfg;

@@ -45,15 +45,25 @@
   if (cfg.clickId) setTimeout(function () { var b = document.getElementById(cfg.clickId); if (b) b.click(); }, 300);
   if (cfg.clickTab) setTimeout(function () { var b = document.querySelector('[data-tab="' + cfg.clickTab + '"]'); if (b) b.click(); }, 300);
   var text = function (id) { return (document.getElementById(id) || {}).textContent || ""; };
+  // Routine: tick the first daily item, back up through the share sheet, then try to restore from a wrong text.
+  if (cfg.routine) setTimeout(function () {
+    var t = document.querySelector('[data-rt="day:0"]');
+    if (t) { t.checked = true; t.dispatchEvent(new Event("change")); }
+    setTimeout(function () {
+      var b = document.getElementById("rtBackup"); if (b) b.click();
+      var box = document.getElementById("rtRestoreBox"), r = document.getElementById("rtRestore");
+      if (box && r) { box.value = '{"app":"other"}'; r.click(); }
+    }, 300);
+  }, cfg.routine);
   setTimeout(function () {
     var pkt = __T.packets[__T.packets.length - 1] || null;
     var pre = document.createElement("pre"); pre.id = "packet"; pre.textContent = JSON.stringify(pkt); document.body.appendChild(pre);
-    document.title = "RESULT " + JSON.stringify({ packets: __T.packets.length, posts: __T.posts.length, scanMinutes: __T.scanMinutes,
+    document.title = "RESULT " + JSON.stringify({ packets: __T.packets.length, scanMinutes: __T.scanMinutes,
       spot: __T.requests.filter(function (r) { return r.indexOf("SPOT") === 0; }), status: (document.getElementById("scanStatus") || {}).textContent || "",
       scanCards: text("scanCards"), smMain: text("smMain"), coach: text("coach"), paper: text("ppSimple") + " | " + text("ppHero") + " | " + text("ppTrades"),
-      paperStatus: text("ppStatus"), paperTitle: text("ppTitle"), help: text("sgHelp"), chartPlan: text("cvAnalysis"), aiKeys: text("aiKeyList"), aiStatus: text("aiStatus"), chart: !!document.querySelector("#smChart canvas"),
+      paperStatus: text("ppStatus"), paperTitle: text("ppTitle"), help: text("sgHelp"), chartPlan: text("cvAnalysis"), news: text("smNews"), newsTop: text("smNewsTop"), aiLeft: localStorage.getItem("aiKeys"), conf: text("smMain").indexOf("ความมั่นใจของสูตร") >= 0, chart: !!document.querySelector("#smChart canvas"),
       charts: Array.prototype.filter.call(document.querySelectorAll("#smMain .sm-chart"), function (el) { return !!el.querySelector("canvas"); }).length,
-      paperCheck: text("ppCheck"), floatAlert: text("floatAlert"), floatShown: !document.getElementById("floatAlert").classList.contains("hidden"),
+      paperCheck: text("ppCheck"), routine: text("smRoutine"), rtStatus: text("rtStatus"), shared: __T.shared || "", floatAlert: text("floatAlert"), floatShown: !document.getElementById("floatAlert").classList.contains("hidden"),
       floatCls: Array.prototype.map.call(document.querySelectorAll("#floatAlert .fa"), function (el) { return el.className; }),
       sheets: Array.prototype.map.call(document.querySelectorAll("#smMain .sm-sheet"), function (el) { return el.className; }) });
   }, cfg.waitMs || 12000);

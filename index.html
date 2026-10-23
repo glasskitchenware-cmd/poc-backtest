@@ -136,6 +136,18 @@ body.simple #guideBar{display:none!important}body.simple main{padding-bottom:24p
 .sm-sched{margin-top:6px;padding:8px 12px;border-radius:10px;background:var(--panel);font-size:13px}.sm-sched b{color:var(--yel)}
 .live-chk{margin-top:10px;padding:10px 12px;border-radius:12px;font-size:14px;background:var(--panel);border:2px solid var(--line)}.live-chk>div{font-weight:700;margin:4px 0}.live-chk small{display:block;margin-top:4px}
 .live-chk.ok{border-color:#0ecb81}.live-chk.watch{border-color:#f0b90b;background:rgba(240,185,11,.12)}.live-chk.broken{border-color:#f6465d;background:rgba(246,70,93,.15)}
+.rt summary{cursor:pointer}.rt-sec{font-size:12.5px;font-weight:700;color:var(--yel);margin:12px 0 4px}.rt-plan{padding-left:20px;margin:4px 0;font-size:13.5px;line-height:1.5}.rt-plan li{margin:3px 0}
+.rt-list{margin-top:10px}.rt-hd{font-weight:700;font-size:14px}.rt-hd small{color:var(--muted)}.rt-item{display:flex;gap:8px;align-items:flex-start;font-size:13.5px;margin:6px 0;color:var(--ink)}.rt-item input{margin-top:3px;width:18px;height:18px;flex:none}.rt-item.done{color:var(--muted);text-decoration:line-through}
+.conf-box{margin-top:8px;padding:10px 12px;border-radius:12px;background:var(--panel);border:2px solid var(--line)}.conf-box.good{border-color:#0ecb81}.conf-box.weak{border-color:#f0b90b}.conf-box.bad{border-color:#f6465d}
+.conf-hd{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}.conf-hd span{font-size:13px;color:var(--muted)}.conf-hd b{font-size:20px}.conf-box.good .conf-hd b{color:#0ecb81}.conf-box.weak .conf-hd b{color:#f0b90b}.conf-box.bad .conf-hd b{color:#f6465d}
+.conf-year{font-size:14px;margin-top:4px}.conf-year b{font-size:17px;color:var(--yel)}.conf-year small{display:block;color:var(--muted);font-size:11.5px}
+.conf-row{display:flex;gap:8px;font-size:13px;padding:5px 0;border-top:1px solid var(--line)}.conf-row i{font-style:normal;font-weight:800;width:14px}.conf-row.pass i{color:#0ecb81}.conf-row.warn i{color:#f0b90b}.conf-row.fail i{color:#f6465d}.conf-row.info i{color:var(--muted)}
+.conf-line{font-size:13px;margin:2px 0 6px;padding:6px 10px;border-radius:8px;background:var(--deep)}.conf-line b{color:var(--yel)}
+.nw small{font-size:12px;color:var(--muted)}.nw-sec{font-size:12.5px;font-weight:700;color:var(--yel);margin:10px 0 2px}
+.nw-row{padding:7px 0;border-top:1px solid var(--line)}.nw-row a{color:var(--ink);text-decoration:none;font-size:14px;line-height:1.35;display:block}.nw-row small{display:block;margin-top:2px}
+.nw-row.risk a{color:#ffd2d8}.yel{color:var(--yel)}
+.nw-ev{padding:5px 0;font-size:13px;border-top:1px solid var(--line)}.nw-ev small{display:block}.nw-ev.high b{color:#f6465d}
+.nw-alert{margin-top:8px;padding:9px 12px;border-radius:10px;background:rgba(246,70,93,.15);border:2px solid #f6465d;font-size:13.5px;font-weight:700}.nw-alert small{display:block;font-weight:400;margin-top:3px;color:var(--ink)}
 .sm-status{font-size:12px;color:var(--muted);margin:8px 2px 0;line-height:1.5}
 .sm-row{padding:7px 0 2px;border-top:1px solid var(--line);margin-top:6px;cursor:pointer}
 .sm-note{font-size:12px;color:var(--muted);margin:8px 0 0}
@@ -210,34 +222,9 @@ a{color:var(--accent)}
   <details style="margin-top:12px"><summary>วันประกาศ FOMC (วันงดเข้าไม้)</summary>
     <textarea id="sgFomc" rows="4" style="width:100%;background:var(--deep);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:8px;font:12px ui-monospace,monospace"></textarea>
     <button class="mini" id="sgFomcOk" type="button">ตรวจแล้ว ✓</button>
-    <p class="muted" style="font-size:12px;margin:4px 0 0">ไม่มีฟีดข่าว CPI/NFP แบบมีเวลา จึงไม่ได้กรองข่าวเหล่านี้</p>
+    <p class="muted" style="font-size:12px;margin:4px 0 0">ข่าว CPI/NFP/FOMC พร้อมเวลา แสดงในหน้าหลัก (ปฏิทินเศรษฐกิจ ฟรี) แต่ไม่ได้ใช้กรองสัญญาณ เพราะสูตรไม่ได้ทดสอบกับข่าว</p>
     <p class="muted" style="font-size:12px;margin:4px 0 0">ปี 2026 ยังไม่ได้ตรวจ เทียบกับ federalreserve.gov/monetarypolicy/fomccalendars.htm</p>
   </details>
-</section>
-<section>
-  <h2>AI (Google Gemini) <small class="muted">ไม่บังคับ</small></h2>
-  <div id="aiKeyList"></div>
-  <div class="row" style="margin-top:8px">
-    <a class="mini" id="aiGetKey" href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener"
-     style="display:block;text-align:center;text-decoration:none;margin:0;padding:10px">① เอาคีย์ ↗</a>
-    <button class="mini" id="aiPaste" type="button" style="width:100%;margin:0">② วางคีย์ (เพิ่มได้หลายอัน)</button>
-  </div>
-  <textarea id="aiKeysBox" rows="3" autocomplete="off" spellcheck="false" placeholder="หรือวางหลายคีย์ที่นี่ (บรรทัดละคีย์ / คั่นด้วยช่องว่างก็ได้)"
-    style="width:100%;margin-top:8px;background:var(--deep);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:8px;font:12px ui-monospace,monospace"></textarea>
-  <button class="mini ghost" id="aiKeysAdd" type="button" style="width:100%;margin-top:6px">เพิ่มทุกคีย์จากช่องนี้</button>
-  <details style="margin-top:8px"><summary>วิธีเอาคีย์ · ตั้งค่าเพิ่ม</summary>
-    <ol class="how" style="padding-left:30px">
-      <li>กด ① แล้วล็อกอิน Google</li>
-      <li>กด <b>Create API key</b> แล้วกด <b>คัดลอก</b> (ขึ้นต้นด้วย AIza)</li>
-      <li>กลับมากด ② วางคีย์ · ใส่หลายคีย์ได้ ถ้าคีย์แรกโควตาหมด แอปสลับไปคีย์ถัดไปเอง</li>
-    </ol>
-    <input id="aiKey" type="hidden">
-    <label for="aiModel">Model</label><input id="aiModel" value="" placeholder="อัตโนมัติ (เว้นว่างได้)">
-    <label class="checks" style="margin-top:10px"><input type="checkbox" id="aiAuto" checked> วิเคราะห์ข่าวอัตโนมัติเมื่อมีสัญญาณ</label>
-    <p class="muted" style="font-size:12px;margin:6px 0 0">คีย์เก็บในมือถือเครื่องนี้เท่านั้น ห้ามแชร์คีย์ให้ใคร</p>
-  </details>
-  <button class="mini ghost" id="aiTest" style="width:100%;margin-top:8px">ทดสอบคีย์ทั้งหมด</button>
-  <div id="aiStatus" class="status-line"></div>
 </section>
 </div>
 
@@ -305,8 +292,6 @@ a{color:var(--accent)}
 <section>
   <h2>วิเคราะห์ <small id="cvTime" class="muted"></small></h2>
   <div id="cvAnalysis"><p class="muted">เลือกเหรียญเพื่อดูการวิเคราะห์</p></div>
-  <button class="mini" id="cvAi">ให้ AI วิเคราะห์กราฟนี้ + ข่าว</button>
-  <div id="cvAiOut" style="margin-top:8px"></div>
   <p class="muted" style="font-size:12px;margin:10px 0 0">Fibo/เทรนด์ไลน์ตีอัตโนมัติ ใช้ช่วยดูเท่านั้น</p>
 </section>
 </div>
@@ -1482,19 +1467,6 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
     });
   }
 
-  function httpPost(url, body) {
-    if (window.NativeHttp && window.NativeHttp.post) {
-      return new Promise(function (resolve, reject) {
-        var id = "p" + (++nextId);
-        pending[id] = { resolve: resolve, reject: reject };
-        window.NativeHttp.post(id, url, body);
-      });
-    }
-    return fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: body }).then(function (r) {
-      return r.text().then(function (t) { if (!r.ok) throw new Error("HTTP " + r.status + " " + t); return t; });
-    });
-  }
-
   function binance(path) {
     var errors = [];
     return BASES.reduce(function (chain, base) {
@@ -1888,7 +1860,8 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
           state = "half"; riskPct = st.risk / 2; message = "พอร์ตลง " + fmt(dd, 1) + "% จากจุดสูงสุด: ลดความเสี่ยงเหลือครึ่งหนึ่ง (" + fmt(riskPct, 2) + "% ต่อไม้) จนกว่าจะกลับขึ้นมา (กติกาที่ผลทดสอบเลือก)";
         }
         return { settings: st, balance: balance, peak: peak, dd: dd, riskPct: riskPct, riskThb: balance * riskPct / 100,
-          state: state, message: message, closed: closed, todayPnl: todayPnl, rule: tr.stop.name };
+          state: state, message: message, closed: closed, todayPnl: todayPnl,
+          rule: tr.stop.id === "none" && tr.port ? "เทรดทุกสัญญาณ · หยุดเข้าไม้ใหม่ถ้าลงเกิน " + fmt(tr.port.maxDD, 1) + "%" : tr.stop.name };
       }
       if (dd >= HARD_STOP_DD) { state = "stop"; riskPct = 0; message = "หยุดเทรด: ยอดลงจากจุดสูงสุด " + fmt(dd, 1) + "% (เกณฑ์ " + HARD_STOP_DD + "%) ทบทวนระบบก่อนเทรดต่อ"; }
       else if (todayPnl <= -dayStart * DAILY_STOP / 100) { state = "day"; riskPct = 0; message = "หยุดวันนี้: ขาดทุนวันนี้ถึง " + DAILY_STOP + "% แล้ว พรุ่งนี้ค่อยเทรดใหม่"; }
@@ -2058,211 +2031,135 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
   }
   function scanStatus(text, isError) { var el = $("scanStatus"); el.textContent = text; el.className = "status-line" + (isError ? " err" : ""); }
 
-  // ---- Google Gemini analysis (user's own API key, stored on this device only) ----
-  var AI = (function () {
-    var BASE = "https://generativelanguage.googleapis.com/v1beta/models/";
-    // Several keys: when one is out of quota or rejected, the next one is tried and remembered.
-    function keys() {
-      try { var a = JSON.parse(localStorage.getItem("aiKeys") || "[]"); if (Array.isArray(a)) return a; } catch (e) { /* ignore */ }
-      return [];
+  // ---- News: free sources only, no keys and no AI ----
+  // Crypto news RSS (English and Thai), Binance announcements (listings, delistings), the Fed and the SEC, and this
+  // week's economic calendar (ForexFactory). Headlines that name a coin or a risk word are flagged. News never changes a
+  // signal: the rule was not tested with news. It is there so the trader knows what is moving the market, and so an
+  // entry alert says when a high-impact US release is due before the next 4-hour close.
+  var News = (function () {
+    var FEEDS = [
+      ["CoinDesk", "https://www.coindesk.com/arc/outboundfeeds/rss/"], ["Cointelegraph", "https://cointelegraph.com/rss"],
+      ["Decrypt", "https://decrypt.co/feed"], ["The Block", "https://www.theblock.co/rss.xml"], ["CryptoSlate", "https://cryptoslate.com/feed/"],
+      ["Bitcoin Magazine", "https://bitcoinmagazine.com/feed"], ["Siam Blockchain", "https://siamblockchain.com/feed/"],
+      ["Bitcoin Addict", "https://bitcoinaddict.org/feed/"], ["Fed", "https://www.federalreserve.gov/feeds/press_all.xml"],
+      ["SEC", "https://www.sec.gov/news/pressreleases.rss"]
+    ];
+    var BINANCE = "https://www.binance.com/bapi/composite/v1/public/cms/article/list/query?type=1&pageNo=1&pageSize=10";
+    var CALENDAR = "https://nfs.faireconomy.media/ff_calendar_thisweek.json";
+    var NAMES = { BTC: "bitcoin", ETH: "ethereum", BNB: "bnb", SOL: "solana", XRP: "xrp|ripple", DOGE: "dogecoin", ADA: "cardano",
+      AVAX: "avalanche", LINK: "chainlink", DOT: "polkadot", TRX: "tron", LTC: "litecoin" };
+    var RISK = /hack|exploit|delist|lawsuit|\bsues?\b|charged|\bban(s|ned)?\b|bankrupt|insolven|\bhalt|outage|suspend|liquidat|\bETF\b|FOMC|\bCPI\b|rate (cut|hike)|tariff|แฮ็ก|ถอดถอน|ระงับ|ฟ้อง/i;
+    var KEY = "news.v1", HOUR = 3600000, s = { items: [], events: [], at: 0, calAt: 0, errors: [] }, inflight = null, timer = null;
+    try { var c = JSON.parse(localStorage.getItem(KEY) || "null"); if (c && c.items) s = c; } catch (e) { /* first run */ }
+    function coinsIn(text) {
+      return Object.keys(NAMES).filter(function (k) { return new RegExp("\\b" + k + "\\b").test(text) || new RegExp("\\b(" + NAMES[k] + ")\\b", "i").test(text); });
     }
-    var idx = 0;
-    try { idx = parseInt(localStorage.getItem("aiKeyIdx") || "0", 10) || 0; } catch (e) { /* ignore */ }
-    function key() { var a = keys(); return a.length ? a[idx % a.length] : ""; }
-    function useKey(k) {
-      idx = Math.max(0, keys().indexOf(k));
-      try { localStorage.setItem("aiKeyIdx", String(idx)); } catch (e) { /* ignore */ }
+    function item(src, title, link, time) {
+      title = String(title || "").replace(/\s+/g, " ").trim();
+      return { src: src, title: title, link: link || "", time: time || 0, coins: coinsIn(title), risk: RISK.test(title) };
     }
-    function saveKeys(a) {
-      try { localStorage.setItem("aiKeys", JSON.stringify(a)); } catch (e) { /* ignore */ }
-      $("aiKey").value = a[0] || "";
-      renderKeys();
+    function rss(src, xml) {
+      var d = new DOMParser().parseFromString(xml, "text/xml"), nodes = d.getElementsByTagName("item");
+      if (!nodes.length) nodes = d.getElementsByTagName("entry");
+      var get = function (n, tag) { var e = n.getElementsByTagName(tag)[0]; return e ? e.textContent : ""; };
+      return Array.prototype.slice.call(nodes, 0, 20).map(function (n) {
+        var linkEl = n.getElementsByTagName("link")[0], link = linkEl ? (linkEl.getAttribute("href") || linkEl.textContent) : "";
+        return item(src, get(n, "title"), link.trim(), Date.parse(get(n, "pubDate") || get(n, "updated") || get(n, "published")) || 0);
+      }).filter(function (x) { return x.title; });
     }
-    var keyState = {};
-    function renderKeys() {
-      var a = keys();
-      $("aiKeyList").innerHTML = a.length ? a.map(function (k, i) {
-        var st = keyState[k];
-        return '<div class="keyrow"><span>คีย์ ' + (i + 1) + '</span><code>' + esc(k.slice(0, 4) + "…" + k.slice(-4)) + "</code>" +
-          (st ? '<span class="st ' + (st.ok ? "up" : "down") + '">' + esc(st.text) + "</span>" : "") +
-          '<button class="x" data-delkey="' + i + '" type="button">✕</button></div>';
-      }).join("") : '<p class="muted" style="margin:0;font-size:13px">ยังไม่มีคีย์ · ไม่ใส่ก็ใช้แอปได้ แค่ไม่มี AI ช่วยเช็กข่าว</p>';
-      Array.prototype.forEach.call(document.querySelectorAll("[data-delkey]"), function (b) {
-        b.onclick = function () { var list = keys(); list.splice(+b.getAttribute("data-delkey"), 1); saveKeys(list); };
+    function binance(json) {
+      var out = [];
+      ((JSON.parse(json).data || {}).catalogs || []).forEach(function (cat) {
+        (cat.articles || []).forEach(function (a) {
+          out.push(item("Binance · " + (cat.catalogName || ""), a.title, "https://www.binance.com/en/support/announcement/" + a.code, a.releaseDate));
+        });
       });
+      return out;
     }
-    // Adds every Gemini key found in the text (one or many, any separators); returns how many were new.
-    function addKeys(text) {
-      var found = String(text || "").match(/AIza[0-9A-Za-z_-]{35}/g) || [], a = keys(), added = 0;
-      found.forEach(function (k) { if (a.indexOf(k) < 0) { a.push(k); added++; } });
-      if (found.length) saveKeys(a);
-      return { found: found.length, added: added };
+    function calendar(json) {
+      return JSON.parse(json).filter(function (e) { return e.country === "USD" && (e.impact === "High" || e.impact === "Medium"); })
+        .map(function (e) { return { title: e.title, time: Date.parse(e.date), impact: e.impact, forecast: e.forecast || "", previous: e.previous || "" }; });
     }
-    var FALLBACK = "gemini-flash-latest";
-    function model() { return ($("aiModel").value || FALLBACK).trim(); }
-    function status(t, err) { $("aiStatus").textContent = t; $("aiStatus").className = "status-line" + (err ? " err" : ""); }
-
-    // Google retires models; when it answers 404 and names a replacement ("use models/xyz"), switch to it, remember it and retry once.
-    function post(m, retry, body, k, left) {
-      k = k || key();
-      if (left === undefined) left = keys().length - 1;
-      return httpPost(BASE + encodeURIComponent(m) + ":generateContent?key=" + encodeURIComponent(k), JSON.stringify(body)).then(function (t) {
-        useKey(k);
-        return t;
-      }, function (e) {
-        var msg = String(e.message || e);
-        if (left > 0 && /HTTP (429|403)|HTTP 400[\s\S]*API.?key|RESOURCE_EXHAUSTED|quota/i.test(msg)) {
-          var a = keys(), next = a[(a.indexOf(k) + 1) % a.length];
-          return post(m, retry, body, next, left - 1);
+    // All sources at once; each failure is listed and the others still show. The calendar is fetched once an hour.
+    function refresh(force) {
+      if (inflight) return inflight;
+      if (!force && Date.now() - s.at < 90000) return Promise.resolve(s);
+      var errors = [], items = [], wantCal = force || Date.now() - s.calAt > HOUR;
+      var jobs = FEEDS.map(function (f) {
+        return httpGet(f[1]).then(function (t) { items = items.concat(rss(f[0], t)); }, function (e) { errors.push(f[0] + ": " + String(e.message).slice(0, 60)); });
+      });
+      jobs.push(httpGet(BINANCE).then(function (t) { items = items.concat(binance(t)); }, function (e) { errors.push("Binance: " + String(e.message).slice(0, 60)); }));
+      if (wantCal) jobs.push(httpGet(CALENDAR).then(function (t) { s.events = calendar(t); s.calAt = Date.now(); }, function (e) { errors.push("ปฏิทินเศรษฐกิจ: " + String(e.message).slice(0, 60)); }));
+      return (inflight = Promise.all(jobs).then(function () {
+        if (items.length) {
+          var seen = {};
+          s.items = items.filter(function (x) { var k = x.title.toLowerCase(); if (seen[k]) return false; seen[k] = 1; return true; })
+            .sort(function (a, b) { return b.time - a.time; }).slice(0, 120);
         }
-        var gone = /HTTP 404|no longer available|not found/i.test(msg);
-        if (!retry || !gone) throw friendly(msg);
-        var hint = (msg.match(/models\/([A-Za-z0-9._-]+)/g) || []).map(function (x) { return x.slice(7); }).filter(function (x) { return x !== m; })[0];
-        var next = hint || (m !== FALLBACK ? FALLBACK : null);
-        if (!next) throw friendly(msg);
-        $("aiModel").value = next;
-        try { localStorage.setItem("aiModel", next); } catch (x) { /* ignore */ }
-        return post(next, false, body, k, left);
-      });
+        s.at = Date.now(); s.errors = errors; inflight = null;
+        try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) { /* the next refresh fills it again */ }
+        return s;
+      }));
     }
-    function friendly(msg) {
-      var j = null; try { j = JSON.parse(msg.slice(msg.indexOf("{"))); } catch (e) { /* not JSON */ }
-      var code = /HTTP (\d+)/.exec(msg), text = j && j.error && j.error.message ? j.error.message : msg;
-      var th = code && code[1] === "400" && /API key/i.test(text) ? "คีย์ไม่ถูกต้อง ลบแล้ววางคีย์ใหม่" :
-        code && code[1] === "403" ? "คีย์นี้ใช้ Gemini ไม่ได้ (ยังไม่เปิดสิทธิ์)" : code && code[1] === "429" ? "โควตาฟรีหมด รอสักพักหรือเพิ่มคีย์" :
-        code && code[1] === "404" ? "หาโมเดลไม่เจอ ลองล้างช่อง Model ให้ว่างแล้วกดทดสอบใหม่" : "";
-      return new Error((th ? th + " · " : "") + (code ? "HTTP " + code[1] + " · " : "") + text.slice(0, 200));
+    function forCoin(symbol, hours) {
+      var k = symbol.replace("USDT", ""), from = Date.now() - hours * HOUR;
+      return s.items.filter(function (x) { return x.time >= from && x.coins.indexOf(k) >= 0; });
     }
-
-    function ask(prompt, search) {
-      if (!key()) return Promise.reject(new Error("ยังไม่ได้ใส่ Gemini API key (หน้าแรก → AI)"));
-      var body = { contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 1200 } };
-      if (search) body.tools = [{ google_search: {} }];
-      return post(model(), true, body).then(JSON.parse).then(function (res) {
-          var c = res.candidates && res.candidates[0];
-          var text = c && c.content && c.content.parts ? c.content.parts.map(function (x) { return x.text || ""; }).join("") : "";
-          if (!text) throw new Error("Gemini ไม่ตอบข้อความ" + (res.promptFeedback ? " (" + JSON.stringify(res.promptFeedback).slice(0, 120) + ")" : ""));
-          var chunks = (c.groundingMetadata && c.groundingMetadata.groundingChunks) || [];
-          var sources = chunks.map(function (g) { return g.web; }).filter(Boolean).slice(0, 5);
-          var m = /คำตัดสิน\s*[:：]\s*(เข้า|รอ|ข้าม)/.exec(text);
-          return { text: text.trim(), sources: sources, verdict: m ? m[1] : "ดูรายละเอียด" };
-        });
+    // High-impact US releases from an hour ago to `hours` ahead (the calendar's own times, shown in Thai time).
+    function upcoming(hours, all) {
+      var now = Date.now();
+      return s.events.filter(function (e) { return (all || e.impact === "High") && e.time >= now - HOUR && e.time <= now + hours * HOUR; })
+        .sort(function (a, b) { return a.time - b.time; });
     }
-
-    function box(res) {
-      var tone = res.verdict === "เข้า" ? "go" : res.verdict === "ข้าม" ? "stop" : "wait";
-      return '<div class="ai"><span class="pill ' + (tone === "go" ? "go" : tone === "stop" ? "no" : "wait") + '">AI: ' + esc(res.verdict) + "</span>\n" + esc(res.text) +
-        (res.sources.length ? "\n\nแหล่งข่าว:\n" + res.sources.map(function (w) { return '• <a href="' + esc(w.uri) + '" target="_blank" rel="noopener">' + esc(w.title || w.uri) + "</a>"; }).join("\n") : "") +
-        '\n<small class="muted">ความเห็น AI ไม่ได้ผ่าน backtest ใช้ประกอบการตัดสินใจเท่านั้น</small></div>';
+    // One line for an entry alert: high-impact US releases before the next 4-hour close, and risk headlines on the coin.
+    function warnFor(symbol) {
+      var ev = upcoming(4).map(function (e) { return e.title + " " + thai(e.time).slice(9, 14) + " น."; });
+      var hot = forCoin(symbol, 24).filter(function (x) { return x.risk; }).slice(0, 1).map(function (x) { return x.title.slice(0, 90); });
+      return (ev.length ? "ข่าวแรง USD: " + ev.join(", ") : "") + (ev.length && hot.length ? " · " : "") + (hot.length ? "ข่าว: " + hot[0] : "");
     }
-
-    function signalPrompt(r) {
-      var g = r.signal, coin = r.symbol.replace("USDT", "");
-      return [
-        "คุณคือผู้ช่วยตรวจความเสี่ยงก่อนเปิดไม้ Crypto Futures ตอบเป็นภาษาไทย สั้น กระชับ",
-        "กฎ: ใช้ตัวเลขที่ให้มาเท่านั้น ห้ามแต่งราคาหรือสถิติเพิ่ม; ใช้ Google Search หาข่าวใน 24 ชม. ล่าสุดของ " + coin +
-          " และตลาด crypto/เศรษฐกิจสหรัฐที่กระทบราคา (CPI, FOMC, ETF, hack, delist, liquidation ใหญ่) ถ้าไม่พบให้บอกว่าไม่พบ ห้ามเดาข่าว",
-        "สัญญาณทดลองจากระบบ (" + g.stratName + " แท่ง " + TF[g.tf].name + " ยังไม่พิสูจน์ว่าทำกำไร):",
-        "- เหรียญ " + r.symbol + " ฝั่ง " + (g.dir > 0 ? "LONG" : "SHORT") + " เข้า " + price(g.entry) + " SL " + price(g.stop) + " (" + fmt(g.stopPct, 2) + "%)",
-        hasTp(g) ? "- TP1/TP2/TP3 " + g.tps.map(price).join(" / ") + " ถือไม่เกิน " + g.hold + " ชม." : "- " + (g.tpPlan ? g.tpPlan + " · " : "") + g.exitRule,
-        "- แนวโน้ม " + (hasTp(g) ? "EMA50/200" : "EMA200") + " แท่งเดียวกัน: " + (g.trend > 0 ? "ขาขึ้น" : g.trend < 0 ? "ขาลง" : "ไม่ชัด"),
-        "- หลักฐานย้อนหลังของสูตรนี้กับเหรียญนี้: " + evidenceFor(r.symbol, g.tf).text,
-        "- Leverage เพดาน x" + g.lev + ", ราคา Liquidate ประมาณ " + price(g.liq) + " (ไม่มีตาราง bracket จริง)",
-        "ห้ามให้ตัวเลขความน่าจะเป็นหรือ % โอกาสชนะของไม้นี้ ห้ามแต่งสถิติ ถ้าข้อมูลไม่พอให้บอกว่าไม่พอ",
-        "ตอบตามรูปแบบนี้เท่านั้น:",
-        "คำตัดสิน: เข้า หรือ รอ หรือ ข้าม (เลือกคำเดียว)",
-        "เหตุผล: 3 ข้อสั้น",
-        "ข่าว: 1–3 ข่าวสำคัญพร้อมเวลา หรือ \"ไม่พบข่าวสำคัญ\"",
-        "ความเสี่ยง: 1–2 ข้อ",
-        "Leverage: ยืนยัน x" + g.lev + " หรือแนะนำให้ต่ำลง พร้อมเหตุผลสั้น"
-      ].join("\n");
+    function ago(t) {
+      var m = Math.max(0, Math.round((Date.now() - t) / 60000));
+      return m < 60 ? m + " นาที" : m < 1440 ? Math.round(m / 60) + " ชม." : Math.round(m / 1440) + " วัน";
     }
-
-    function analyseSignal(r, manual) {
-      var el = $("ai-" + r.symbol);
-      if (el) el.innerHTML = '<div class="ai muted">AI กำลังวิเคราะห์และค้นข่าว…</div>';
-      return ask(signalPrompt(r), true).then(function (res) {
-        r.ai = res;
-        if ($("ai-" + r.symbol)) $("ai-" + r.symbol).innerHTML = box(res);
-      }).catch(function (e) {
-        if ($("ai-" + r.symbol)) $("ai-" + r.symbol).innerHTML = '<div class="ai down">AI: ' + esc(e.message) + "</div>";
-        if (manual) status(e.message, true);
-      });
+    function row(x, mine) {
+      var flag = x.risk ? '<b class="down">⚠ </b>' : "", tags = x.coins.filter(function (k) { return mine.indexOf(k) >= 0; });
+      return '<div class="nw-row' + (x.risk ? " risk" : "") + '"><a href="' + esc(x.link) + '" target="_blank" rel="noopener">' + flag + esc(x.title) + "</a>" +
+        "<small>" + esc(x.src) + " · " + ago(x.time) + "ที่แล้ว" + (tags.length ? ' · <b class="yel">' + tags.join(" ") + "</b>" : "") + "</small></div>";
     }
-
-    function auto(results) {
-      if (!$("aiAuto").checked || !key()) return Promise.resolve();
-      var list = results.filter(function (r) { return r.signal; });
-      return list.reduce(function (chain, r) { return chain.then(function () { return analyseSignal(r, false); }); }, Promise.resolve());
+    function eventsHtml(hours) {
+      var list = upcoming(hours, true);
+      return list.length ? list.map(function (e) {
+        return '<div class="nw-ev ' + (e.impact === "High" ? "high" : "") + '"><b>' + thai(e.time).slice(0, 14) + " น.</b> " + esc(e.title) + " (USD" + (e.impact === "High" ? " · แรง" : "") + ")" +
+          (e.forecast || e.previous ? "<small>คาด " + esc(e.forecast || "—") + " · ครั้งก่อน " + esc(e.previous || "—") + "</small>" : "") + "</div>";
+      }).join("") : '<small class="muted">ไม่มีข่าวเศรษฐกิจสหรัฐแรงๆ ใน ' + hours + " ชม. ข้างหน้า</small>";
     }
-
-    function analyseChart(ctx) {
-      var a = ctx.a, prompt = [
-        "คุณคือผู้ช่วยวิเคราะห์กราฟ Crypto Futures ตอบภาษาไทย สั้น กระชับ ใช้ตัวเลขที่ให้มาเท่านั้น และใช้ Google Search หาข่าว 24 ชม. ล่าสุดของ " + ctx.symbol.replace("USDT", ""),
-        "กราฟ " + ctx.symbol + " timeframe " + ctx.tf + " ราคา " + price(a.price),
-        "EMA20 " + price(a.e20) + " EMA50 " + price(a.e50) + " EMA200 " + price(a.e200) + " RSI14 " + fmt(a.rsi, 1),
-        "Swing ล่าสุด: สูง " + price(a.hi) + " ต่ำ " + price(a.lo) + " (" + (a.upSwing ? "ขาขึ้นจากต่ำไปสูง" : "ขาลงจากสูงไปต่ำ") + ")",
-        "Fibonacci: " + Object.keys(a.fib).map(function (k) { return k + "=" + price(a.fib[k]); }).join(", ") + " · Ext 1.272=" + price(a.ext[1.272]) + " 1.618=" + price(a.ext[1.618]),
-        "เทรนด์ไลน์: แนวรับ " + (a.sup === null ? "ไม่มี" : price(a.sup)) + ", แนวต้าน " + (a.res === null ? "ไม่มี" : price(a.res)),
-        "แท่งล่าสุด (เวลา UTC, O/H/L/C): " + ctx.recent,
-        "ตอบตามรูปแบบนี้:",
-        "คำตัดสิน: เข้า หรือ รอ หรือ ข้าม",
-        "ฝั่ง: LONG หรือ SHORT หรือ ไม่มี",
-        "แผน: จุดเข้า / SL / TP1 / TP2 / TP3 อ้างอิงระดับข้างบนเท่านั้น",
-        "Leverage แนะนำ: x? โดย Liquidate ต้องไกลกว่า SL อย่างน้อย 1.5 เท่า (สมมติ maintenance margin 0.5%)",
-        "ข่าว: 1–3 ข่าว หรือ \"ไม่พบข่าวสำคัญ\"",
-        "ความเสี่ยง: 1–2 ข้อ"
-      ].join("\n");
-      $("cvAiOut").innerHTML = '<div class="ai muted">AI กำลังวิเคราะห์และค้นข่าว…</div>';
-      ask(prompt, true).then(function (res) { $("cvAiOut").innerHTML = box(res); })
-        .catch(function (e) { $("cvAiOut").innerHTML = '<div class="ai down">AI: ' + esc(e.message) + "</div>"; });
+    // Main screen: high-impact releases soon (top), and the headlines with the user's coins first (bottom).
+    function topHtml() {
+      var soon = upcoming(24);
+      return soon.length ? '<div class="nw-alert">⚠️ ข่าวเศรษฐกิจแรงใน 24 ชม.: ' + soon.map(function (e) { return esc(e.title) + " " + thai(e.time).slice(9, 14) + " น."; }).join(" · ") +
+        "<small>ราคามักกระชากตอนข่าวออก · ใส่ SL ไว้ใน Binance เสมอ · สัญญาณไม่เปลี่ยนตามข่าว (สูตรไม่ได้ทดสอบกับข่าว)</small></div>" : "";
     }
-
-    try {
-      var old = localStorage.getItem("aiKey");
-      if (old && !keys().length) localStorage.setItem("aiKeys", JSON.stringify([old]));
-      localStorage.removeItem("aiKey");
-    } catch (e) { /* ignore */ }
-    saveKeys(keys());
-    ["aiModel", "aiAuto"].forEach(function (id) {
-      try {
-        var v = localStorage.getItem(id);
-        if (v !== null) { if (id === "aiAuto") $(id).checked = v === "1"; else $(id).value = v; }
-      } catch (e) { /* ignore */ }
-      $(id).addEventListener("change", function () {
-        try { localStorage.setItem(id, id === "aiAuto" ? ($(id).checked ? "1" : "0") : $(id).value.trim()); } catch (e) { /* ignore */ }
-      });
-    });
-    var keysAdded = function (res, where) {
-      if (!res.found) { status("ไม่พบคีย์ที่ขึ้นต้นด้วย AIza ใน" + where, true); return; }
-      status("พบ " + res.found + " คีย์ · เพิ่มใหม่ " + res.added + " · มีทั้งหมด " + keys().length + " คีย์ · กดทดสอบคีย์ได้เลย");
-    };
-    $("aiKeysAdd").onclick = function () {
-      keysAdded(addKeys($("aiKeysBox").value), "ช่องที่วาง");
-      $("aiKeysBox").value = "";   // keys are kept only in the masked list, not left visible in the box
-    };
-    $("aiPaste").onclick = function () {
-      var done = function (text) { keysAdded(addKeys(text), "คลิปบอร์ด · คัดลอกคีย์ก่อน หรือวางในช่องด้านล่าง"); };
-      if (window.NativeHttp && window.NativeHttp.clipboard) { done(window.NativeHttp.clipboard()); return; }
-      if (navigator.clipboard && navigator.clipboard.readText) navigator.clipboard.readText().then(done, function () { done(""); });
-      else done("");
-    };
-    $("aiTest").onclick = function () {
-      var a = keys();
-      if (!a.length) { status("ยังไม่มีคีย์ · กด ① เอาคีย์ แล้ว ② วางคีย์", true); return; }
-      status("กำลังทดสอบ " + a.length + " คีย์…");
-      var body = { contents: [{ role: "user", parts: [{ text: "ตอบคำเดียวว่า พร้อม" }] }], generationConfig: { temperature: 0, maxOutputTokens: 20 } }, good = 0;
-      a.reduce(function (chain, k) {
-        return chain.then(function () {
-          return post(model(), true, body, k, 0).then(function () { good++; keyState[k] = { ok: true, text: "ใช้ได้" }; },
-            function (e) { keyState[k] = { ok: false, text: e.message.split(" · ")[0].slice(0, 40) }; }).then(renderKeys);
-        });
-      }, Promise.resolve()).then(function () {
-        status(good ? "ใช้ได้ " + good + "/" + a.length + " คีย์ · โมเดล " + model() : "ไม่มีคีย์ที่ใช้ได้", !good);
-      });
-    };
-    return { ask: ask, auto: auto, analyseSignal: analyseSignal, analyseChart: analyseChart };
+    function listHtml(mine, n) {
+      var day = Date.now() - 48 * HOUR, list = s.items.filter(function (x) { return x.time >= day; });
+      // Binance's own notices (delistings, new contracts) first, then risk words and the user's coins, newest first.
+      var score = function (x) { return (/^Binance/.test(x.src) ? 2 : 0) + (x.risk || x.coins.some(function (k) { return mine.indexOf(k) >= 0; }) ? 1 : 0); };
+      var first = list.filter(function (x) { return score(x) > 0; }).sort(function (a, b) { return score(b) - score(a) || b.time - a.time; }).slice(0, n);
+      var rest = list.filter(function (x) { return first.indexOf(x) < 0; });
+      return '<div class="sm-bt nw"><b>ข่าว · ฟรี ไม่มี AI</b> <small>' + (s.at ? "อัปเดต " + thai(s.at).slice(9, 14) + " น. · " + list.length + " ข่าวใน 48 ชม." : "กำลังโหลด…") +
+        (s.errors.length ? " · โหลดไม่ได้ " + s.errors.length + " แหล่ง" : "") + "</small>" +
+        '<div class="nw-sec">ปฏิทินเศรษฐกิจสหรัฐ 48 ชม.</div>' + eventsHtml(48) +
+        '<div class="nw-sec">ข่าวที่เกี่ยวกับเหรียญของคุณ / ความเสี่ยง</div>' + (first.map(function (x) { return row(x, mine); }).join("") || '<small class="muted">ไม่มี</small>') +
+        "<details><summary>ข่าวอื่น " + rest.length + " ข่าว</summary>" + rest.slice(0, 40).map(function (x) { return row(x, mine); }).join("") + "</details></div>";
+    }
+    function start(onChange) {
+      var tick = function () { if (!document.hidden && location.hash !== "#bg") refresh().then(onChange); };
+      clearInterval(timer); timer = setInterval(tick, 120000); tick();
+      document.addEventListener("visibilitychange", tick);
+    }
+    return { refresh: refresh, forCoin: forCoin, upcoming: upcoming, warnFor: warnFor, topHtml: topHtml, listHtml: listHtml, row: row, start: start, state: function () { return s; } };
   })();
+  // v6 removed the AI: forget the keys and settings it kept on this phone.
+  try { ["aiKeys", "aiKeyIdx", "aiModel", "aiAuto", "aiKey"].forEach(function (k) { localStorage.removeItem(k); }); } catch (e) { /* nothing stored */ }
 
   // ---- The user's chosen strategy (locked) and its automatic paper trading ----
   var FOMC_DEFAULT = [
@@ -2542,8 +2439,11 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
   function trendNormal() {
     var T = window.EVIDENCE_TREND, k = trendLadder() ? "ladder" : "rule", nm = T && T.normal && T.normal[k];
     if (!nm) return null;
-    var sr = T.stopRules && T.stopRules[k], chosen = sr && sr.rows.filter(function (x) { return x.id === sr.chosen; })[0];
-    return { normal: nm, port: nm.port && nm.port[String(trendRiskPct())], stop: chosen || null };
+    // The rules chosen on 2020-2022 (the old 4% / 8% stops, a cap on open positions) cut most of the 2023-2026 profit,
+    // and so did every other risk-cutting rule tested; the app trades every signal and stops new entries only past the
+    // deepest drawdown of the test (research/pro stopRules, research/pro/robust.js heat).
+    var sr = T.stopRules && T.stopRules[k], none = sr && sr.rows.filter(function (x) { return x.id === "none"; })[0];
+    return { normal: nm, port: nm.port && nm.port[String(trendRiskPct())], stop: none || null, studied: sr || null };
   }
   // The 4-hour closes in Thai time (03:00, 07:00, ... 23:00) and the next one.
   function trendSchedule(now) {
@@ -2583,6 +2483,54 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
     return "ปกติของสูตรนี้ (ทดสอบ " + trendPeriod() + "): แพ้ติดกันได้ถึง " + nm.normal.worstStreak + " ไม้" +
       (p ? " · เดือนที่ติดลบ " + p.losingMonths + "% · ติดลบติดกันนานสุด " + p.worstLosingMonths + " เดือน · 3 เดือนแย่สุด " + fmt(p.worst3m, 1, true) + "% · พอร์ตลงลึกสุด " +
         fmt(p.maxDD, 1) + "% · อยู่ใต้จุดสูงสุดนานสุด " + p.underDays + " วัน (เสี่ยง " + trendRiskPct() + "%/ไม้)" : "");
+  }
+  // Statistical confidence that an average is above zero, from its t-statistic (normal approximation). Trades are taken as
+  // independent, which they are not quite (the coins move together), so it reads higher than it is.
+  function normCdf(z) {
+    var t = 1 / (1 + 0.2316419 * Math.abs(z)), p = 0.3989423 * Math.exp(-z * z / 2) * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
+    return z > 0 ? 1 - p : p;
+  }
+  function sure(t) { var p = normCdf(t) * 100; return p >= 99.95 ? ">99.9%" : fmt(p, p >= 99 ? 1 : 0) + "%"; }
+  // How much the tests let us trust the rule, test by test (pass / warn / fail), and how often a year ended in profit.
+  // Every number comes from research/pro and research/pro/robust.js; nothing here is a forecast for one trade.
+  function trendConfidence() {
+    var T = window.EVIDENCE_TREND;
+    if (!T || !T.all) return null;
+    var lad = trendLadder(), k = lad ? "ladder" : "rule", main = lad && T.ladder.test ? T.ladder.test : T.all, R = T.robust, rows = [];
+    var add = function (ok, text) { rows.push({ ok: ok, text: text }); };
+    var r3 = function (v) { return fmt(v, 3, true) + "R"; };
+    add(T.parity === "OK" && T.replay === "OK" ? "pass" : "fail", "โค้ดในแอปให้ไม้ตรงกับโค้ดวิจัยทุกไม้ และตรงกับการคำนวณสดทีละแท่ง");
+    add(main.t >= 2 ? "pass" : "fail", "ทดสอบล่วงหน้า " + trendPeriod() + " · 12 เหรียญ · " + main.n + " ไม้: เฉลี่ย " + r3(main.avgR) + " ต่อไม้ · มั่นใจว่ากำไรเฉลี่ยเป็นบวก " + sure(main.t));
+    if (R && R.unseen && R.unseen[k]) {
+      var u = R.unseen[k], coins = Object.keys(u.rows || {}), pos = coins.filter(function (c) { return u.rows[c].avgR > 0; }).length, sp = R.spot[k].all;
+      add(u.all.t >= 2 && pos >= 0.75 * coins.length ? "pass" : "fail", "เหรียญที่สูตรไม่เคยเห็น " + coins.length + " เหรียญ (รวมเหรียญที่ถูกถอดแล้ว) · " + u.all.n + " ไม้: " + r3(u.all.avgR) +
+        " · บวก " + pos + "/" + coins.length + " เหรียญ · มั่นใจ " + sure(u.all.t));
+      add(sp.t >= 2 ? "pass" : "fail", "ปีก่อนเลือกสูตร 2017–2019 · " + R.spot.coins.length + " เหรียญ · " + sp.n + " ไม้: " + r3(sp.avgR) + " · มั่นใจ " + sure(sp.t));
+    }
+    if (T.stress) add(T.stress.t >= 2 ? "pass" : T.stress.t >= 1.64 ? "warn" : "fail", "ค่าธรรมเนียม+slippage ×2: " + r3(T.stress.avgR) + " · มั่นใจ " + sure(T.stress.t) + " · ความได้เปรียบบาง ต้องเข้าให้ตรงเวลาและราคา");
+    var yrs = R && R.base && R.base[k] ? R.base[k].years : T.years, recent = [2025, 2026].filter(function (y) { return yrs && yrs[y]; });
+    if (recent.length) add(recent.every(function (y) { return yrs[y].t >= 2; }) ? "pass" : "warn",
+      "2 ปีล่าสุด: " + recent.map(function (y) { return y + " " + r3(yrs[y].avgR); }).join(" · ") + " → ความได้เปรียบอ่อนลง (แทบเท่าทุน)");
+    var fails = rows.filter(function (r) { return r.ok === "fail"; }).length, warns = rows.filter(function (r) { return r.ok === "warn"; }).length;
+    var Y = R && R.yearly && R.yearly[k];
+    return { level: fails ? "ต่ำ" : warns ? "ปานกลาง–สูง" : "สูง", cls: fails ? "bad" : warns ? "weak" : "good", rows: rows,
+      passed: rows.length - fails - warns, total: rows.length,
+      year: Y ? { win: Math.round(100 - Y.pLoss), loss10: Y.pLoss10, p5: Y.p5, p50: Y.p50, p95: Y.p95, worst12: Y.worst12 } : null };
+  }
+  // One line for alerts and sheets: "ปานกลาง–สูง (ผ่าน 4/6 การทดสอบ) · ปีที่กำไร ≈81%".
+  function confidenceLine() {
+    var c = trendConfidence();
+    return c ? c.level + " (ผ่าน " + c.passed + "/" + c.total + " การทดสอบ)" + (c.year ? " · ปีที่กำไร ≈" + c.year.win + "%" : "") : "";
+  }
+  function confidenceHtml() {
+    var c = trendConfidence(), mark = { pass: "✓", warn: "⚠", fail: "✗" };
+    if (!c) return "";
+    return '<div class="conf-box ' + c.cls + '"><div class="conf-hd"><span>ความมั่นใจของสูตร</span><b>' + c.level + "</b><small>ผ่าน " + c.passed + "/" + c.total + " การทดสอบ</small></div>" +
+      (c.year ? '<div class="conf-year">โอกาสปีที่กำไร <b>≈' + c.year.win + '%</b> · ปีที่ขาดทุนเกิน 10% ≈' + fmt(c.year.loss10, 0) + "% · ปีกลางๆ " + fmt(c.year.p50, 0, true) +
+        "% <small>(เสี่ยง 0.5%/ไม้ 12 เหรียญ จำลองจากเดือนจริง 2023–2026 · 5% แย่สุด " + fmt(c.year.p5, 0, true) + "% · 5% ดีสุด " + fmt(c.year.p95, 0, true) + "%)</small></div>" : "") +
+      "<details><summary>ดูผลทดสอบทีละข้อ</summary>" + c.rows.map(function (r) { return '<div class="conf-row ' + r.ok + '"><i>' + mark[r.ok] + "</i>" + esc(r.text) + "</div>"; }).join("") +
+      '<div class="conf-row info"><i>ℹ</i>กติกาลดความเสี่ยงและการจำกัดจำนวนไม้ที่เลือกจากปี 2020–2022 ทำกำไรปี 2023–2026 หายเกือบหมด จึงเทรดทุกสัญญาณ และหยุดเข้าไม้ใหม่เฉพาะเมื่อพอร์ตลงลึกกว่าที่ทดสอบเคยเจอ</div>' +
+      '<small class="muted">"มั่นใจ" = ความมั่นใจทางสถิติว่ากำไรเฉลี่ยต่อไม้ในข้อมูลทดสอบเป็นบวก (คิดแบบไม้อิสระ จึงอาจสูงเกินจริง) ไม่ใช่การรับประกันอนาคต</small></details></div>';
   }
   // Headline numbers for a trade: how often trades like it closed in profit in the test (win %), how much bigger the
   // average win was than the average loss, a grade by the average result, and the risk band. Never an invented confidence.
@@ -2738,6 +2686,7 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
     // 7 days and the test record below.
     function trendParts(items) {
       var risk = trendRiskPct(), top = '<div class="sm-exp">สูตรหลัก Trend 4H · สัญญาณไม่ใช่คำสั่งซื้อขาย</div>', sch = trendSchedule(Date.now());
+      top += confidenceHtml();
       top += '<div class="sm-sched">⏰ แท่ง 4 ชม. ปิด ' + sch.times.join(" · ") + " น. → เข้าภายใน 15 นาทีหลังปิด · รอบถัดไป <b>" + thai(sch.next).slice(9, 14) + " น.</b></div>";
       var lc = null;
       try { lc = JSON.parse(localStorage.getItem("liveCheck") || "null"); } catch (e) { /* none yet */ }
@@ -2834,10 +2783,12 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
             (R ? row("ราคาไปถึง +1R", R[1] + "%") + row("ราคาไปถึง +2R", R[2] + "%") + row("ราคาไปถึง +3R", R[3] + "%") + row("ราคาไปถึง +5R", R[5] + "%") +
               row("ไม่ถึง +1R เลย", fmt(100 - R[1], 1) + "% (โดน SL " + R.slFirst + "% · ออกตามสูตร " + fmt(100 - R[1] - R.slFirst, 1) + "%)") : "") +
             row("กำไรเฉลี่ยต่อไม้", fmt(st.avgR, 2, true) + "R ≈ " + baht(st.avgR * oneR).replace(/ \(.*\)$/, "") + " (ช่วง 95%: " + fmt(st.avgRCI[0], 2, true) + " ถึง " + fmt(st.avgRCI[1], 2, true) + "R)") +
+            (isFinite(st.t) ? row("มั่นใจว่า " + coin + " กำไรเฉลี่ยเป็นบวก", sure(st.t) + " (เหรียญเดียว " + st.n + " ไม้ ข้อมูลน้อยกว่าทั้งสูตร)") : "") +
             row("ไม้ที่ใช้คำนวณ", st.n + " ไม้ (" + coin + " · " + (trendLadder() ? "แบ่งขาย" : "ไม่ตั้ง TP") + ")")
           : row("ความมั่นใจ", "ยังไม่มีข้อมูลยืนยัน (ไม้ทดสอบน้อยกว่า 30)");
       return '<div class="sm-sum sm-sheet ' + (long ? "l" : "s") + '" id="smSheet' + i + '"><div class="sm-sheet-hd"><b>' + (i + 1) + ". " + r.symbol + ' <small>Perp</small></b><span class="pill ' + (long ? "go" : "short") + '">' +
-          (long ? "LONG" : "SHORT") + "</span></div>" + headline(g.dir, g.lev, verdictOf(r.symbol, tf, z.lossB / cap * 100)) + keyBox(g, z, cap) + "<div class=\"sm-order\">" +
+          (long ? "LONG" : "SHORT") + "</span></div>" + headline(g.dir, g.lev, verdictOf(r.symbol, tf, z.lossB / cap * 100)) +
+          (trend && confidenceLine() ? '<div class="conf-line">ความมั่นใจของสูตร: <b>' + confidenceLine() + "</b></div>" : "") + keyBox(g, z, cap) + "<div class=\"sm-order\">" +
         sec("สัญญาณ") +
         row("ฝั่ง", '<span class="' + (long ? "up" : "down") + '">' + (long ? "LONG (Buy)" : "SHORT (Sell)") + "</span>") +
         row("สูตร", esc(g.stratName)) + row("กรอบเวลา", TF[tf].name) +
@@ -2863,9 +2814,22 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
         sec("ผลลัพธ์ถ้าถูกทาง / ผิดทาง") + outcomes +
         sec("ความมั่นใจ · สถิติไม้แบบนี้ของ " + coin + (trend ? " (walk-forward " + trendPeriod() + ")" : "")) + conf + "</div>" +
         '<small class="muted">ความมั่นใจคือสถิติของไม้ลักษณะเดียวกันในช่วงทดสอบ ไม่ใช่การรับประกันไม้นี้ · ผลลัพธ์คิดจากขนาดไม้นี้ รวมค่าธรรมเนียมโดยประมาณ</small>' +
-        (r.ai ? '<div class="ev">AI เช็กข่าว: ' + esc(r.ai.verdict) + "</div>" : "") +
+        newsFor(r.symbol) +
         '<div class="sm-chart-hd" style="margin-top:8px">กราฟ 4 ชม. · ' + coin + '</div><div id="smChart' + i + '" class="sm-chart"></div>' +
         '<button type="button" class="mini" data-save="' + i + '" style="width:100%;margin-top:8px">เข้าแล้ว · บันทึกลงพอร์ต</button></div>';
+    }
+    // The coin's headlines of the last 24 hours and high-impact US releases before the next 4-hour close.
+    function newsFor(symbol) {
+      var list = News.forCoin(symbol, 24), soon = News.upcoming(4), mine = selectedCoins().map(function (c) { return c.replace("USDT", ""); });
+      return '<div class="sm-sec">ข่าว ' + symbol.replace("USDT", "") + " 24 ชม. · ข่าวไม่เปลี่ยนสัญญาณ</div>" +
+        (soon.length ? '<div class="nw-alert" style="margin:4px 0">⚠️ ข่าวแรงก่อนแท่งถัดไปปิด: ' + soon.map(function (e) { return esc(e.title) + " " + thai(e.time).slice(9, 14) + " น."; }).join(" · ") + "</div>" : "") +
+        (list.length ? list.slice(0, 4).map(function (x) { return News.row(x, mine); }).join("") : '<small class="muted">ไม่มีข่าวที่พูดถึงเหรียญนี้</small>');
+    }
+    function newsList() { return News.listHtml(selectedCoins().map(function (c) { return c.replace("USDT", ""); }), 8); }
+    // New headlines every 2 minutes: only the news boxes change, so the sheets, charts and scroll position stay.
+    function redrawNews() {
+      if ($("smNewsTop")) $("smNewsTop").innerHTML = News.topHtml();
+      if ($("smNews")) $("smNews").innerHTML = newsList();
     }
     // Proof of life: when the app last scanned here, what it found, and the last background scan Android ran.
     function statusLine() {
@@ -2883,7 +2847,7 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
         return '<button type="button" data-tf="' + k + '" class="' + (k === tf ? "on" : "") + '">' + TF[k].name + (k === "4h" ? " Trend" : "") + "</button>";
       }).join("") + "</div>";
       var items = isTrend(tf) ? planItems() : [], parts = isTrend(tf) ? trendParts(items) : { top: squeezeHead(tf), open: "", bottom: "", held: [] };
-      head += statusLine() + parts.top;
+      head += statusLine() + '<div id="smNewsTop">' + News.topHtml() + "</div>" + parts.top;
       if (list.length) {
         var tot = list.reduce(function (a, x) { var z = sized(x.signal); a.m += z.marginB; a.l += z.lossB; return a; }, { m: 0, l: 0 });
         head += '<div class="sm-bt" style="font-size:13px"><b>สัญญาณน่าเข้า ' + list.length + " ตัว</b>" + (list.length > 1 ? " (เรียงจากสถิติเหรียญดีสุด)" : "") +
@@ -2901,8 +2865,11 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
       var rest = items.filter(function (it) { return it.kind === "exit" || it.kind === "blocked"; });
       var plan = rest.filter(function (it) { return it.symbol === chartSym; })[0] || rest[0];
       if (plan) head += '<div class="sm-chartbox"><div class="sm-chart-hd">กราฟ 4 ชม. · ' + plan.symbol.replace("USDT", "") + '</div><div id="smChart" class="sm-chart"></div>' + planLegend(plan) + "</div>";
-      head += parts.bottom;
+      var rtOpen = $("smRoutine") && $("smRoutine").open;
+      head += parts.bottom + (isTrend(tf) ? Routine.html() : "") + '<div id="smNews">' + newsList() + "</div>";
       $("smMain").innerHTML = head;
+      if (rtOpen && $("smRoutine")) $("smRoutine").open = true;
+      Routine.bind(draw);
       list.forEach(function (x, i) {
         var it = items.filter(function (y) { return y.symbol === x.symbol && y.kind === "entry"; })[0];
         try { drawPlan($("smChart" + i), it); } catch (e) { /* the chart is a convenience; the numbers are complete */ }
@@ -3020,7 +2987,7 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
       });
       schedule();
     }
-    return { show: show, render: render, busy: busy };
+    return { show: show, render: render, busy: busy, redrawNews: redrawNews };
   })();
 
   function futuresScan() {
@@ -3063,8 +3030,9 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
       renderFutures(results, fxInfo, lev, end);
       lastFutures = results;
       Simple.render(results, null, fxInfo.rate, { end: end, failed: errors.length });
-      // Gemini runs only on demand in the open app, never inside background scans.
-      return location.hash === "#bg" ? null : AI.auto(results);
+      // News for the alert lines (the calendar is cached for an hour); a failure or a slow source never holds the alerts
+      // back more than 15 seconds.
+      return Promise.race([News.refresh().catch(function () { return null; }), new Promise(function (res) { setTimeout(res, 15000); })]);
     }).then(function () {
       Simple.render(results, null, fxInfo.rate, { end: end, failed: errors.length });
       reportScan(results, end, null, { scanned: results.length, failed: errors });
@@ -3106,7 +3074,8 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
   }
 
   function newsFilterLabel() {
-    return "ตัวกรองข่าว: งดเฉพาะวัน FOMC จากรายการที่ใส่เอง (ปี 2026 ยังไม่ยืนยัน) · CPI/NFP ไม่มีฟีดข่าว จึงไม่ได้กรอง";
+    return isTrend(curTf()) ? "ข่าว: CPI/NFP/FOMC และข่าวเหรียญจากแหล่งฟรีแสดงประกอบ ไม่ได้ใช้กรองสัญญาณ (สูตรไม่ได้ทดสอบกับข่าว)"
+      : "ตัวกรองข่าว: งดเฉพาะวัน FOMC จากรายการที่ใส่เอง (ปี 2026 ยังไม่ยืนยัน) · CPI/NFP แสดงในปฏิทินข่าว แต่ไม่ได้ใช้กรอง";
   }
 
   // Order size from the stop distance: risk % of the balance; leverage is a cap chosen by the user (5/10/20/50x), never
@@ -3336,9 +3305,8 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
         '<div class="slider-tip">ลากสไลเดอร์ไปที่ <b style="font-size:20px">' + fmt(Math.max(g.sliderPct, 0.1), g.sliderPct < 10 ? 1 : 0) +
           "%</b> · โดน SL เสีย ≈ " + fmt(g.riskUsdt * fx, 0) + " ฿ · เข้าก่อน " + thai(g.expires).slice(9) + " น.</div>" +
         (g.sizeLimited ? '<div class="banner wait" style="margin:8px 0 0;font-size:13px">ลดขนาดให้ Margin ไม่เกิน ' + (locked() ? "5" : "25") + "% ของทุน</div>" : "") +
-        '<div id="ai-' + r.symbol + '"></div>' +
         '<div class="btnrow"><button class="mini" data-record="' + esc(JSON.stringify(recordOf(r, g, fx))) + '">เข้าแล้ว · บันทึก</button>' +
-        '<button class="mini ghost" data-ai="' + r.symbol + '">AI วิเคราะห์</button><button class="mini ghost" data-chart="' + r.symbol + '">กราฟ</button></div>' +
+        '<button class="mini ghost" data-chart="' + r.symbol + '">กราฟ</button></div>' +
         '<details style="margin-top:8px"><summary>รายละเอียด</summary><small>' + detail + "</small></details></div>";
     }).join("");
     cards = trendBoard(results) + cards;
@@ -3357,12 +3325,6 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
   }
 
   function bindCardButtons() {
-    Array.prototype.forEach.call(document.querySelectorAll("[data-ai]"), function (b) {
-      b.onclick = function () {
-        var r = lastFutures.filter(function (x) { return x.symbol === b.getAttribute("data-ai"); })[0];
-        if (r) AI.analyseSignal(r, true);
-      };
-    });
     Array.prototype.forEach.call(document.querySelectorAll("[data-chart]"), function (b) {
       b.onclick = function () { $("cvSymbol").value = b.getAttribute("data-chart"); document.querySelector('[data-tab="chartTab"]').click(); ChartView.open(b.getAttribute("data-chart")); };
     });
@@ -3426,6 +3388,7 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
       qty: String(g.qty), margin_usdt: g.margin.toFixed(2), margin_thb: String(Math.round(g.margin * fx)), risk_thb: String(Math.round(g.riskUsdt * fx)),
       risk_pct: (g.riskUsdt * fx / Math.max(1e-9, Portfolio.plan().balance) * 100).toFixed(2),
       win_pct: (function (v) { return v.win !== null ? fmt(v.win, 0) : ""; })(verdictOf(r.symbol, tf, 0)), grade: verdictOf(r.symbol, tf, 0).grade,
+      news: News.warnFor(r.symbol), confidence: isTrend(tf) ? confidenceLine() : "",
       leverage: g.lev, leverage_cap: g.levCapUser, liq_est: pxDp(g.liq, g.dp), mark: g.mark ? pxDp(g.mark, g.dp) : "",
       rationale: g.why, evidence: ev.text, evidence_ok: ev.ok, experimental: true };
   }
@@ -3829,12 +3792,102 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
     });
     return { open: open, stop: stop, context: context };
   })();
-  $("cvAi").onclick = function () {
-    var c = ChartView.context();
-    if (c) AI.analyseChart(c); else $("cvAiOut").innerHTML = '<div class="ai">รอกราฟโหลดก่อน</div>';
-  };
 
   // ---- Step-by-step guide ----
+  // ---- How a professional trades this rule: the written plan, daily / weekly / monthly checklists, and a backup ----
+  // The plan is the rule's own facts (research/pro); the checklists keep their ticks per day / week / month on this phone.
+  var Routine = (function () {
+    var KEY = "routine.v1";
+    var LISTS = {
+      day: ["หลังแท่ง 4 ชม. ปิด (03:00 · 07:00 · 11:00 · 15:00 · 19:00 · 23:00 น.) เปิดแอปภายใน 15 นาที เข้า / ปิดไม้ตามที่แอปบอกทุกไม้",
+        "ทุกไม้ที่เข้า: Isolated · Leverage และขนาดตามแอป · ตั้ง Stop Loss (Stop Market) ใน Binance ทันที · ตั้ง TP1 เป็น Limit",
+        "บันทึกไม้ลงพอร์ตด้วยราคาที่ได้จริง (เพื่อวัดว่าเข้าห่างจากสัญญาณแค่ไหน)",
+        "ดูปฏิทินข่าววันนี้ · ข่าวแรงไม่ใช่เหตุให้ข้ามไม้ แต่ต้องมี SL อยู่ใน Binance แล้ว"],
+      week: ["เทียบสมุดผลจริงกับผลทดสอบ (ปกติ / ต่ำกว่าปกติ / แย่กว่าที่เคยเจอ)",
+        "ตรวจว่าทุกสัญญาณ 7 วันได้เข้าครบ ไม่ได้ข้ามไม้ และไม่มีไม้นอกระบบ",
+        "สำรองข้อมูลพอร์ตและสมุด (ปุ่มด้านล่าง)"],
+      month: ["สรุปเดือนเป็น R: ชนะ / แพ้ / เฉลี่ยต่อไม้ เทียบกับ \"ปกติของสูตร\"",
+        "ดูความมั่นใจของสูตรอีกครั้ง และวันที่ของผลทดสอบในแอป (ควรอัปเดตทุกปี)",
+        "ห้ามเปลี่ยนกติกากลางทางเพราะขาดทุนช่วงสั้น · ห้ามเพิ่มความเสี่ยงเกิน 1% ต่อไม้"]
+    };
+    function load() { try { return JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (e) { return {}; } }
+    function save(v) { try { localStorage.setItem(KEY, JSON.stringify(v)); } catch (e) { /* ticks are a convenience */ } }
+    function period(kind, now) {
+      var d = new Date(now + THAI_OFFSET_S * 1000), day = d.toISOString().slice(0, 10);
+      if (kind === "day") return day;
+      if (kind === "month") return day.slice(0, 7);
+      var monday = new Date(d.getTime() - ((d.getUTCDay() + 6) % 7) * 86400000);
+      return "w" + monday.toISOString().slice(0, 10);
+    }
+    function done(kind) { var v = load()[kind]; return v && v.p === period(kind, Date.now()) ? v.done || [] : []; }
+    function toggle(kind, i) {
+      var all = load(), cur = done(kind).slice(), k = cur.indexOf(i);
+      if (k >= 0) cur.splice(k, 1); else cur.push(i);
+      all[kind] = { p: period(kind, Date.now()), done: cur };
+      save(all);
+    }
+    // The written plan: what is traded, how much, when it stops. Numbers from the rule's tests.
+    function planHtml() {
+      var nm = trendNormal(), lad = trendLadder(), risk = trendRiskPct(), dd = nm && nm.port ? fmt(nm.port.maxDD, 1) + "%" : "—";
+      var li = function (t) { return "<li>" + t + "</li>"; };
+      return "<ol class=\"rt-plan\">" +
+        li("<b>สูตรเดียว:</b> Trend 4H · Binance USDⓈ-M Perpetual · เข้าและออกตามแอปเท่านั้น ทั้ง LONG และ SHORT") +
+        li("<b>เหรียญ:</b> ผลทดสอบคิดจาก 12 เหรียญ ยิ่งเลือกน้อย ผลยิ่งแกว่ง · เลือกไว้ตอนนี้ " + selectedCoins().length + " เหรียญ") +
+        li("<b>ความเสี่ยง:</b> " + risk + "% ของทุนต่อไม้ (ไม่เกิน 1%) · Isolated · Leverage ตามที่แอปคำนวณ (Liquidation ไกลกว่า SL 1.5 เท่า)") +
+        li("<b>ออก:</b> SL ตั้งใน Binance ทันที ห้ามเลื่อน · " + (lad ? "ขาย 50% ที่ +3R · ที่เหลือปิดเมื่อแอปเด้ง \"ปิดไม้\"" : "ไม่ตั้ง TP · ปิดเมื่อแอปเด้ง \"ปิดไม้\"")) +
+        li("<b>เทรดทุกสัญญาณ:</b> สูตรชนะราว 1 ใน 3 กำไรมาจากไม้ใหญ่ไม่กี่ไม้ การเลือกข้ามไม้ทำให้พลาดไม้ใหญ่") +
+        li("<b>หยุด:</b> หยุดเข้าไม้ใหม่เมื่อพอร์ตลงเกิน " + dd + " จากจุดสูงสุด (เกินที่ทดสอบเคยเจอ) หรือสมุดผลจริงขึ้น ⛔ แล้วทบทวนก่อนเทรดต่อ") +
+        li("<b>ห้าม:</b> เพิ่มขนาดหลังแพ้ · เทรดนอกสูตร · เปลี่ยนกติกาเพราะแพ้ติดกัน (แพ้ติดกันหลายสิบไม้เคยเกิดขึ้นแล้วในทดสอบ)") + "</ol>";
+    }
+    function listHtml(kind, title) {
+      var d = done(kind);
+      return '<div class="rt-list"><div class="rt-hd">' + title + ' <small>' + d.length + "/" + LISTS[kind].length + "</small></div>" + LISTS[kind].map(function (t, i) {
+        return '<label class="rt-item' + (d.indexOf(i) >= 0 ? " done" : "") + '"><input type="checkbox" data-rt="' + kind + ":" + i + '"' + (d.indexOf(i) >= 0 ? " checked" : "") + "> " + t + "</label>";
+      }).join("") + "</div>";
+    }
+    function html() {
+      var d = done("day").length, n = LISTS.day.length;
+      return '<details class="sm-bt rt" id="smRoutine"><summary><b>แผนเทรดและกิจวัตรแบบมืออาชีพ</b> <small>วันนี้ ' + d + "/" + n + (d >= n ? " ✓" : "") + "</small></summary>" +
+        '<div class="rt-sec">แผนการเทรด (เขียนไว้ก่อน ทำตามทุกวัน)</div>' + planHtml() +
+        listHtml("day", "ทุกวัน") + listHtml("week", "ทุกสัปดาห์") + listHtml("month", "ทุกเดือน") +
+        '<div class="rt-sec">สำรอง / กู้คืนข้อมูล</div><small class="muted">ไม้ที่บันทึก สมุดผลจริง และการตั้งค่า อยู่ในมือถือเครื่องนี้เท่านั้น ลบแอป = หาย</small>' +
+        '<div class="row" style="margin-top:6px"><button type="button" class="mini" id="rtBackup" style="width:100%;margin:0">สำรองข้อมูล (ส่งเข้า LINE / Drive / อีเมล)</button></div>' +
+        '<textarea id="rtRestoreBox" rows="3" placeholder="กู้คืน: วางข้อความสำรองที่นี่" style="width:100%;margin-top:6px;background:var(--deep);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:8px;font:12px ui-monospace,monospace"></textarea>' +
+        '<button type="button" class="mini ghost" id="rtRestore" style="width:100%;margin-top:6px">กู้คืนจากข้อความที่วาง</button><div id="rtStatus" class="status-line"></div></details>';
+    }
+    // Everything the trader built up on this phone, as one JSON text (no keys: the app has none).
+    var KEEP = ["portfolio.v1", "paper.v2", "liveCheck", "routine.v1", "alertCoins", "tradeTf", "tpMode", "pfCapital", "pfRisk", "pfTarget", "alertLev", "guide.flags", "floatSeen"];
+    function backup() {
+      var out = { app: "POC Signal", v: 1, at: Date.now(), data: {} };
+      KEEP.forEach(function (k) { try { var v = localStorage.getItem(k); if (v !== null) out.data[k] = v; } catch (e) { /* skip */ } });
+      ["pfCapital", "pfRisk", "pfTarget"].forEach(function (id) { if ($(id)) out.data[id] = $(id).value; });
+      return JSON.stringify(out);
+    }
+    function restore(text) {
+      var j = JSON.parse(text);
+      if (!j || j.app !== "POC Signal" || !j.data) throw new Error("ไม่ใช่ข้อความสำรองของแอปนี้");
+      var n = 0;
+      Object.keys(j.data).forEach(function (k) { if (KEEP.indexOf(k) >= 0) { localStorage.setItem(k, j.data[k]); n++; } });
+      return n;
+    }
+    function bind(redraw) {
+      Array.prototype.forEach.call(document.querySelectorAll("[data-rt]"), function (b) {
+        b.onchange = function () { var p = b.getAttribute("data-rt").split(":"); toggle(p[0], +p[1]); redraw(); };
+      });
+      var st = function (t, err) { if ($("rtStatus")) { $("rtStatus").textContent = t; $("rtStatus").className = "status-line" + (err ? " err" : ""); } };
+      if ($("rtBackup")) $("rtBackup").onclick = function () {
+        var text = backup();
+        if (window.NativeHttp && window.NativeHttp.share) { window.NativeHttp.share("POC Signal สำรองข้อมูล " + thai(Date.now()), text); st("เปิดหน้าส่งแล้ว เลือก LINE / Drive / อีเมล เก็บข้อความไว้"); }
+        else { $("rtRestoreBox").value = text; st("คัดลอกข้อความในช่องด้านบนเก็บไว้"); }
+      };
+      if ($("rtRestore")) $("rtRestore").onclick = function () {
+        try { var n = restore($("rtRestoreBox").value.trim()); st("กู้คืนแล้ว " + n + " รายการ · กำลังโหลดใหม่…"); setTimeout(function () { location.reload(); }, 800); }
+        catch (e) { st("กู้คืนไม่ได้: " + e.message, true); }
+      };
+    }
+    return { html: html, bind: bind, backup: backup, restore: restore };
+  })();
+
   var Guide = (function () {
     var KEY = "guide.flags";
     function flags() { try { return JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) { return {}; } }
@@ -3851,8 +3904,6 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
         tab: "portTab", target: "ppStart", done: function () { return has("paper.v2"); } },
       { id: "alerts", title: "เปิดแจ้งเตือนสัญญาณ", how: "หน้าแรก → ตั้งค่า → ติ๊ก \"เด้งเมื่อมีสัญญาณเข้าได้\" แล้วกดอนุญาตการแจ้งเตือน (ในแอป Android ตั้งแบตเตอรี่เป็น \"ไม่จำกัด\" ด้วย)",
         tab: "guideTab", target: "autoScan", done: function () { return $("autoScan").checked; } },
-      { id: "ai", title: "(ไม่บังคับ) ใส่ Gemini API key ให้ AI ช่วยเช็กข่าว", how: "แตะ \"พาไป\" → กดปุ่ม ① เปิดหน้าเอาคีย์ → Create API key → คัดลอก → กลับมากด ② วางคีย์ → ทดสอบคีย์",
-        tab: "guideTab", target: "aiGetKey", done: function () { return !!$("aiKey").value.trim(); }, optional: true },
       { id: "wait", title: "รอแจ้งเตือน แล้วเปิดดูการ์ดสัญญาณ", how: "สูตรนี้มีสัญญาณประมาณ 5 ครั้งต่อเดือน ช่วง Paper แค่เปิดแท็บพอร์ตดูผลเป็นระยะ ไม่ต้องเปิดไม้จริง",
         tab: "portTab", target: "ppHero", done: function () { return false; }, info: true }
     ];
@@ -3901,7 +3952,7 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
     $("pfCapital").addEventListener("blur", function () { mark("capital"); });
     $("sgFomcOk").addEventListener("click", function () { mark("fomc"); $("sgFomcOk").textContent = "ตรวจแล้ว ✓ (บันทึกแล้ว)"; });
     $("pp2026").addEventListener("click", function () { mark("test2026"); });
-    ["sgMode", "sgLock", "autoScan", "aiKey"].forEach(function (id) { $(id).addEventListener("change", render); });
+    ["sgMode", "sgLock", "autoScan"].forEach(function (id) { $(id).addEventListener("change", render); });
     $("ppStart").addEventListener("click", function () { setTimeout(render, 50); });
     return { render: render };
   })();
@@ -3982,7 +4033,7 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
   Portfolio.render();
   $("run").onclick = run;
   if (location.hash === "#bg") scan();
-  else { Simple.show(true); scan(); }
+  else { Simple.show(true); scan(); News.start(Simple.redrawNews); }
 })();
 
 </script>

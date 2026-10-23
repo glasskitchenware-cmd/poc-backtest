@@ -177,6 +177,9 @@ final class SignalAlerts {
         String riskPct = item.optString("risk_pct", "");
         if (!riskPct.isEmpty()) b.append(" · เสี่ยง ").append(riskPct).append("%");
         if (!risk.isEmpty()) b.append(riskPct.isEmpty() ? " · โดน SL เสีย ≈ " : " (≈ ").append(risk).append(riskPct.isEmpty() ? " ฿" : " ฿)");
+        // A high-impact US release before the next close, or a risk headline on the coin (free news, no AI).
+        String news = item.optString("news", "");
+        if (!news.isEmpty()) b.append("\n⚠️ ").append(cut(news, 160));
         b.append("\nแท่งปิด ").append(bangkok(candle, "dd/MM HH:mm")).append(" น. (เวลาไทย UTC+7)");
         if (expires > candle) b.append(" · ยกเลิกถ้ายังไม่เข้าภายใน ").append(bangkok(expires, "HH:mm")).append(" น.");
         if (!tp5.isEmpty()) b.append("\nTP1 ").append(tp1).append(" (1R) · TP2 ").append(tp2).append(" (2R) · TP5 ").append(tp5).append(" (5R)");
@@ -200,6 +203,8 @@ final class SignalAlerts {
         String evidence = item.optString("evidence", "");
         b.append("\n").append(evidence.isEmpty() ? "ยังไม่มีข้อมูลยืนยัน" : cut(evidence, 220));
         if (!win.isEmpty()) b.append("\nโอกาสกำไร ").append(win).append("% = สัดส่วนไม้แบบนี้ที่ปิดกำไรในช่วงทดสอบ (สถิติ ไม่ใช่การรับประกัน)");
+        String confidence = item.optString("confidence", "");
+        if (!confidence.isEmpty()) b.append("\nความมั่นใจของสูตร: ").append(cut(confidence, 140));
         b.append("\nสัญญาณทดลอง ไม่ใช่คำสั่งซื้อขาย · Paper เท่านั้น · ตรวจราคาล่าสุดก่อนตัดสินใจ");
         return new Note(key, candle, symbol, side, tf, title, b.toString(), "ENTRY");
     }

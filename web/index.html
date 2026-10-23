@@ -136,6 +136,18 @@ body.simple #guideBar{display:none!important}body.simple main{padding-bottom:24p
 .sm-sched{margin-top:6px;padding:8px 12px;border-radius:10px;background:var(--panel);font-size:13px}.sm-sched b{color:var(--yel)}
 .live-chk{margin-top:10px;padding:10px 12px;border-radius:12px;font-size:14px;background:var(--panel);border:2px solid var(--line)}.live-chk>div{font-weight:700;margin:4px 0}.live-chk small{display:block;margin-top:4px}
 .live-chk.ok{border-color:#0ecb81}.live-chk.watch{border-color:#f0b90b;background:rgba(240,185,11,.12)}.live-chk.broken{border-color:#f6465d;background:rgba(246,70,93,.15)}
+.rt summary{cursor:pointer}.rt-sec{font-size:12.5px;font-weight:700;color:var(--yel);margin:12px 0 4px}.rt-plan{padding-left:20px;margin:4px 0;font-size:13.5px;line-height:1.5}.rt-plan li{margin:3px 0}
+.rt-list{margin-top:10px}.rt-hd{font-weight:700;font-size:14px}.rt-hd small{color:var(--muted)}.rt-item{display:flex;gap:8px;align-items:flex-start;font-size:13.5px;margin:6px 0;color:var(--ink)}.rt-item input{margin-top:3px;width:18px;height:18px;flex:none}.rt-item.done{color:var(--muted);text-decoration:line-through}
+.conf-box{margin-top:8px;padding:10px 12px;border-radius:12px;background:var(--panel);border:2px solid var(--line)}.conf-box.good{border-color:#0ecb81}.conf-box.weak{border-color:#f0b90b}.conf-box.bad{border-color:#f6465d}
+.conf-hd{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}.conf-hd span{font-size:13px;color:var(--muted)}.conf-hd b{font-size:20px}.conf-box.good .conf-hd b{color:#0ecb81}.conf-box.weak .conf-hd b{color:#f0b90b}.conf-box.bad .conf-hd b{color:#f6465d}
+.conf-year{font-size:14px;margin-top:4px}.conf-year b{font-size:17px;color:var(--yel)}.conf-year small{display:block;color:var(--muted);font-size:11.5px}
+.conf-row{display:flex;gap:8px;font-size:13px;padding:5px 0;border-top:1px solid var(--line)}.conf-row i{font-style:normal;font-weight:800;width:14px}.conf-row.pass i{color:#0ecb81}.conf-row.warn i{color:#f0b90b}.conf-row.fail i{color:#f6465d}.conf-row.info i{color:var(--muted)}
+.conf-line{font-size:13px;margin:2px 0 6px;padding:6px 10px;border-radius:8px;background:var(--deep)}.conf-line b{color:var(--yel)}
+.nw small{font-size:12px;color:var(--muted)}.nw-sec{font-size:12.5px;font-weight:700;color:var(--yel);margin:10px 0 2px}
+.nw-row{padding:7px 0;border-top:1px solid var(--line)}.nw-row a{color:var(--ink);text-decoration:none;font-size:14px;line-height:1.35;display:block}.nw-row small{display:block;margin-top:2px}
+.nw-row.risk a{color:#ffd2d8}.yel{color:var(--yel)}
+.nw-ev{padding:5px 0;font-size:13px;border-top:1px solid var(--line)}.nw-ev small{display:block}.nw-ev.high b{color:#f6465d}
+.nw-alert{margin-top:8px;padding:9px 12px;border-radius:10px;background:rgba(246,70,93,.15);border:2px solid #f6465d;font-size:13.5px;font-weight:700}.nw-alert small{display:block;font-weight:400;margin-top:3px;color:var(--ink)}
 .sm-status{font-size:12px;color:var(--muted);margin:8px 2px 0;line-height:1.5}
 .sm-row{padding:7px 0 2px;border-top:1px solid var(--line);margin-top:6px;cursor:pointer}
 .sm-note{font-size:12px;color:var(--muted);margin:8px 0 0}
@@ -210,34 +222,9 @@ a{color:var(--accent)}
   <details style="margin-top:12px"><summary>วันประกาศ FOMC (วันงดเข้าไม้)</summary>
     <textarea id="sgFomc" rows="4" style="width:100%;background:var(--deep);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:8px;font:12px ui-monospace,monospace"></textarea>
     <button class="mini" id="sgFomcOk" type="button">ตรวจแล้ว ✓</button>
-    <p class="muted" style="font-size:12px;margin:4px 0 0">ไม่มีฟีดข่าว CPI/NFP แบบมีเวลา จึงไม่ได้กรองข่าวเหล่านี้</p>
+    <p class="muted" style="font-size:12px;margin:4px 0 0">ข่าว CPI/NFP/FOMC พร้อมเวลา แสดงในหน้าหลัก (ปฏิทินเศรษฐกิจ ฟรี) แต่ไม่ได้ใช้กรองสัญญาณ เพราะสูตรไม่ได้ทดสอบกับข่าว</p>
     <p class="muted" style="font-size:12px;margin:4px 0 0">ปี 2026 ยังไม่ได้ตรวจ เทียบกับ federalreserve.gov/monetarypolicy/fomccalendars.htm</p>
   </details>
-</section>
-<section>
-  <h2>AI (Google Gemini) <small class="muted">ไม่บังคับ</small></h2>
-  <div id="aiKeyList"></div>
-  <div class="row" style="margin-top:8px">
-    <a class="mini" id="aiGetKey" href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener"
-     style="display:block;text-align:center;text-decoration:none;margin:0;padding:10px">① เอาคีย์ ↗</a>
-    <button class="mini" id="aiPaste" type="button" style="width:100%;margin:0">② วางคีย์ (เพิ่มได้หลายอัน)</button>
-  </div>
-  <textarea id="aiKeysBox" rows="3" autocomplete="off" spellcheck="false" placeholder="หรือวางหลายคีย์ที่นี่ (บรรทัดละคีย์ / คั่นด้วยช่องว่างก็ได้)"
-    style="width:100%;margin-top:8px;background:var(--deep);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:8px;font:12px ui-monospace,monospace"></textarea>
-  <button class="mini ghost" id="aiKeysAdd" type="button" style="width:100%;margin-top:6px">เพิ่มทุกคีย์จากช่องนี้</button>
-  <details style="margin-top:8px"><summary>วิธีเอาคีย์ · ตั้งค่าเพิ่ม</summary>
-    <ol class="how" style="padding-left:30px">
-      <li>กด ① แล้วล็อกอิน Google</li>
-      <li>กด <b>Create API key</b> แล้วกด <b>คัดลอก</b> (ขึ้นต้นด้วย AIza)</li>
-      <li>กลับมากด ② วางคีย์ · ใส่หลายคีย์ได้ ถ้าคีย์แรกโควตาหมด แอปสลับไปคีย์ถัดไปเอง</li>
-    </ol>
-    <input id="aiKey" type="hidden">
-    <label for="aiModel">Model</label><input id="aiModel" value="" placeholder="อัตโนมัติ (เว้นว่างได้)">
-    <label class="checks" style="margin-top:10px"><input type="checkbox" id="aiAuto" checked> วิเคราะห์ข่าวอัตโนมัติเมื่อมีสัญญาณ</label>
-    <p class="muted" style="font-size:12px;margin:6px 0 0">คีย์เก็บในมือถือเครื่องนี้เท่านั้น ห้ามแชร์คีย์ให้ใคร</p>
-  </details>
-  <button class="mini ghost" id="aiTest" style="width:100%;margin-top:8px">ทดสอบคีย์ทั้งหมด</button>
-  <div id="aiStatus" class="status-line"></div>
 </section>
 </div>
 
@@ -305,8 +292,6 @@ a{color:var(--accent)}
 <section>
   <h2>วิเคราะห์ <small id="cvTime" class="muted"></small></h2>
   <div id="cvAnalysis"><p class="muted">เลือกเหรียญเพื่อดูการวิเคราะห์</p></div>
-  <button class="mini" id="cvAi">ให้ AI วิเคราะห์กราฟนี้ + ข่าว</button>
-  <div id="cvAiOut" style="margin-top:8px"></div>
   <p class="muted" style="font-size:12px;margin:10px 0 0">Fibo/เทรนด์ไลน์ตีอัตโนมัติ ใช้ช่วยดูเท่านั้น</p>
 </section>
 </div>

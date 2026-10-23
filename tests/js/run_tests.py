@@ -159,9 +159,9 @@ def main():
     check("ขาดทุน" in by["BTCUSDT"]["evidence"], "negative average R is labelled as a loss")
     check(by["ETHUSDT"]["evidence"].startswith("ยังไม่มีข้อมูลยืนยัน") and not by["ETHUSDT"]["evidence_ok"], "n<30 -> 'no confirming data', no percentage")
 
-    r = run(page, "nogemini_bg", {"storage": dict(store12, aiKeys=json.dumps(["AIzaSyTESTKEY_aaaaaaaaaaaaaaaaaaaaaaaa"]), aiAuto="1"),
-                                  "capital": 1_000_000, "force": {"BTCUSDT": "LONG"}})
-    check(r["posts"] == 0 and len(r["packet"]["signals"]) >= 1, "background scan with a signal and Gemini key: no Gemini request")
+    r = run(page, "no_ai", {"storage": dict(store12, aiKeys=json.dumps(["AIzaSyTESTKEY_aaaaaaaaaaaaaaaaaaaaaaaa"]), aiAuto="1"),
+                            "capital": 1_000_000, "force": {"BTCUSDT": "LONG"}})
+    check(r["aiLeft"] is None and len(r["packet"]["signals"]) >= 1, "v6 has no AI: Gemini keys left by older versions are erased, the scan still alerts")
 
     r = run(page, "foreground_tf", {"storage": store12, "capital": 1_000_000, "force": {}, "clickTf": "5m", "waitMs": 15000}, bg=False)
     check(5 in r["scanMinutes"], "main-screen 5m button also moves the Android alarm to 5 minutes")
@@ -223,8 +223,8 @@ def main():
     r = run(page, "h4_stop_half", {"storage": dict(h4, **{"portfolio.v1": json.dumps(loss15)}), "capital": 1_000_000, "trendEvidence": evidence_with(NORMAL, "half15", 30.0),
                                    "trendForce": {"ETHUSDT": "LONG"}})
     sg = r["packet"]["signals"]
-    check("ลดความเสี่ยงเหลือครึ่งหนึ่ง" in r["packet"]["note"] and len(sg) == 1 and sg[0]["kind"] == "ENTRY" and sg[0]["risk_pct"] in ("0.12", "0.13"),
-          "Trend: researched half-risk rule at 15% drawdown keeps sending entries at half the risk (" + (sg[0]["risk_pct"] if sg else "none") + "%)")
+    check(r["packet"]["note"] == "" and len(sg) == 1 and sg[0]["risk_pct"] == "0.25",
+          "Trend: whatever rule 2020-2022 picked, the app trades every signal at the set risk (risk-cutting rules lost the 2023-2026 profit)")
 
     r = run(page, "h4_default", {"storage": {"alertCoins": json.dumps(["BTCUSDT"]), "tradeTf": "15m"}, "capital": 1_000_000, "trendForce": {}})
     check(r["packet"]["interval_minutes"] == 240 and 240 in r["scanMinutes"], "update moves an old M15 install to Trend 4H once, alarm to 240 minutes")
@@ -300,9 +300,31 @@ def main():
     check("จุดเข้า LONG" in c and "จุดเข้า SHORT" in c and "แท่ง 4 ชม. ปิดเหนือ" in c and "SL ถ้าเข้า LONG" in c and "NaN" not in c,
           "chart tab, no position: the 4h closes that would start a LONG or a SHORT, with SL and TP")
 
-    fake = ["AIza" + c * 35 for c in "ABCDEFGHIJ"]
-    r = run(page, "keys10", {"storage": h4, "capital": 1_000, "clipboard": "\n".join(fake) + "\n", "clickId": "aiPaste", "waitMs": 8000}, bg=False)
-    check(r["aiKeys"].count("คีย์ ") == 10 and "พบ 10 คีย์" in r["aiStatus"] and fake[0] not in r["aiKeys"], "10 keys pasted at once: all added, shown masked")
+    # Free news, no keys: headlines, Binance announcements and the US calendar on the main screen, the sheet and the alert.
+    r = run(page, "news_main", {"storage": h4, "capital": 1_000_000, "trendForce": {"SOLUSDT": "LONG"}, "clickTf": "4h", "waitMs": 15000,
+                                "justClosed": 14_400_000}, bg=False)
+    n, s = r["news"], r["smMain"]
+    check("⚠️ ข่าวเศรษฐกิจแรงใน 24 ชม.: CPI m/m" in r["newsTop"], "main screen: a high-impact US release in the next 24 h is flagged at the top")
+    check("ปฏิทินเศรษฐกิจสหรัฐ" in n and "CPI m/m" in n and "Unemployment Claims" in n and "GDP q/q" not in n, "calendar: US releases only, with their Thai times")
+    check("Solana network outage" in n and "Binance · Delisting" in n and "SOL" in n and "ไม่มี AI" in n, "headlines from the free sources, coins tagged, no AI")
+    check("ข่าว SOL 24 ชม." in s and "⚠️ ข่าวแรงก่อนแท่งถัดไปปิด: CPI m/m" in s, "trade sheet: the coin's headlines and the release due before the next close")
+    pk = r["packet"]["signals"][0]
+    check("ข่าวแรง USD: CPI m/m" in pk["news"] and "Solana network outage" in pk["news"], "entry alert carries the news warning: " + pk["news"][:80])
+    check(r["conf"] and pk["confidence"].startswith(("สูง", "ปานกลาง", "ต่ำ")) and "การทดสอบ" in pk["confidence"], "confidence of the rule on the screen and in the alert: " + pk["confidence"])
+    # The professional's routine: the written plan, ticks per day, and the backup through Android's share sheet.
+    saved = {"trades": [{"id": 1, "symbol": "SOLUSDT", "entry": 150, "stop": 140, "qty": 1, "fx": 33, "risk": 330, "dir": 1, "fee": 0.0007, "lev": 10,
+                         "entry_time": int(time.time() * 1000) - 86_400_000, "closed": False}], "nextId": 2}
+    r = run(page, "routine", {"storage": dict(h4, **{"portfolio.v1": json.dumps(saved)}), "capital": 1_000_000, "trendForce": {}, "clickTf": "4h",
+                              "waitMs": 15000, "justClosed": 14_400_000, "routine": 6000}, bg=False)
+    rt = r["routine"]
+    check("แผนเทรดและกิจวัตรแบบมืออาชีพ" in rt and "วันนี้ 1/4" in rt and "เทรดทุกสัญญาณ" in rt and "ทุกสัปดาห์" in rt and "ทุกเดือน" in rt,
+          "main screen: the written plan and the daily / weekly / monthly checklists, today's tick kept (1/4)")
+    b = json.loads(r["shared"]) if r["shared"] else {}
+    check(b.get("app") == "POC Signal" and "SOLUSDT" in b.get("data", {}).get("portfolio.v1", "") and "routine.v1" in b.get("data", {}),
+          "backup: the saved trades, the routine and the settings go out as one text through the share sheet")
+    check("กู้คืนไม่ได้: ไม่ใช่ข้อความสำรองของแอปนี้" in r["rtStatus"], "restore refuses a text that is not this app's backup")
+    r = run(page, "news_down", {"storage": h4, "capital": 1_000_000, "trendForce": {"ETHUSDT": "LONG"}, "newsDown": True})
+    check([x["kind"] for x in r["packet"]["signals"]] == ["ENTRY"] and r["packet"]["signals"][0]["news"] == "", "every news source down: the entry alert still goes out")
 
     r = run(page, "paper_trend", {"storage": h4, "capital": 100_000, "clickId": "pp2026", "waitMs": 20000}, bg=False)
     check("Trend 4H · 3 เหรียญ" in r["paperTitle"] and "บาท" in r["paper"] and "อัปเดต" in r["paperStatus"], "Paper runs Trend 4H on the selected coins: " + r["paperStatus"][:60])

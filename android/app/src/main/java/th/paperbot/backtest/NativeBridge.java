@@ -1,7 +1,5 @@
 package th.paperbot.backtest;
 
-import android.content.ClipData;
-import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Handler;
@@ -13,7 +11,6 @@ import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -30,11 +27,14 @@ final class NativeBridge {
         void onAlertsChanged(boolean enabled);
     }
 
+    // Market data, the baht rate, and free news without keys: crypto news RSS, Binance announcements, the Fed and the
+    // SEC, and the week's economic calendar.
     private static final List<String> ALLOWED_HOSTS = Arrays.asList(
-            "data-api.binance.vision", "api.binance.com", "fapi.binance.com", "fapi1.binance.com", "api.bitkub.com", "open.er-api.com");
+            "data-api.binance.vision", "api.binance.com", "fapi.binance.com", "fapi1.binance.com", "api.bitkub.com", "open.er-api.com",
+            "www.coindesk.com", "cointelegraph.com", "decrypt.co", "bitcoinmagazine.com", "www.theblock.co", "cryptoslate.com",
+            "siamblockchain.com", "bitcoinaddict.org", "www.binance.com", "www.federalreserve.gov", "www.sec.gov", "nfs.faireconomy.media");
     // Emulator tests only: the host machine as seen from the Android emulator, used when the APK is debuggable.
     private static final String DEBUG_MOCK_HOST = "10.0.2.2";
-    private static final List<String> POST_HOSTS = Arrays.asList("generativelanguage.googleapis.com");
 
     private final Context context;
     private final WebView web;
@@ -66,8 +66,8 @@ final class NativeBridge {
                 HttpURLConnection connection = (HttpURLConnection) url.openConnection();
                 connection.setConnectTimeout(15000);
                 connection.setReadTimeout(30000);
-                connection.setRequestProperty("Accept", "application/json");
-                connection.setRequestProperty("User-Agent", "POC-Signal-Android/1.1");
+                connection.setRequestProperty("Accept", "application/json, application/rss+xml, application/xml, text/xml, */*");
+                connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android) POCSignal/6.0");
                 int status = connection.getResponseCode();
                 InputStream stream = status >= 400 ? connection.getErrorStream() : connection.getInputStream();
                 body = stream == null ? "" : read(stream);
@@ -85,60 +85,20 @@ final class NativeBridge {
         });
     }
 
-    /** JSON POST, only to Google's Gemini API, with the user's own key in the URL. */
+    /** Shares text through Android's share sheet (LINE, Drive, e-mail): the journal backup. */
     @JavascriptInterface
-    public void post(final String id, final String address, final String json) {
-        pool.execute(() -> {
-            boolean ok = false;
-            String body;
+    public void share(final String subject, final String text) {
+        main.post(() -> {
+            Intent send = new Intent(Intent.ACTION_SEND).setType("text/plain")
+                    .putExtra(Intent.EXTRA_SUBJECT, subject).putExtra(Intent.EXTRA_TEXT, text);
             try {
-                URL url = new URL(address);
-                if (!"https".equals(url.getProtocol()) || !POST_HOSTS.contains(url.getHost())) {
-                    throw new IllegalArgumentException("host not allowed: " + url.getHost());
-                }
-                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-                connection.setConnectTimeout(15000);
-                connection.setReadTimeout(90000);
-                connection.setRequestMethod("POST");
-                connection.setDoOutput(true);
-                connection.setRequestProperty("Content-Type", "application/json; charset=utf-8");
-                try (OutputStream out = connection.getOutputStream()) {
-                    out.write(json.getBytes(StandardCharsets.UTF_8));
-                }
-                int status = connection.getResponseCode();
-                InputStream stream = status >= 400 ? connection.getErrorStream() : connection.getInputStream();
-                body = stream == null ? "" : read(stream);
-                connection.disconnect();
-                ok = status >= 200 && status < 300;
-                if (!ok) {
-                    body = "HTTP " + status + " " + body;
-                }
-            } catch (Exception error) {
-                body = error.getClass().getSimpleName() + ": " + error.getMessage();
+                context.startActivity(Intent.createChooser(send, subject).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            } catch (Exception ignored) {
+                // No app can receive text: nothing to do.
             }
-            final String script = "window.__nativeDone(" + JSONObject.quote(id) + "," + ok + ","
-                    + JSONObject.quote(body) + ")";
-            main.post(() -> web.evaluateJavascript(script, null));
         });
     }
 
-    /** Text on the clipboard, so the user can paste the API key with one tap. */
-    @JavascriptInterface
-    public String clipboard() {
-        try {
-            ClipboardManager manager = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
-            ClipData clip = manager == null ? null : manager.getPrimaryClip();
-            if (clip == null || clip.getItemCount() == 0) {
-                return "";
-            }
-            CharSequence text = clip.getItemAt(0).coerceToText(context);
-            return text == null ? "" : text.toString();
-        } catch (Exception error) {
-            return "";
-        }
-    }
-
-    /** Opens the screen where the user lets the app run in the background (no battery optimisation). */
     @JavascriptInterface
     public void openBatterySettings() {
         main.post(() -> {
