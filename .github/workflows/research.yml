@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       job:
-        description: "mtf10000, skills, evidence, tune, pro, robust or newsprobe"
+        description: "mtf10000, skills, evidence, tune, pro, robust, sentiment or newsprobe"
         default: "skills"
 
 jobs:
@@ -120,6 +120,34 @@ jobs:
         run: |
           cp research/pro/robust.json /tmp/robust.json
           bash .github/publish_result.sh robust /tmp/robust.json
+
+  sentiment:
+    # Trend 4H against the Crypto Fear & Greed Index history (research/pro/sentiment.js).
+    if: ${{ inputs.job == 'sentiment' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: python -m pip install requests
+      - working-directory: research/evidence
+        run: |
+          python fetch.py BTCUSDT,ETHUSDT,BNBUSDT,SOLUSDT,XRPUSDT,DOGEUSDT,ADAUSDT,AVAXUSDT,LINKUSDT,DOTUSDT,TRXUSDT,LTCUSDT 4h 2020-01
+          curl -sfL --retry 3 "https://api.alternative.me/fng/?limit=0&format=json" -o fng.json
+          python -c "import json; d=json.load(open('fng.json'))['data']; print(len(d), 'days of Fear & Greed')"
+      - working-directory: research/pro
+        run: node sentiment.js BTCUSDT,ETHUSDT,BNBUSDT,SOLUSDT,XRPUSDT,DOGEUSDT,ADAUSDT,AVAXUSDT,LINKUSDT,DOTUSDT,TRXUSDT,LTCUSDT
+      - name: Publish sentiment.json (branch research-results)
+        run: |
+          cp research/pro/sentiment.json /tmp/sentiment.json
+          bash .github/publish_result.sh sentiment /tmp/sentiment.json
 
   newsprobe:
     # Which free news sources answer a plain app request (no browser, no key), and what they return.
