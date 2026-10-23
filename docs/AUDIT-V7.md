@@ -80,3 +80,58 @@ SL distance shown from the entry and from the live price, both labelled. The sys
 Pyramiding (research/pro/pyramid.js, run on 2026-10-23, `research/pro/pyramid_20261023.json`) passed its pre-set checks
 (add a unit at +2R: MAR 2023-26 1.07 vs 0.71, unseen 1.04 vs 0.85, spot 4.20 vs 4.14), but it is **not** added: the base
 rule's edge after costs in 2025-2026 is not distinguishable from zero and its last 30 days are on watch.
+
+# v7.1 audit, second round (2026-10-23)
+
+## 1. Backtest vs the last 30 days (research/pro/recent.js, `research/pro/recent_20261023.json`)
+
+The last 30 days rebuilt from Binance's archive bars with the app's own code (strategy version `71cb4bbbe96e` =
+sha256 of web/trend.js; 12 coins; 4h bars 2020-01-01..2026-10-22 23:59; closed bars only; same costs).
+
+| | trades | win | net R | avg R | PF | gross R | fee | slippage | funding |
+|---|---|---|---|---|---|---|---|---|---|
+| exits 2026-09-23..10-23 | 61 | 29.5% | −16.0 | −0.262 | 0.49 | −12.2 | 1.4 | 1.1 | 1.3 |
+| LONG | 33 | 27.3% | −3.5 | −0.107 | 0.77 | | | | |
+| SHORT | 28 | 32.1% | −12.5 | −0.445 | 0.20 | | | | |
+| 2023-01..2026-09 (evidence) | 1,999 | 34.1% | +208.2 | +0.104 | 1.25 | +327.7 | 40.1 | 30.1 | 49.3 |
+| — LONG | 1,042 | 34.6% | +210.8 | +0.202 | 1.46 | | | | |
+| — SHORT | 957 | 33.4% | −2.6 | −0.003 | 0.99 | | | | |
+
+- **Same rule, same trades.** The app's "−26.9R" was the last **50 closed trades**, labelled "30 วัน". The archive rebuild's
+  61 trades minus its oldest 11 (the 18–23 Sept winners, +10.9R) is −26.9R: the app's trades match the archive. The bug
+  was the label; fixed ("N ไม้ล่าสุดที่ปิด (เข้า dd/mm – ปิด dd/mm)").
+- **Costs are not the cause**: gross −12.2R before 3.8R of costs.
+- **Where.** LINK (8 trades −6.1R), DOT (−3.6R), BTC (−3.4R), TRX (−2.7R); 6 coins were positive or flat.
+- **Together.** Losses came in clusters of entries on the same bar: 8 Oct 16:00 (7 shorts, −6.3R), 13 Oct (6, −2.6R),
+  15 Oct (5, −4.0R), 21 Oct (4 longs, −3.5R). Average correlation of the coins' 4h returns 0.69 (median of history 0.68).
+- **Market.** BTC −5.5% over 30 days, efficiency ratio 0.069 (history median 0.075), bar range 2.02% (median 2.28%):
+  slightly choppier and quieter than usual, not outside history.
+- **Is it unusual?** Over calendar 30-day windows of 2023-2026 (1,340 windows), −16.0R ranks at the 9.4th percentile
+  (p5 −23.6R, worst −37.5R). The last-50-trades measure (−26.9R) is below the 50-trade p5 (−22.0R) but above the worst
+  (−31.8R): "below normal", not "never seen". The app shows "ต่ำกว่าปกติ" and does **not** pause.
+- **The year.** 2026 to date: 466 trades, −0.016R per trade. 2025: +0.057R. The 2023-2026 average with a confidence
+  interval that keeps each week's trades together (weekly-block bootstrap, 195 weeks): **+0.001 to +0.247R** (the
+  per-trade interval that ignores correlation was +0.041 to +0.167R). The edge is barely distinguishable from zero.
+- **Found, not adopted:** in 2023-2026 SHORT trades had no edge (957 trades, −0.003R, PF 0.99); all the profit came from
+  LONG. Dropping shorts would be a rule chosen after looking at the result, so it is **not** changed; it needs a check
+  fixed in advance on data not used here (25 unseen coins, spot 2017-2019) before it can be considered.
+
+## 2. Valid vs Holdout for every rule
+
+The Backtest page showed the holdout only for the rule chosen on Valid, with a "✓" on the best Valid result. Now every
+technique and every variant shows its own Dev, Valid and Holdout (trades, win, R, PF) and **VALIDATED** only if Dev and
+Valid are positive (Valid ≥ 30 trades) and Holdout has ≥ 30 trades, positive R and PF > 1; otherwise **NOT VALIDATED**.
+The holdout is reported, never used to choose or rank; the number of techniques tried is stated (more tries, more
+chance of a pass by luck). The "✓" is gone. Squeeze v2 is labelled NOT VALIDATED wherever it is offered: its
+out-of-sample 2026-01..09 lost on every timeframe (1h 594 trades −0.09R, 15m 2,195 −0.11R, 5m 5,712 −0.37R per trade).
+
+## 3. Signal status vs execution feasibility
+
+Two labels on each new-signal card: the signal (VALID SIGNAL, VALID SIGNAL · เข้าช้า) and whether it can be opened
+(TRADEABLE, INSUFFICIENT CAPITAL, BELOW EXCHANGE MINIMUM, RISK EXCEEDED, NO TRADE · ระบบเฝ้าระวัง, STALE DATA when the
+live price has not moved for over a minute). A valid signal the capital cannot open now stays on screen with its levels
+and "ใบสั่ง: NO TRADE" (no size, no order sheet); before, it was reduced to one line. Rejections for the rule's own
+filters (leverage, liquidation before the SL) show as INVALID SIGNAL. In the 37 THB test case (mock prices) the ETH card shows
+"INSUFFICIENT CAPITAL · BELOW EXCHANGE MINIMUM" (Binance's smallest order: margin 2.12 USDT, risk 43.6% of the balance
+vs 0.25% set). The system's simulated positions: "ระบบจำลองกำลังถือสถานะ … Paper ของระบบ ไม่ใช่ไม้ใน Binance ของคุณ · R
+นับจากจุดเข้าของระบบ", with "อย่าไล่ราคา" once the price is more than 0.5R past the entry.

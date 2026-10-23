@@ -393,8 +393,10 @@ jobs:
       - name: Publish recent.json and tradelist.csv (branch research-results)
         run: |
           cp research/pro/recent.json /tmp/recent.json; cp research/pro/tradelist.csv /tmp/tradelist.csv
-          bash .github/publish_result.sh recent /tmp/recent.json
-          bash .github/publish_result.sh tradelist /tmp/tradelist.csv
+          # publish_result.sh checks out the results branch, so run a copy for the second file
+          cp .github/publish_result.sh /tmp/publish_result.sh
+          bash /tmp/publish_result.sh recent /tmp/recent.json
+          bash /tmp/publish_result.sh tradelist /tmp/tradelist.csv
 
   newsprobe:
     # Which free news sources answer a plain app request (no browser, no key), and what they return.

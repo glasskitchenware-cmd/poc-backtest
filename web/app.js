@@ -1128,6 +1128,13 @@
     var last = closed.slice(0, N).reduce(function (a, t) { return a + t.r; }, 0), b = w[N];
     return { closed: closed, N: N, last: last, band: b, lvl: last < b.min ? "bad" : last < b.p5 ? "warn" : "ok" };
   }
+  // The dates the last N closed trades span (entry of the oldest to exit of the newest), for labels: N trades, not 30 days.
+  function recentSpan() {
+    var c = RECENT && RECENT.closed ? RECENT.closed.slice(0, RECENT.N) : [];
+    if (!c.length) return "";
+    var first = Math.min.apply(null, c.map(function (t) { return t.entry_time; }));
+    return "เข้า " + thai(first).slice(0, 5) + " – ปิด " + thai(c[0].exit_time).slice(0, 5);
+  }
   function trendConfidence() {
     var T = window.EVIDENCE_TREND;
     if (!T || !T.all) return null;
@@ -1147,7 +1154,7 @@
     if (recent.length) add(recent.every(function (y) { return yrs[y].t >= 2; }) ? "pass" : "warn",
       "2 ปีล่าสุด: " + recent.map(function (y) { return y + " " + r3(yrs[y].avgR); }).join(" · ") + " → ความได้เปรียบอ่อนลง (แทบเท่าทุน)");
     // Live results come first: a recent run worse than 95% of the test's runs of the same length puts the system on watch.
-    if (RECENT && RECENT.N) add(RECENT.lvl === "ok" ? "pass" : "fail", "ผลจริงของระบบ " + RECENT.N + " ไม้ล่าสุด (30 วัน): " + fmt(RECENT.last, 1, true) + "R · ผลทดสอบช่วงเท่ากัน แย่ 5% ล่างสุด " +
+    if (RECENT && RECENT.N) add(RECENT.lvl === "ok" ? "pass" : "fail", "ผลจริงของระบบ " + RECENT.N + " ไม้ล่าสุดที่ปิด (" + recentSpan() + "): " + fmt(RECENT.last, 1, true) + "R · ผลทดสอบช่วงเท่ากัน แย่ 5% ล่างสุด " +
       fmt(RECENT.band.p5, 1, true) + "R · แย่สุดที่เคยเจอ " + fmt(RECENT.band.min, 1, true) + "R");
     var fails = rows.filter(function (r) { return r.ok === "fail"; }).length, warns = rows.filter(function (r) { return r.ok === "warn"; }).length;
     var watch = RECENT && RECENT.N && RECENT.lvl !== "ok";
@@ -1363,10 +1370,15 @@
       var f = g.minSize ? 1 : money() / (g.balanceUsdt * fx), k = 2 * (FUT.fee + FUT.slippage), cost = k * p, dist = Math.abs(p - g.stop), st = g.step || 0;
       var q = g.minSize ? g.qty : Math.min(g.qty * f * (Math.abs(g.entry - g.stop) + k * g.entry) / (dist + cost), LOCK.marginShare * money() / fx * g.lev / p);
       if (st) q = Math.max(1, Math.round(q / st)) * st;   // the nearest size Binance takes, as the sheet shows it
-      var minQ = Math.max(g.minQty || 0, (g.minNotional || 0) / p);
-      if (q < minQ) q = st ? Math.ceil(minQ / st - 1e-9) * st : minQ;
-      var lossB = q * (dist + cost) * fx, target = money() * (g.riskPctTarget || trendRiskPct()) / 100;
-      return { qty: q, marginB: q * p / g.lev * fx, lossB: lossB, blocked: lossB > target * 1.1 || q * p / g.lev * fx > money() };
+      var minQ = Math.max(g.minQty || 0, (g.minNotional || 0) / p), forced = q < minQ;
+      if (forced) q = st ? Math.ceil(minQ / st - 1e-9) * st : minQ;
+      var lossB = q * (dist + cost) * fx, target = money() * (g.riskPctTarget || trendRiskPct()) / 100, marginB = q * p / g.lev * fx;
+      // Execution feasibility, separate from whether the signal is valid.
+      var why = [];
+      if (marginB > money()) why.push("INSUFFICIENT CAPITAL");
+      if (lossB > target * 1.1) why.push(forced ? "BELOW EXCHANGE MINIMUM" : "RISK EXCEEDED");
+      var exec = why.length ? why.join(" · ") : "TRADEABLE";
+      return { qty: q, notional: q * p, marginB: marginB, lossB: lossB, blocked: exec !== "TRADEABLE", exec: exec };
     }
     // Of the system's trades that stood at this R at a 4-hour close (TP1 sold or not), how many ended in profit, measured
     // from the system's entry (research/pro/liveodds.js; held within 10 points on 2023-2026 and unseen coins).
@@ -1378,7 +1390,7 @@
     }
     // The status line and the live price line every live card carries.
     function liveHead(sym, p0) {
-      return '<div class="live-row"><span class="chip" data-st>…</span><span class="live-px">ตอนนี้ <b data-now="' + sym + '">' + price(p0) + '</b> <small data-off></small></span></div>' +
+      return '<div class="live-row"><span class="chip" data-st>…</span><span class="chip hidden" data-ex></span><span class="live-px">ตอนนี้ <b data-now="' + sym + '">' + price(p0) + '</b> <small data-off></small></span></div>' +
         '<p class="fine live-why" data-why></p><p class="odds" data-odds></p><details class="fit"><summary data-fit>…</summary><ul class="fit-list" data-fitlist></ul></details>';
     }
     // One position the system holds: live move and R, its levels and exit, and whether to join it now. Chart on request.
@@ -1457,11 +1469,12 @@
     // A new signal as an order to copy: side, leverage, entry, SL, TP1, size, margin, risk, deadline. Size, margin and risk
     // follow the live price; once the 15 minutes pass the card stays while joining is still within the test. The full
     // sheet folds.
-    function orderCard(r, g, z, i) {
+    function orderCard(r, g, z, i, block) {
       var long = g.dir > 0, coin = r.symbol.replace("USDT", ""), cap = money(), v = verdictOf(r.symbol, TREND.tf, z.lossB / cap * 100), tp1 = g.ladder && g.ladder[0];
       var late = lateFirstBar(), aid = "smAct" + i;
       LC[aid] = { kind: "entry", sym: r.symbol, dir: g.dir, e: g.entry, k: Math.abs(g.entry - g.stop), sl: g.stop, tp: tp1 ? tp1.price : null, tpDone: false, until: g.expires,
-        joinOk: !!late, late: late, order: g, since: g.candle, p0: r.close, ord: i };
+        joinOk: !!late, late: late, order: g, since: g.candle, p0: r.close, ord: i, block: block || null };
+      if (block) return blockedCard(r, g, aid, tp1, block);
       return '<div class="card act ' + (long ? "l" : "s") + '" id="' + aid + '"><div class="card-hd">' + sidePill(g.dir, "เข้า", true) + ' <b class="sym">' + coin + '</b> <span class="lev">x' + g.lev + "</span>" +
           (v.win !== null ? '<span class="chip">ชนะ ' + fmt(v.win, 0) + "% (" + v.n + " ไม้ 2023–26)</span>" : "") + "</div>" + liveHead(r.symbol, r.close) +
         '<div class="facts three">' + fact("ราคาเข้า ≈", price(g.entry)) + fact("Stop Loss", '<span class="down">' + price(g.stop) + '</span><small data-dsl></small>') +
@@ -1472,6 +1485,15 @@
         '<p class="fine">Isolated x' + g.lev + " · เข้าภายใน " + thai(g.expires).slice(9, 14) + " น. · ตั้ง SL ใน Binance ทันที · ที่เหลือปิดเมื่อแอปเด้ง \"ปิดไม้\"" +
           (g.minSize ? " · ขนาดขั้นต่ำของ Binance" : " · ขนาดคิดจากราคาตอนนี้ ให้เสี่ยงเท่าเดิมถึง SL") + "</p>" + riskBox(g, z, v) + marginNote(z.marginB) + moodLine(r.symbol, g.dir) +
         '<details class="more-chart" data-draw="sig:' + i + '"><summary>รายละเอียดทั้งหมด + กราฟ</summary>' + tradeSheet(r, g, z, TREND.tf, i) + "</details></div>";
+    }
+    // A valid signal that cannot be opened (capital short of Binance's smallest order at the set risk, or the system on
+    // watch): its levels stay visible, without an order to copy.
+    function blockedCard(r, g, aid, tp1, block) {
+      var bid = aid;
+      return '<div class="card act blocked ' + (g.dir > 0 ? "l" : "s") + '" id="' + bid + '"><div class="card-hd">' + sidePill(g.dir, "สัญญาณ", false) + ' <b class="sym">' + r.symbol.replace("USDT", "") + "</b></div>" +
+        liveHead(r.symbol, r.close) + '<div class="facts three">' + fact("ราคาเข้าของระบบ", price(g.entry)) + fact("Stop Loss", '<span class="down">' + price(g.stop) + '</span><small data-dsl></small>') +
+          (tp1 ? fact("TP1", '<span class="up">' + price(tp1.price) + "</span>") : fact("Take Profit", "ไม่ตั้ง")) + "</div>" +
+        '<div class="callout bad sm">' + ic("alert") + "<span><b>ใบสั่ง: NO TRADE</b> · " + esc(block) + " · สัญญาณถูกต้องตามสูตร แต่คุณเปิดไม้นี้ตามความเสี่ยงที่ตั้งไม่ได้ · ไม่เพิ่มความเสี่ยงให้อัตโนมัติ</span></div></div>";
     }
     // A trade's news read: the coin's good and bad headlines, whether they point the trade's way, and how the rule's past
     // trades did in the same market mood. The market mood and what the mood study found are in the system's note.
@@ -1518,7 +1540,7 @@
           " ไม้ติดกัน: ปกติ " + fmt(b.p50, 1, true) + "R · แย่ 5% ล่างสุด " + fmt(b.p5, 1, true) + "R · แย่สุดที่เคยเจอ " + fmt(b.min, 1, true) + "R" +
           (lvl === "ok" ? "" : " · ช่วงแบบนี้ควรเสี่ยงต่ำสุด (0.25%) หรือรอให้กลับเข้ากรอบปกติก่อนใช้เงินเพิ่ม") + "</small></div></div>";
       }
-      return '<div class="sec-hd">ผลงานระบบ 30 วัน</div><div class="card perf">' +
+      return '<div class="sec-hd">ผลงานระบบ 30 วัน <small>ไม้ที่เข้าใน 30 วันล่าสุด · ระบบจำลอง</small></div><div class="card perf">' +
         (closed.length ? '<div class="card-hd"><b>' + closed.length + ' ไม้ที่ปิด</b><small>ชนะ ' + wins + " · แพ้ " + (closed.length - wins) + '</small><b class="big ' + tone(sumR) + '">' + fmt(sumR, 1, true) + "R</b></div>" +
             '<p class="fine">≈ <b class="' + tone(sumR) + '">' + fmt(sumR * risk, 1, true) + "% ของทุน</b> ที่เสี่ยง " + risk + "%/ไม้</p>" + verdict +
             closed.slice(0, 8).map(function (t) {
@@ -1549,7 +1571,10 @@
       var now = Date.now(), held = items.filter(function (it) { return it.kind === "hold"; }), resOf = function (sym) { return results.filter(function (r) { return r.symbol === sym; })[0]; };
       // Entries past their 15 minutes: the system has been in since this bar's open; the card stays (as joining late).
       var entries = list.concat(results.filter(function (r) { return r.signal && !r.signal.below_minimum && now >= r.signal.expires; }));
+      // Valid signals that cannot be opened stay on screen, marked so (never as an order).
+      var blockedSig = results.filter(function (r) { return r.signal && now < r.signal.expires + 4 * 3600000 && entries.indexOf(r) < 0 && (r.signal.noCapital || (systemPaused() && !r.signal.below_minimum)); });
       var cards = entries.map(function (x, i) { return orderCard(x, x.signal, sized(x.signal), i); }).join("") +
+        blockedSig.map(function (x, i) { var g = x.signal; return orderCard(x, g, liveSize(g, g.entry), 50 + i, g.noCapital ? g.reject : "ระบบเฝ้าระวัง: " + RECENT.N + " ไม้ล่าสุดของระบบแย่กว่าที่ผลทดสอบเคยเจอ หยุดเข้าไม้ใหม่"); }).join("") +
         held.map(function (it, i) { return holdCard(it, resOf(it.symbol), i); }).join("");
       var exits = results.filter(function (r) { return r.exit; }).map(function (r) {
         var x = r.exit;
@@ -1572,10 +1597,10 @@
       h += '<div id="smNote">' + traderNote(list, held) + "</div>";
       if (systemPaused()) h += '<div class="callout bad">' + ic("alert") + "<div><b>NO TRADE · ระบบหยุดเข้าไม้ใหม่</b><small>" + RECENT.N + " ไม้ล่าสุดของระบบรวม " +
         fmt(RECENT.last, 1, true) + "R แย่กว่าที่ผลทดสอบเคยเจอในช่วงยาวเท่ากัน (" + fmt(RECENT.band.min, 1, true) + "R) · ผลทดสอบไม่ครอบคลุมสภาพนี้แล้ว · ไม้ที่ถืออยู่ยังแจ้งปิดตามปกติ · กลับมาแจ้งเข้าเมื่อกลับเข้ากรอบ</small></div></div>";
-      h += '<div class="sec-hd">ตามได้ตอนนี้ <span class="cnt" id="cntFollow"></span><small id="feedSt">กำลังต่อราคาสด…</small></div><div id="smNewsTop">' + News.topHtml() + "</div>" +
+      h += '<div class="sec-hd">สัญญาณใหม่ · ยังอยู่ในจุดเข้า <span class="cnt" id="cntFollow"></span><small id="feedSt">กำลังต่อราคาสด…</small></div><div id="smNewsTop">' + News.topHtml() + "</div>" +
         '<div id="grpFollow">' + cards + "</div>" + idle +
-        results.filter(function (r) { return r.signal && r.signal.below_minimum; }).map(function (r) {
-          return '<p class="fine">' + coin(r) + " " + (r.signal.dir > 0 ? "LONG" : "SHORT") + " มีสัญญาณแต่ไม่ผ่าน: " + esc(r.signal.reject) + "</p>";
+        results.filter(function (r) { return r.signal && r.signal.below_minimum && !r.signal.noCapital; }).map(function (r) {
+          return '<p class="fine"><b class="down">INVALID SIGNAL</b> ' + coin(r) + " " + (r.signal.dir > 0 ? "LONG" : "SHORT") + ": " + esc(r.signal.reject) + "</p>";
         }).join("");
       h += '<div id="secEnded"><div class="sec-hd">จบสัญญาณแล้ว <span class="cnt" id="cntEnded"></span><small>ถ้ายังถืออยู่ ปิดตามนี้</small></div>' + exits + '<div id="grpEnded"></div>' +
         (endedRows ? '<div class="card ended-list"><div class="card-hd"><b>จบใน 24 ชม.</b></div>' + endedRows + "</div>" : "") + "</div>";
@@ -1588,7 +1613,7 @@
           return '<div class="watch-row" data-watch="' + r.symbol + '" data-lvl="' + lvl + '" data-dir="' + dir + '">' + sidePill(dir) + " <b>" + coin(r) + "</b>" +
             '<small>ถ้าปิด' + (dir > 0 ? "เหนือ " : "ใต้ ") + price(lvl) + '</small><span class="watch-now" data-now="' + r.symbol + '">' + price(r.close) + '</span><b class="watch-d" data-wd>—</b></div>';
         }).join("") + '<p class="fine">ระหว่างแท่งราคาอาจทะลุแล้วกลับ สูตรนับเฉพาะราคาปิด · แอปเด้งแจ้งเตือนเองทันทีที่แท่งปิดเข้าเงื่อนไข</p></div>';
-      h += '<div id="secHold"><div class="sec-hd">ไม้จำลองของระบบ · ตามไม่ทันแล้ว <span class="cnt" id="cntHold"></span><small>ระบบถือในการจำลอง ไม่ใช่ไม้ใน Binance ของคุณ</small></div><div id="grpHold"></div></div>';
+      h += '<div id="secHold"><div class="sec-hd">ระบบจำลองกำลังถือสถานะ <span class="cnt" id="cntHold"></span><small>Paper ของระบบ ไม่ใช่ไม้ใน Binance ของคุณ · R นับจากจุดเข้าของระบบ</small></div><div id="grpHold"></div></div>';
       var endedStatic = (exits ? results.filter(function (r) { return r.exit; }).length : 0) + ended.length;
       h += periodsHtml() + perfHtml();
       var T = window.EVIDENCE_TREND, port = T && T.portfolio && T.portfolio[String(trendRiskPct())];
@@ -1982,8 +2007,10 @@
         var p = px[c.sym] > 0 ? px[c.sym] : c.p0, st = cardState(c, p, now), pc = function (v) { return fmt((v / p - 1) * 100 * c.dir, 2, true) + "%"; };
         // Capital: the order at the live price must keep the set risk; Binance's smallest order above it is NO TRADE.
         var zz = c.order ? liveSize(c.order, p) : null;
-        if (zz && zz.blocked && st.g === "follow") st = { g: "hold", why: "nocap", off: st.off };
-        if (systemPaused() && st.g === "follow") st = { g: "hold", why: "paused", off: st.off };
+        // Execution feasibility is a separate label: a valid signal stays a valid signal even when it cannot be opened.
+        var stale = lastTick > 0 && now - lastTick > 60000;
+        var ex = c.block ? (c.order.noCapital ? (zz ? zz.exec : "INSUFFICIENT CAPITAL") : "NO TRADE · ระบบเฝ้าระวัง") : systemPaused() ? "NO TRADE · ระบบเฝ้าระวัง" :
+          stale ? "STALE DATA · ราคาไม่อัปเดต" : zz ? zz.exec : null;
         if (st.g === "ended") {
           c.ended = true;
           var big = el.querySelector("[data-livepos]");
@@ -1993,8 +2020,11 @@
         if (c.at !== st.g) { c.at = st.g; moved = true; }
         el.classList.remove("st-follow", "st-hold", "st-ended"); el.classList.add("st-" + st.g);
         var q = function (sel) { return el.querySelector(sel); }, set = function (sel, text, cls) { var x = q(sel); if (x) { x.textContent = text; if (cls !== undefined) x.className = cls; } };
-        var chip = { follow: st.why === "window" ? "ตามได้" : "ตามได้ (เข้าช้า)", hold: st.why === "paused" ? "NO TRADE · ระบบหยุดเข้าไม้" : st.why === "nocap" ? "NO TRADE · ทุนไม่พอ" : st.why === "tp" ? "ถืออยู่ · ขาย TP1 แล้ว" : "ถืออยู่ · ตามไม่ทัน", ended: "จบแล้ว · แตะ SL" }[st.g];
+        var sim = c.kind === "hold" ? "ระบบจำลองกำลังถือสถานะ" : "สัญญาณเลยจุดเข้าแล้ว";
+        var chip = { follow: c.kind === "hold" ? "ระบบจำลองถืออยู่ · ราคายังใกล้จุดเข้า" : st.why === "window" ? "VALID SIGNAL" : "VALID SIGNAL · เข้าช้า",
+          hold: st.why === "tp" ? sim + " · ขาย TP1 แล้ว" : st.why === "far" ? sim + " · อย่าไล่ราคา" : sim + " · หมดเวลาเข้า", ended: "จบสัญญาณ · แตะ SL" }[st.g];
         set("[data-st]", chip, "chip " + { follow: "good", hold: "warn", ended: "bad" }[st.g]);
+        set("[data-ex]", ex || "", "chip " + (st.g !== "follow" || !ex ? "hidden" : ex === "TRADEABLE" ? "good" : "bad"));
         set("[data-off]", "(" + fmt(c.dir * (p / c.e - 1) * 100, 2, true) + "% · " + fmt(st.off, 2, true) + "R จากจุดเข้า)", tone(Math.round(st.off * 100) / 100));
         var left = c.until - now, mm = function (ms) { var t = Math.max(0, Math.round(ms / 1000)); return Math.floor(t / 60) + ":" + ("0" + t % 60).slice(-2); };
         set("[data-why]", {
@@ -2005,10 +2035,12 @@
           tp: "ราคาถึง TP1 แล้ว: ระบบขายส่วนแรก ส่วนที่เหลือถือต่อ · ไม่ต้องเข้าตาม",
           expired: "หมดเวลาเข้าแล้ว · ถ้าเข้าไปแล้ว ถือต่อ ห้ามเลื่อน SL",
           nojoin: "ถ้าเข้าไปแล้ว ถือต่อ ห้ามเลื่อน SL",
-          paused: "NO TRADE: ระบบหยุดเข้าไม้ใหม่ ผล 30 วันล่าสุดแย่กว่าที่ผลทดสอบเคยเจอ · ถ้าเข้าไปแล้ว ถือต่อตามแผน SL เดิม",
-          nocap: "ทุนไม่พอ ไม่สามารถเข้าไม้ตามความเสี่ยงที่กำหนด: ไม้เล็กสุดของ Binance เสี่ยง " + (zz ? fmt(zz.lossB / money() * 100, 2) : "?") + "% ของทุน (ตั้งไว้ " + trendRiskPct() + "%) · ไม่เพิ่มความเสี่ยงให้อัตโนมัติ",
           sl: "ราคาแตะ SL " + price(c.sl) + " ในแท่ง 4 ชม. นี้ (ไปถึง " + price(st.x) + ") · ระบบออกที่ราว −1R · ถ้ายังถือ เช็กใน Binance ว่าโดน SL แล้ว"
         }[st.why], "fine live-why" + (st.g === "ended" ? " down" : ""));
+        if (st.g === "follow" && ex && ex !== "TRADEABLE") set("[data-why]", ex.indexOf("NO TRADE") === 0 ? "NO TRADE: ระบบหยุดเข้าไม้ใหม่ " + RECENT.N + " ไม้ล่าสุดแย่กว่าที่ผลทดสอบเคยเจอ · ถ้าเข้าไปแล้ว ถือต่อตามแผน SL เดิม"
+          : ex === "STALE DATA · ราคาไม่อัปเดต" ? "ราคาสดไม่อัปเดตเกิน 1 นาที · ตัวเลขบนการ์ดอาจเก่า อย่าเข้าจนกว่าราคาจะกลับมาวิ่ง"
+          : "ทุนไม่พอ ไม่สามารถเข้าไม้ตามความเสี่ยงที่กำหนด: " + ex + (zz ? " · ไม้เล็กสุดของ Binance เสี่ยง " + fmt(zz.lossB / money() * 100, 2) + "% ของทุน (ตั้งไว้ " + trendRiskPct() + "%)" +
+            (zz.marginB > money() ? " · Margin " + fmt(zz.marginB, 0) + " ฿ เกินทุน" : "") : "") + " · ไม่เพิ่มความเสี่ยงให้อัตโนมัติ", "fine live-why down");
         // How completely the rule's conditions for entering now are met: a checklist, not a win chance.
         var plan = Portfolio.plan(), inTime = c.kind === "entry" ? now < c.until || c.joinOk : c.lateOk;
         var items = [
@@ -2021,7 +2053,7 @@
           ["ยังไม่ถึง TP1", !(st.why === "tp")],
           ["ทุนพอ: ไม้เล็กสุดของ Binance ไม่เสี่ยงเกินที่ตั้ง และ Margin ไม่เกินทุน", !c.noCap && !(zz && zz.blocked)],
           ["พอร์ตไม่ได้หยุดเข้าไม้ใหม่ (ไม่ลงลึกเกินผลทดสอบ)", plan.state === "ok" || plan.state === "half"],
-          ["ผลจริง 30 วันของระบบไม่แย่กว่าที่ผลทดสอบเคยเจอ", !systemPaused()]
+          ["ไม้ล่าสุดของระบบไม่แย่กว่าที่ผลทดสอบเคยเจอ", !systemPaused()]
         ], met = items.filter(function (x) { return x[1]; }).length;
         set("[data-fit]", "ครบองค์ประกอบสูตร " + met + "/" + items.length + " (" + Math.round(100 * met / items.length) + "%)", met === items.length ? "fit-all" : "fit-part");
         var fl = q("[data-fitlist]");
@@ -2040,7 +2072,7 @@
           set("[data-q]", qtyTxt(z.qty)); set("[data-m]", fmt(z.marginB, 0)); set("[data-rk]", fmt(z.lossB / cap * 100, 2) + "%"); set("[data-rb]", "≈ " + fmt(z.lossB, 0) + " บาท");
           set("[data-rb2]", "−" + fmt(z.lossB, 0) + " ฿");
         }
-        set("[data-jhead]", zz && zz.blocked ? "NO TRADE · ทุนไม่พอ" : st.g === "follow" ? "ครบองค์ประกอบ · เข้าตามได้" : "ถ้าจะเข้าเอง (ครบ " + met + "/" + items.length + " · ดูข้อที่ขาดด้านบน)");
+        set("[data-jhead]", zz && zz.blocked ? "NO TRADE · " + zz.exec : st.g === "follow" ? "ครบองค์ประกอบ · เข้าตามได้" : "ถ้าจะเข้าเอง (ครบ " + met + "/" + items.length + " · ดูข้อที่ขาดด้านบน)");
         if (c.met !== met) { c.met = met; moved = true; }
         if (st.g === "hold" && st.why !== "nojoin" && !c.noCap) set("[data-jno]", st.why === "tp" ? "ไม่ต้องตาม: ระบบขาย TP ไปแล้ว รอไม้ใหม่" : st.why === "expired" ? "ไม่ต้องตาม: หมดเวลาเข้าแล้ว รอไม้ใหม่" : "ไม่ต้องตาม: ราคาห่างจุดเข้าเกิน 0.5R แล้ว รอไม้ใหม่");
       });
