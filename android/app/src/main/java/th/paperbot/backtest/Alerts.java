@@ -203,7 +203,7 @@ final class Alerts {
 
     private static RemoteViews colored(Context context, int layout, String title, String body, int accent) {
         RemoteViews v = new RemoteViews(context.getPackageName(), layout);
-        v.setTextViewText(R.id.n_title, title);
+        v.setTextViewText(R.id.n_title, SignalAlerts.barTitle(title));
         v.setTextViewText(R.id.n_body, body);
         v.setInt(R.id.n_title, "setBackgroundColor", accent);
         v.setTextColor(R.id.n_title, accent == YELLOW ? 0xFF181A20 : 0xFFFFFFFF);

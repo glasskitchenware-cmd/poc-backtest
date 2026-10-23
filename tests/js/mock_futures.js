@@ -2,7 +2,7 @@
  * Binance USD-M futures API and records every packet the app hands to the native alerts. */
 (function () {
   var Q = new URLSearchParams(location.search), CASE = Q.get("case") || "all";
-  var cfg = JSON.parse(decodeURIComponent(Q.get("cfg") || "%7B%7D"));
+  var cfg = JSON.parse(Q.get("cfg") || "{}");   // URLSearchParams has decoded it already (cfg text may contain "%")
   // cfg.justClosed (ms): the page sees a clock one minute after the latest candle of that size closed, so a foreground
   // test can show a signal that is still within its entry window.
   if (cfg.justClosed) {

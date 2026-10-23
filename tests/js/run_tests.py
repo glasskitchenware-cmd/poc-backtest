@@ -14,6 +14,22 @@ FIELDS = ["symbol", "side", "tf", "strategy", "candle_close", "expires", "entry"
           "margin_thb", "risk_thb", "leverage", "leverage_cap", "liq_est", "rationale", "evidence", "experimental"]
 
 
+def evidence_with(normal_rule, chosen="none", max_dd=30.0):
+    """The real Trend evidence plus a synthetic 'normal' range and stop rule, so the checks below do not depend on the
+    numbers of the latest research run."""
+    ev = json.loads((ROOT / "research/pro/evidence_trend_20261022.json").read_text(encoding="utf-8"))
+    port = {"taken": 1000, "skipped": 0, "cagr": 30, "maxDD": max_dd, "losingMonths": 42, "worstLosingMonths": 4, "worst3m": -18.5,
+            "worstMonth": -12, "underDays": 300}
+    nm = dict(normal_rule, port={"0.25": port, "0.5": port, "1": port})
+    ev["normal"] = {"rule": nm, "ladder": nm}
+    rows = [{"id": i, "name": n, "train": {}, "test": {}} for i, n in [("none", "ไม่มีกติกาหยุด (เทรดทุกสัญญาณ)"), ("half15", "ลดความเสี่ยงครึ่งหนึ่งเมื่อพอร์ตลง 15%")]]
+    ev["stopRules"] = {"rule": {"rows": rows, "chosen": chosen}, "ladder": {"rows": rows, "chosen": chosen}}
+    return ev
+
+
+NORMAL = {"n": 1999, "worstStreak": 17, "maxDDR": 40.0, "windows": {str(k): {"p5": -999, "p50": 0, "min": -999} for k in (10, 20, 30, 50, 100)}}
+
+
 def chrome():
     for c in [os.environ.get("CHROME")] + sorted(glob.glob("/opt/pw-browsers/chromium-*/chrome-linux/chrome")) + \
              ["/usr/bin/google-chrome", "/usr/bin/chromium", "/usr/bin/chromium-browser"]:
@@ -187,11 +203,28 @@ def main():
 
     now = int(time.time() * 1000)
     loss = {"trades": [{"id": 1, "symbol": "BTCUSDT", "entry": 1, "stop": 0.9, "qty": 1, "fx": 33, "risk": 1000, "dir": 1, "fee": 0.0007, "lev": 10,
-                        "entry_time": now - 3 * 86_400_000, "exit_time": now - 2 * 86_400_000, "exit": 0.85, "pnl": -150_000, "r": -150, "closed": True}], "nextId": 2}
+                        "entry_time": now - 3 * 86_400_000, "exit_time": now - 2 * 86_400_000, "exit": 0.85, "pnl": -500_000, "r": -500, "closed": True}], "nextId": 2}
     r = run(page, "h4_paused", {"storage": dict(h4, **{"portfolio.v1": json.dumps(loss)}), "capital": 1_000_000,
                                 "trendForce": {"BTCUSDT": "EXIT_LONG", "ETHUSDT": "LONG"}})
     pk = r["packet"]
     check(pk["note"] != "" and [s["kind"] for s in pk["signals"]] == ["EXIT"], "drawdown stop: new entries paused, the exit still goes out")
+
+    # Trend 4H stop rule from research/pro: a 15% drawdown is inside the test's range (normal for trend following),
+    # so entries go on; past the test's deepest drawdown they stop.
+    loss15 = json.loads(json.dumps(loss)); loss15["trades"][0]["pnl"] = -150_000
+    ev = evidence_with(NORMAL, "none", 30.0)
+    r = run(page, "h4_stop_normal", {"storage": dict(h4, **{"portfolio.v1": json.dumps(loss15)}), "capital": 1_000_000, "trendEvidence": ev,
+                                     "trendForce": {"ETHUSDT": "LONG"}})
+    check(r["packet"]["note"] == "" and [s["kind"] for s in r["packet"]["signals"]] == ["ENTRY"], "Trend: 15% drawdown is within the test's range -> entries continue")
+    r = run(page, "h4_stop_deep", {"storage": dict(h4, **{"portfolio.v1": json.dumps(loss)}), "capital": 1_000_000, "trendEvidence": ev,
+                                   "trendForce": {"BTCUSDT": "EXIT_LONG", "ETHUSDT": "LONG"}})
+    check("เกินที่ผลทดสอบเคยเจอ (30.0%)" in r["packet"]["note"] and [s["kind"] for s in r["packet"]["signals"]] == ["EXIT"],
+          "Trend: drawdown beyond the test's deepest -> new entries stop, exits still go out")
+    r = run(page, "h4_stop_half", {"storage": dict(h4, **{"portfolio.v1": json.dumps(loss15)}), "capital": 1_000_000, "trendEvidence": evidence_with(NORMAL, "half15", 30.0),
+                                   "trendForce": {"ETHUSDT": "LONG"}})
+    sg = r["packet"]["signals"]
+    check("ลดความเสี่ยงเหลือครึ่งหนึ่ง" in r["packet"]["note"] and len(sg) == 1 and sg[0]["kind"] == "ENTRY" and sg[0]["risk_pct"] in ("0.12", "0.13"),
+          "Trend: researched half-risk rule at 15% drawdown keeps sending entries at half the risk (" + (sg[0]["risk_pct"] if sg else "none") + "%)")
 
     r = run(page, "h4_default", {"storage": {"alertCoins": json.dumps(["BTCUSDT"]), "tradeTf": "15m"}, "capital": 1_000_000, "trendForce": {}})
     check(r["packet"]["interval_minutes"] == 240 and 240 in r["scanMinutes"], "update moves an old M15 install to Trend 4H once, alarm to 240 minutes")
@@ -220,6 +253,7 @@ def main():
           "new signals pop a floating bar: side, coin, leverage, risk, entry/SL")
     check(sorted(r["floatCls"]) == ["fa l", "fa s"], "floating bars coloured by side (green LONG, red SHORT)")
     check(sorted(r["sheets"]) == ["sm-sum sm-sheet l", "sm-sum sm-sheet l", "sm-sum sm-sheet s"], "trade sheets and the open SOL LONG card are framed in their side's colour")
+    check("⏰ แท่ง 4 ชม. ปิด 03:00 · 07:00 · 11:00 · 15:00 · 19:00 · 23:00 น." in r["smMain"] and "รอบถัดไป" in r["smMain"], "main screen: the day's 4h closes in Thai time and the next one")
     check("ขั้นที่" not in shown and "ภาพจำลองหน้า Binance" not in shown and "ทำตามภาพ" not in shown, "no coaching steps or Binance look-alike")
     check("NaN" not in shown and "undefined" not in shown, "main screen has no NaN/undefined for a signal without TP")
 
@@ -274,6 +308,19 @@ def main():
     check("Trend 4H · 3 เหรียญ" in r["paperTitle"] and "บาท" in r["paper"] and "อัปเดต" in r["paperStatus"], "Paper runs Trend 4H on the selected coins: " + r["paperStatus"][:60])
     check("NaN" not in r["paper"] and "undefined" not in r["paper"], "Paper Trend view has no NaN/undefined")
     check(r["spot"] == [], "Paper uses futures endpoints only")
+    # The mock's 2026 bars give the rule a long losing run: against a wide test range it reads as normal, against the
+    # real-looking range (17 losses in a row at most, 30% drawdown) as worse than anything the test showed.
+    r = run(page, "paper_check_ok", {"storage": h4, "capital": 100_000, "clickId": "pp2026", "waitMs": 20000,
+                                     "trendEvidence": evidence_with(dict(NORMAL, worstStreak=999), "none", 99.0)}, bg=False)
+    chk = r["paperCheck"]
+    check("ผลจริงเทียบผลทดสอบ" in chk and "✅ ปกติ" in chk and "ทดสอบแพ้ติดกันสูงสุด 999 ไม้" in chk and "ทดสอบลงลึกสุด 99.0%" in chk and "100 ไม้ล่าสุดรวม" in chk,
+          "Paper: live record checked against the test's normal range: " + chk[:90])
+    check("แพ้ติดกันได้ถึง 999 ไม้" in chk and "อยู่ใต้จุดสูงสุดนานสุด 300 วัน" in chk, "Paper: what is normal for the rule (losing streak, time below the peak)")
+    r = run(page, "paper_check_broken", {"storage": h4, "capital": 100_000, "clickId": "pp2026", "waitMs": 20000, "trendEvidence": evidence_with(NORMAL)}, bg=False)
+    check("⛔ แย่กว่าที่ผลทดสอบเคยเจอ" in r["paperCheck"] and "ทดสอบแพ้ติดกันสูงสุด 17 ไม้" in r["paperCheck"],
+          "Paper: a record worse than anything in the test says stop new entries and review")
+    r = run(page, "main_normal", {"storage": h4, "capital": 1_000_000, "trendForce": {}, "clickTf": "4h", "waitMs": 15000, "trendEvidence": evidence_with(NORMAL)}, bg=False)
+    check("ปกติของสูตรนี้" in r["smMain"] and "แพ้ติดกันได้ถึง 17 ไม้" in r["smMain"] and "ไม่ใช่สูตรพัง" in r["smMain"], "main screen: what is normal for the rule")
     print(f"PASSED {passed} checks; packets in {OUT}")
 
 

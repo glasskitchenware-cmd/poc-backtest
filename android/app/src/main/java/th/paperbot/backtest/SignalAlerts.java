@@ -58,6 +58,11 @@ final class SignalAlerts {
         }
     }
 
+    /** Text of the coloured bar: the title without "เข้า " and "USDT", so side, coin, leverage and win chance fit one line. */
+    static String barTitle(String title) {
+        return title.replace("เข้า ", "").replace("USDT", "");
+    }
+
     static final class Plan {
         final List<Note> notes = new ArrayList<>();
         boolean ok;

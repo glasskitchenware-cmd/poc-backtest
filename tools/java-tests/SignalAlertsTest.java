@@ -60,6 +60,7 @@ public class SignalAlertsTest {
         JSONObject sw = item("ETHUSDT", "SHORT", "M15", candle).put("win_pct", "35");
         SignalAlerts.Note sn = SignalAlerts.plan(packet(15, candle, new JSONArray().put(sw)), now, key -> -1L).notes.get(0);
         check(sn.title.equals("🔴 เข้า SHORT ETHUSDT · M15 · x10 · โอกาสกำไร 35%") && sn.color() == 0xFFF6465D, "SHORT: red, with the test win rate in the title");
+        check(SignalAlerts.barTitle(sn.title).equals("🔴 SHORT ETH · M15 · x10 · โอกาสกำไร 35%"), "coloured bar: side, coin, leverage and win chance without \"เข้า\"/USDT so it fits one line");
         check(sn.body.contains("โอกาสกำไร 35% = สัดส่วนไม้แบบนี้ที่ปิดกำไรในช่วงทดสอบ"), "win rate explained as a test statistic, not a promise");
         check(first.body.startsWith("เข้า 100.00 · SL 98.20 · TP 101.80 / 103.60 / 109.00 · x10 · โดน SL เสีย ≈ 25 ฿"), "first line (collapsed view) is the whole order");
         JSONObject withPct = item("BTCUSDT", "LONG", "M15", candle).put("risk_pct", "0.25");

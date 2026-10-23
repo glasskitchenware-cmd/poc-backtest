@@ -133,6 +133,9 @@ body.simple #guideBar{display:none!important}body.simple main{padding-bottom:24p
 @keyframes faIn{from{transform:translateY(-120%);opacity:0}to{transform:none;opacity:1}}
 .sm-key{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:6px 0 4px}.sm-key>div{background:var(--deep);border-radius:10px;padding:8px;text-align:center}
 .sm-key small{display:block;font-size:11px;color:var(--muted)}.sm-key b{display:block;font-size:20px;color:var(--yel);margin:2px 0}
+.sm-sched{margin-top:6px;padding:8px 12px;border-radius:10px;background:var(--panel);font-size:13px}.sm-sched b{color:var(--yel)}
+.live-chk{margin-top:10px;padding:10px 12px;border-radius:12px;font-size:14px;background:var(--panel);border:2px solid var(--line)}.live-chk>div{font-weight:700;margin:4px 0}.live-chk small{display:block;margin-top:4px}
+.live-chk.ok{border-color:#0ecb81}.live-chk.watch{border-color:#f0b90b;background:rgba(240,185,11,.12)}.live-chk.broken{border-color:#f6465d;background:rgba(246,70,93,.15)}
 .sm-status{font-size:12px;color:var(--muted);margin:8px 2px 0;line-height:1.5}
 .sm-row{padding:7px 0 2px;border-top:1px solid var(--line);margin-top:6px;cursor:pointer}
 .sm-note{font-size:12px;color:var(--muted);margin:8px 0 0}
@@ -312,7 +315,7 @@ a{color:var(--accent)}
 <section>
   <h2>Paper Trading <small class="muted" id="ppTitle">Trend 4H · เหรียญที่เลือก</small></h2>
   <div class="row">
-    <button class="mini" id="ppStart" style="width:100%;margin:0">เริ่ม Paper วันนี้</button>
+    <button class="mini" id="ppStart" style="width:100%;margin:0">เริ่มสมุดผลจริงวันนี้</button>
     <button class="mini ghost" id="pp2026" style="width:100%;margin:0">ดูผลปี 2026</button>
   </div>
   <div id="ppStatus" class="status-line"></div>

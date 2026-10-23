@@ -133,6 +133,9 @@ body.simple #guideBar{display:none!important}body.simple main{padding-bottom:24p
 @keyframes faIn{from{transform:translateY(-120%);opacity:0}to{transform:none;opacity:1}}
 .sm-key{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:6px 0 4px}.sm-key>div{background:var(--deep);border-radius:10px;padding:8px;text-align:center}
 .sm-key small{display:block;font-size:11px;color:var(--muted)}.sm-key b{display:block;font-size:20px;color:var(--yel);margin:2px 0}
+.sm-sched{margin-top:6px;padding:8px 12px;border-radius:10px;background:var(--panel);font-size:13px}.sm-sched b{color:var(--yel)}
+.live-chk{margin-top:10px;padding:10px 12px;border-radius:12px;font-size:14px;background:var(--panel);border:2px solid var(--line)}.live-chk>div{font-weight:700;margin:4px 0}.live-chk small{display:block;margin-top:4px}
+.live-chk.ok{border-color:#0ecb81}.live-chk.watch{border-color:#f0b90b;background:rgba(240,185,11,.12)}.live-chk.broken{border-color:#f6465d;background:rgba(246,70,93,.15)}
 .sm-status{font-size:12px;color:var(--muted);margin:8px 2px 0;line-height:1.5}
 .sm-row{padding:7px 0 2px;border-top:1px solid var(--line);margin-top:6px;cursor:pointer}
 .sm-note{font-size:12px;color:var(--muted);margin:8px 0 0}
@@ -312,7 +315,7 @@ a{color:var(--accent)}
 <section>
   <h2>Paper Trading <small class="muted" id="ppTitle">Trend 4H · เหรียญที่เลือก</small></h2>
   <div class="row">
-    <button class="mini" id="ppStart" style="width:100%;margin:0">เริ่ม Paper วันนี้</button>
+    <button class="mini" id="ppStart" style="width:100%;margin:0">เริ่มสมุดผลจริงวันนี้</button>
     <button class="mini ghost" id="pp2026" style="width:100%;margin:0">ดูผลปี 2026</button>
   </div>
   <div id="ppStatus" class="status-line"></div>
@@ -1872,6 +1875,21 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
       });
       if (dayStart === null) dayStart = balance;
       var dd = peak > 0 ? (1 - balance / peak) * 100 : 0, riskPct = st.risk, state = "ok", message = "";
+      // Trend 4H: the stop rule research/pro chose on 2020-2022 (trend losing runs are long and normal, so the old
+      // 4% / 8% stops would quit before the recoveries), and no new entries beyond the deepest drawdown of the test.
+      var tr = isTrend(curTf()) ? trendNormal() : null, half = tr && tr.stop && /^half(\d+)$/.exec(tr.stop.id);
+      if (tr && tr.stop && tr.stop.id !== "app") {
+        if (tr.port && dd > tr.port.maxDD) {
+          state = "stop"; riskPct = 0;
+          message = "หยุดเข้าไม้ใหม่: พอร์ตลง " + fmt(dd, 1) + "% จากจุดสูงสุด เกินที่ผลทดสอบเคยเจอ (" + fmt(tr.port.maxDD, 1) + "%) · ถือไม้เดิมตามสูตร แล้วทบทวนก่อนเทรดต่อ";
+        } else if (tr.stop.id === "day2" && todayPnl <= -dayStart * 0.02) {
+          state = "day"; riskPct = 0; message = "หยุดวันนี้: ขาดทุนวันนี้ถึง 2% แล้ว (กติกาที่ผลทดสอบเลือก) พรุ่งนี้เทรดต่อ";
+        } else if (half && dd >= +half[1]) {
+          state = "half"; riskPct = st.risk / 2; message = "พอร์ตลง " + fmt(dd, 1) + "% จากจุดสูงสุด: ลดความเสี่ยงเหลือครึ่งหนึ่ง (" + fmt(riskPct, 2) + "% ต่อไม้) จนกว่าจะกลับขึ้นมา (กติกาที่ผลทดสอบเลือก)";
+        }
+        return { settings: st, balance: balance, peak: peak, dd: dd, riskPct: riskPct, riskThb: balance * riskPct / 100,
+          state: state, message: message, closed: closed, todayPnl: todayPnl, rule: tr.stop.name };
+      }
       if (dd >= HARD_STOP_DD) { state = "stop"; riskPct = 0; message = "หยุดเทรด: ยอดลงจากจุดสูงสุด " + fmt(dd, 1) + "% (เกณฑ์ " + HARD_STOP_DD + "%) ทบทวนระบบก่อนเทรดต่อ"; }
       else if (todayPnl <= -dayStart * DAILY_STOP / 100) { state = "day"; riskPct = 0; message = "หยุดวันนี้: ขาดทุนวันนี้ถึง " + DAILY_STOP + "% แล้ว พรุ่งนี้ค่อยเทรดใหม่"; }
       else if (dd >= HALF_RISK_DD) { state = "half"; riskPct = st.risk / 2; message = "ยอดลง " + fmt(dd, 1) + "% จากจุดสูงสุด: ลดความเสี่ยงเหลือครึ่งหนึ่ง (" + fmt(riskPct, 2) + "% ต่อไม้) จนกว่าจะกลับมา"; }
@@ -1924,7 +1942,7 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
         ["ยอดคงเหลือ", fmt(p.balance, 0) + " ฿", '<span class="' + tone(p.balance - st.capital) + '">' + fmt(p.balance - st.capital, 0, true) + " ฿ (" + fmt((p.balance / st.capital - 1) * 100, 2, true) + "%)</span>"],
         ["เสี่ยงไม้ถัดไป", fmt(p.riskThb, 0) + " ฿", fmt(p.riskPct, 2) + "% ของยอด" + (p.state === "half" ? " (ลดครึ่ง)" : "")],
         ["Win rate ของฉัน", p.closed.length ? fmt(wins / p.closed.length * 100, 0) + "%" : "—", p.closed.length + " ไม้ที่ปิดแล้ว"],
-        ["ลงจากจุดสูงสุด", fmt(p.dd, 1) + "%", "ลดเสี่ยงที่ " + HALF_RISK_DD + "% · หยุดที่ " + HARD_STOP_DD + "%"]
+        ["ลงจากจุดสูงสุด", fmt(p.dd, 1) + "%", p.rule ? "กติกา: " + esc(p.rule) : "ลดเสี่ยงที่ " + HALF_RISK_DD + "% · หยุดที่ " + HARD_STOP_DD + "%"]
       ].map(function (c) { return '<div class="stat"><small>' + c[0] + "</small><b>" + c[1] + "</b><small>" + c[2] + "</small></div>"; }).join("");
 
       // Monthly goal: what it takes in R, and what the record so far projects.
@@ -2388,6 +2406,13 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
         (open.length ? "<div>ไม้ที่ยังถือ " + open.length + ' ไม้ · ยังไม่ปิด <b class="' + tone(openB) + '">' + fmt(openB, 0, true) + " ฿</b></div>" : "") +
         "<p>" + esc(advice) + "</p>" +
         '<p class="muted" style="font-size:12px">สูตรตามเทรนด์แพ้บ่อยกว่าชนะเป็นเรื่องปกติ (ทดสอบชนะราว 1 ใน 3) กำไรมาจากไม้ใหญ่ไม่กี่ไม้ที่วิ่งหลายวัน ให้ดูยอดเงินรวม ไม่ใช่จำนวนครั้งที่ชนะ</p></div>';
+      // The live record against what the test showed as normal; the main screen shows the last verdict.
+      var chk = liveCheck(closed.map(function (t) { return t.r; }), dd * 100);
+      if (chk) {
+        $("ppSimple").innerHTML += '<div class="live-chk ' + chk.level + '" id="ppCheck"><b>ผลจริงเทียบผลทดสอบ</b><div>' + chk.text + "</div><small>" + chk.rows.join("<br>") + "</small>" +
+          '<small class="muted">' + esc(normalText()) + "</small></div>";
+        try { localStorage.setItem("liveCheck", JSON.stringify({ level: chk.level, text: chk.text, n: n, at: Date.now(), label: label })); } catch (e) { /* optional */ }
+      }
       drawCurve(curve, capital, profit);
       var why = { exit: "ออกตามสูตร", stop: "โดน SL", stop_gap: "โดน SL (ราคากระโดด)" };
       var side = function (d) { return d > 0 ? "Long" : "Short"; };
@@ -2511,6 +2536,53 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
     if (!T) return null;
     var row = symbol ? (L ? L.rows && L.rows[symbol] : T.rows && T.rows[symbol]) : (L ? L.test : T.all);
     return row ? Object.assign({}, row, { reach: (symbol ? T.reachRows && T.reachRows[symbol] : T.reach) || null }) : null;
+  }
+  // What the test showed as normal for the chosen take-profit mode (research/pro "normal"): losing streaks, the range of
+  // N consecutive trades, and the portfolio at the user's risk; plus the stop rule research/pro chose on 2020-2022.
+  function trendNormal() {
+    var T = window.EVIDENCE_TREND, k = trendLadder() ? "ladder" : "rule", nm = T && T.normal && T.normal[k];
+    if (!nm) return null;
+    var sr = T.stopRules && T.stopRules[k], chosen = sr && sr.rows.filter(function (x) { return x.id === sr.chosen; })[0];
+    return { normal: nm, port: nm.port && nm.port[String(trendRiskPct())], stop: chosen || null };
+  }
+  // The 4-hour closes in Thai time (03:00, 07:00, ... 23:00) and the next one.
+  function trendSchedule(now) {
+    var ms = TF[TREND.tf].ms, next = Math.floor(now / ms) * ms + ms, times = [];
+    for (var t = 0; t < 86400000; t += ms) times.push(thai(next + t).slice(9, 14));
+    return { times: times.sort(), next: next };
+  }
+  // The rule's live record (R of closed trades in exit order) against the test: the sum of the last N trades against
+  // the range of N consecutive test trades, the losing streak now, and the drawdown at this risk.
+  // ok: within the test's range · watch: below its worst 5% · broken: worse than anything the test showed.
+  function liveCheck(rs, ddPct) {
+    var nm = trendNormal();
+    if (!nm) return null;
+    var w = nm.normal.windows, N = [100, 50, 30, 20, 10].filter(function (k) { return rs.length >= k && w[k]; })[0], streak = 0, rows = [], level = "few";
+    for (var i = rs.length - 1; i >= 0 && !(rs[i] > 0); i--) streak++;
+    if (N) {
+      var sum = rs.slice(-N).reduce(function (a, r) { return a + r; }, 0), b = w[N];
+      level = sum < b.min ? "broken" : sum < b.p5 ? "watch" : "ok";
+      rows.push(N + " ไม้ล่าสุดรวม " + fmt(sum, 1, true) + "R · ทดสอบ " + N + " ไม้ติดกัน: ปกติ " + fmt(b.p50, 1, true) + "R · แย่ 5% ล่างสุด " + fmt(b.p5, 1, true) + "R · แย่สุด " + fmt(b.min, 1, true) + "R");
+    }
+    rows.push("แพ้ติดกันตอนนี้ " + streak + " ไม้ · ทดสอบแพ้ติดกันสูงสุด " + nm.normal.worstStreak + " ไม้");
+    if (streak > nm.normal.worstStreak) level = "broken";
+    if (nm.port) {
+      rows.push("ลงจากจุดสูงสุด " + fmt(ddPct, 1) + "% · ทดสอบลงลึกสุด " + fmt(nm.port.maxDD, 1) + "% (เสี่ยง " + trendRiskPct() + "%/ไม้)");
+      if (ddPct > nm.port.maxDD) level = "broken";
+    }
+    var text = { few: "ยังมีไม้ไม่ถึง 10 ไม้ เทียบกับผลทดสอบไม่ได้",
+      ok: "✅ ปกติ: อยู่ในช่วงที่ผลทดสอบเคยเจอ · เทรดต่อตามสูตร",
+      watch: "⚠️ ต่ำกว่าปกติ: แย่กว่า 95% ของช่วงในผลทดสอบ แต่ยังไม่เกินที่เคยเจอ · เทรดต่อได้ ห้ามเพิ่มความเสี่ยง",
+      broken: "⛔ แย่กว่าที่ผลทดสอบเคยเจอ: หลักฐานไม่ครอบคลุมแล้ว สูตรอาจเสื่อม · หยุดเข้าไม้ใหม่ ถือไม้เดิมตามสูตร แล้วทบทวน" }[level];
+    return { level: level, text: text, rows: rows };
+  }
+  // One line of what is normal for the rule, so a losing run in that range is read as the rule working, not breaking.
+  function normalText() {
+    var nm = trendNormal(), p = nm && nm.port;
+    if (!nm) return "";
+    return "ปกติของสูตรนี้ (ทดสอบ " + trendPeriod() + "): แพ้ติดกันได้ถึง " + nm.normal.worstStreak + " ไม้" +
+      (p ? " · เดือนที่ติดลบ " + p.losingMonths + "% · ติดลบติดกันนานสุด " + p.worstLosingMonths + " เดือน · 3 เดือนแย่สุด " + fmt(p.worst3m, 1, true) + "% · พอร์ตลงลึกสุด " +
+        fmt(p.maxDD, 1) + "% · อยู่ใต้จุดสูงสุดนานสุด " + p.underDays + " วัน (เสี่ยง " + trendRiskPct() + "%/ไม้)" : "");
   }
   // Headline numbers for a trade: how often trades like it closed in profit in the test (win %), how much bigger the
   // average win was than the average loss, a grade by the average result, and the risk band. Never an invented confidence.
@@ -2665,7 +2737,11 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
     // Trend 4H screen around the new signals: exits and refused signals above them; the rule's open positions, its last
     // 7 days and the test record below.
     function trendParts(items) {
-      var risk = trendRiskPct(), top = '<div class="sm-exp">สูตรหลัก Trend 4H · สัญญาณไม่ใช่คำสั่งซื้อขาย</div>';
+      var risk = trendRiskPct(), top = '<div class="sm-exp">สูตรหลัก Trend 4H · สัญญาณไม่ใช่คำสั่งซื้อขาย</div>', sch = trendSchedule(Date.now());
+      top += '<div class="sm-sched">⏰ แท่ง 4 ชม. ปิด ' + sch.times.join(" · ") + " น. → เข้าภายใน 15 นาทีหลังปิด · รอบถัดไป <b>" + thai(sch.next).slice(9, 14) + " น.</b></div>";
+      var lc = null;
+      try { lc = JSON.parse(localStorage.getItem("liveCheck") || "null"); } catch (e) { /* none yet */ }
+      if (lc && (lc.level === "watch" || lc.level === "broken")) top += '<div class="live-chk ' + lc.level + '" style="margin-top:8px"><b>ผลจริงของสูตร (' + esc(lc.label || "Paper") + ", " + lc.n + " ไม้)</b><div>" + esc(lc.text) + "</div></div>";
       var coin = function (r) { return r.symbol.replace("USDT", ""); };
       top += results.filter(function (r) { return r.exit; }).map(function (r) {
         var x = r.exit;
@@ -2691,6 +2767,8 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
               "</span> · เข้า " + thai(t.entry_time) + " ที่ " + price(t.entry) + ' · <span class="' + tone(t.r) + '">' + (t.open ? "เปิดอยู่ " : "ปิดแล้ว ") + fmt(t.r, 2, true) + "R</span>" +
               (t.open ? "" : " <small>(" + ({ exit: "ออกตามสูตร", stop: "SL", stop_gap: "SL", end: "" }[t.reason] || "") + " " + thai(t.exit_time).slice(0, 8) + ")</small>") + "</div>";
           }).join("") : "<br><small>ยังไม่มีสัญญาณใน 7 วันของเหรียญที่เลือก</small>") + "</div>";
+      if (normalText()) bottom += '<div class="sm-bt" style="font-size:13px">' + esc(normalText()) + "<br><small>ผลจริงอยู่ในกรอบนี้ = สูตรทำงานปกติ ไม่ใช่สูตรพัง · เทียบผลจริงได้ที่ เมนู → พอร์ต → Paper" +
+        (lc ? " (ล่าสุด: " + esc(lc.text.split(":")[0]) + ", " + lc.n + " ไม้)" : "") + "</small></div>";
       var T = window.EVIDENCE_TREND, port = T && T.portfolio && T.portfolio[String(risk)];
       if (port) {
         bottom += '<div class="sm-bt good" style="font-size:13px">ผลทดสอบ ' + trendPeriod() + " (12 เหรียญ, walk-forward): เสี่ยง " + risk + "%/ไม้ → พอร์ตโตเฉลี่ย <b>ปีละ " +
@@ -3363,7 +3441,8 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
   function reportScan(results, end, error, extra) {
     if (!window.NativeHttp || !window.NativeHttp.scanDone || $("sgMode").value !== "futures") return;
     var plan = Portfolio.plan(), tf = curTf();
-    var sigs = (plan.state === "ok" ? results : []).filter(function (r) { return r.signal && !r.signal.below_minimum; });
+    // "half" trades on at half the risk (the sizes already use plan.riskPct); "stop" and "day" pause new entries.
+    var sigs = (plan.state === "ok" || plan.state === "half" ? results : []).filter(function (r) { return r.signal && !r.signal.below_minimum; });
     var exits = results.filter(function (r) { return r.exit; });
     window.NativeHttp.scanDone(JSON.stringify({ v: 2, candle: end, interval_minutes: TF[tf].ms / 60000, error: error || "",
       scanned: extra && extra.scanned || 0, failed: extra && extra.failed || [],
@@ -3768,7 +3847,7 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
         tab: "guideTab", target: "sgFomc", done: function () { return !!flags().fomc; }, confirm: "ตรวจแล้ว ✓" },
       { id: "test2026", title: "ดูผลปี 2026 ว่าสูตรยังได้กำไรไหม", how: "แท็บพอร์ต → ปุ่ม \"ดูผลปี 2026 (ข้อมูลใหม่)\" ถ้า R เฉลี่ยเป็นบวกและ PF มากกว่า 1 = ยังดี แคปส่งให้ผู้ช่วยดูได้",
         tab: "portTab", target: "pp2026", done: function () { return !!flags().test2026; } },
-      { id: "paper", title: "เริ่ม Paper Trading", how: "แท็บพอร์ต → ปุ่ม \"เริ่ม Paper วันนี้\" แอปจะจดผลให้เองนับจากวันนี้",
+      { id: "paper", title: "เริ่ม Paper Trading", how: "แท็บพอร์ต → ปุ่ม \"เริ่มสมุดผลจริงวันนี้\" แอปจะจดผลของสูตรให้เองนับจากวันนี้ และเทียบกับผลทดสอบ",
         tab: "portTab", target: "ppStart", done: function () { return has("paper.v2"); } },
       { id: "alerts", title: "เปิดแจ้งเตือนสัญญาณ", how: "หน้าแรก → ตั้งค่า → ติ๊ก \"เด้งเมื่อมีสัญญาณเข้าได้\" แล้วกดอนุญาตการแจ้งเตือน (ในแอป Android ตั้งแบตเตอรี่เป็น \"ไม่จำกัด\" ด้วย)",
         tab: "guideTab", target: "autoScan", done: function () { return $("autoScan").checked; } },
