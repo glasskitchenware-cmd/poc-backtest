@@ -70,6 +70,7 @@
       paperCheck: text("ppCheck"), tfButtons: document.querySelectorAll("#smMain [data-tf]").length,
       holds: Array.prototype.map.call(document.querySelectorAll("#smMain .hold"), function (el) { return el.className; }), live: text("smLive"), ws: __T.ws || "", routine: text("smRoutine"), rtStatus: text("rtStatus"), shared: __T.shared || "", floatAlert: text("floatAlert"), floatShown: !document.getElementById("floatAlert").classList.contains("hidden"),
       floatCls: Array.prototype.map.call(document.querySelectorAll("#floatAlert .fa"), function (el) { return el.className; }),
+      badge: text("liveBadge"), badgeCls: (document.getElementById("liveBadge") || {}).className || "",
       acts: Array.prototype.map.call(document.querySelectorAll("#smMain .act"), function (el) { return el.className; }),
       sheets: Array.prototype.map.call(document.querySelectorAll("#smMain .sm-sheet"), function (el) { return el.className; }) });
   }, cfg.waitMs || 12000);

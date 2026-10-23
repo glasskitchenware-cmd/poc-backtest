@@ -250,10 +250,16 @@ a{color:var(--accent)}
 .ended-list .perf-row:first-of-type{border-top:0}
 #emptyFollow.hidden,#secHold.hidden,#secEnded.hidden{display:none}
 #feedSt.live,#lvFeed.live{color:var(--up)}#feedSt.down,#lvFeed.down{color:var(--down)}
+.live-badge{position:fixed;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:40;padding:6px 10px;border-radius:999px;background:rgba(24,26,32,.94);border:1px solid var(--line);font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums;box-shadow:0 4px 14px rgba(0,0,0,.35)}
+.live-badge.on{color:var(--up)}.live-badge.slow,.live-badge.wait{color:var(--yel)}.live-badge.off{color:var(--down);border-color:var(--down-line)}.live-badge.hidden{display:none}
+@keyframes tickUp{from{color:var(--up);background:var(--up-bg)}to{background:transparent}}@keyframes tickDown{from{color:var(--down);background:var(--down-bg)}to{background:transparent}}
+.tick-up{animation:tickUp .7s ease-out}.tick-down{animation:tickDown .7s ease-out}
+@media (prefers-reduced-motion:reduce){.tick-up,.tick-down{animation:none}}
 </style>
 </head>
 <body>
 <div id="floatAlert" class="float-alert hidden" role="alert"></div>
+<div id="liveBadge" class="live-badge hidden" aria-live="off"></div>
 <main>
 <div class="topbar"><div class="brand"><i>P</i>POC Signal</div><button id="menuBtn" type="button" class="mini ghost" style="margin:0">☰ เมนู</button></div>
 <div id="simpleView">

@@ -197,6 +197,8 @@
     return p(d.getUTCDate()) + "/" + p(d.getUTCMonth() + 1) + "/" + String(d.getUTCFullYear()).slice(2) + " " + p(d.getUTCHours()) + ":" + p(d.getUTCMinutes());
   }
   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return "&#" + c.charCodeAt(0) + ";"; }); }
+  // The app version (android/app/build.gradle versionName; tests/js/run_tests.py checks they match).
+  var APP_VERSION = "6.6";
   // One line-icon family for the screen (24px grid, 1.8 stroke, round ends), drawn in the text colour.
   var ICONS = { check: '<path d="M5 12.5l4.2 4.2L19 7"/>', alert: '<path d="M12 4 2.8 19.5h18.4z"/><path d="M12 10v4.5M12 17.3v.2"/>',
     news: '<rect x="3.5" y="5" width="13" height="14" rx="2"/><path d="M16.5 9h3v7.5a2.5 2.5 0 0 1-5 0"/><path d="M7 9h6M7 12.5h6M7 16h3.5"/>',
@@ -1453,7 +1455,7 @@
           (problem ? "มีปัญหา" : busyNow ? "กำลังเช็ก…" : "ทำงานอยู่") + "</span></div>" +
         '<div class="facts four">' + fact("เช็กครั้งถัดไป", thai(sch.next).slice(9, 14) + " น.") + fact("เหรียญ", selectedCoins().length) + fact("เสี่ยงต่อไม้", trendRiskPct() + "%") +
           fact("ความมั่นใจ", c ? '<span class="yel">' + c.level + "</span>" : "—") + "</div>" +
-        '<p class="fine">' + (c && c.year ? "โอกาสปีที่กำไร ≈" + c.year.win + "% · " : "") + (lastScan ? "เช็กล่าสุด " + thai(lastScan).slice(9, 14) + " น." : "") + "</p>" +
+        '<p class="fine">' + (c && c.year ? "โอกาสปีที่กำไร ≈" + c.year.win + "% · " : "") + (lastScan ? "เช็กล่าสุด " + thai(lastScan).slice(9, 14) + " น. · " : "") + "แอป v" + APP_VERSION + "</p>" +
         (bad ? '<p class="fine down">แจ้งเตือนเบื้องหลัง: ' + esc(bg.text || "").slice(0, 140) + "</p>" : "") +
         (lastError ? '<p class="fine down">เช็กไม่สำเร็จ: ' + esc(lastError).slice(0, 120) + "</p>" : "") +
         (lc && (lc.level === "watch" || lc.level === "broken") ? '<div class="callout ' + (lc.level === "broken" ? "bad" : "warn") + ' sm">' + ic("alert") + "<span>" + esc(lc.text) + "</span></div>" : "") + "</div>";
@@ -1800,7 +1802,14 @@
     }
     function setText(id, text, cls) { var el = $(id); if (!el) return; el.textContent = text; if (cls !== undefined) el.className = cls; }
     function paintLive() {
-      Array.prototype.forEach.call(document.querySelectorAll("#smMain [data-now]"), function (el) { var v = px[el.getAttribute("data-now")]; if (v > 0) el.textContent = price(v); });
+      // A price that changed flashes green (up) or red (down) for a moment, so the screen visibly runs.
+      Array.prototype.forEach.call(document.querySelectorAll("#smMain [data-now]"), function (el) {
+        var v = px[el.getAttribute("data-now")], was = +el.getAttribute("data-v");
+        if (!(v > 0)) return;
+        el.textContent = price(v);
+        if (was && v !== was) { el.classList.remove("tick-up", "tick-down"); void el.offsetWidth; el.classList.add(v > was ? "tick-up" : "tick-down"); }
+        el.setAttribute("data-v", v);
+      });
       // The rule's open positions: move and R since its entry.
       Array.prototype.forEach.call(document.querySelectorAll("#smMain [data-livepos]"), function (el) {
         var v = px[el.getAttribute("data-livepos")], e = +el.getAttribute("data-e"), d = +el.getAttribute("data-d"), k = +el.getAttribute("data-k");
@@ -1829,6 +1838,13 @@
       var age = lastTick ? Date.now() - lastTick : null, at = lastTick ? new Date(lastTick + 7 * 3600000).toISOString().slice(11, 19) : "";
       var fs = age === null ? "กำลังต่อราคาสด…" : age > 15000 ? "ราคาสดขาด · ล่าสุด " + at + " น." : (feed === "ws" ? "ราคาสดทุก 1 วินาที" : "ราคาทุก 3 วินาที") + " · " + at + " น.";
       setText("feedSt", fs, age !== null && age > 15000 ? "down" : age !== null ? "live" : "");
+      // The same, pinned to a corner so it shows wherever the screen is scrolled.
+      var badge = $("liveBadge"), on = document.body.classList.contains("simple") && liveSymbols().length > 0;
+      if (badge) {
+        badge.classList.toggle("hidden", !on);
+        badge.className = "live-badge" + (on ? "" : " hidden") + (age === null ? " wait" : age > 15000 ? " off" : age > 5000 ? " slow" : " on");
+        badge.textContent = age === null ? "● กำลังต่อราคาสด…" : age > 15000 ? "● ราคาสดขาด · " + at : "● " + (feed === "ws" ? "สด" : "ทุก 3 วิ") + " " + at;
+      }
       if (open.length) setText("lvFeed", fs + " (Binance Mark)", "fine " + (age !== null && age <= 15000 ? "live" : age !== null ? "down" : ""));
     }
     // Where a live card belongs now. follow: a new signal within its 15 minutes, or joining late is within the test (price

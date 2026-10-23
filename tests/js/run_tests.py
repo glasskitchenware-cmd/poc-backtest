@@ -390,6 +390,9 @@ def main():
           "total after fees, fed by Binance's mark-price WebSocket every second")
     check("wss://fstream.binance.com/market/stream?streams=" in r["ws"], "mark prices from Binance's /market stream address (the old /stream one went silent on 2026-04-23)")
     check("ราคาสดทุก 1 วินาที · " in r["smMain"], "the main screen says the numbers are live and when the last price came")
+    check(r["badge"].startswith("● สด ") and r["badgeCls"] == "live-badge on", "a badge pinned to the corner shows the live feed and the last price's time: " + r["badge"])
+    gv = re.search(r"versionName '([\d.]+)'", (ROOT / "android/app/build.gradle").read_text(encoding="utf-8")).group(1)
+    check("แอป v" + gv in r["smMain"], "the main screen shows the app version, the same as the APK's (" + gv + ")")
     r = run(page, "live_silent", {"storage": dict(h4, **{"portfolio.v1": json.dumps(held)}), "capital": 100_000, "trendForce": {}, "clickTf": "4h",
                                   "waitMs": 20000, "justClosed": 14_400_000, "wsSilent": True}, bg=False)
     check("ราคาทุก 3 วินาที" in r["live"] and "+20.00%" not in r["live"] and "ROI" in r["live"] and "ราคาทุก 3 วินาที · " in r["smMain"],
