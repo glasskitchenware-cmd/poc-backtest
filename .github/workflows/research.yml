@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       job:
-        description: "mtf10000, skills, evidence, tune, pro, robust, sentiment, meanrev or newsprobe"
+        description: "mtf10000, skills, evidence, tune, pro, robust, sentiment, meanrev, improve or newsprobe"
         default: "skills"
 
 jobs:
@@ -175,6 +175,37 @@ jobs:
         run: |
           cp research/pro/meanrev.json /tmp/meanrev.json
           bash .github/publish_result.sh meanrev /tmp/meanrev.json
+
+  improve:
+    # Can Trend 4H be made better (entry filters, the rest after TP1, how many coins), checks fixed before the run.
+    if: ${{ inputs.job == 'improve' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: python -m pip install requests
+      - name: Bars (the 12 coins, 25 unseen coins, spot 2017-2019) and the Fear & Greed history
+        working-directory: research/evidence
+        run: |
+          python fetch.py BTCUSDT,ETHUSDT,BNBUSDT,SOLUSDT,XRPUSDT,DOGEUSDT,ADAUSDT,AVAXUSDT,LINKUSDT,DOTUSDT,TRXUSDT,LTCUSDT 4h 2020-01
+          python fetch.py ETCUSDT,BCHUSDT,XLMUSDT,EOSUSDT,ATOMUSDT,NEARUSDT,FILUSDT,AAVEUSDT,UNIUSDT,ALGOUSDT,MATICUSDT,FTMUSDT,SANDUSDT,MANAUSDT,AXSUSDT,ICPUSDT,APTUSDT,OPUSDT,ARBUSDT,INJUSDT,SUIUSDT,XTZUSDT,THETAUSDT,VETUSDT,ZECUSDT 4h 2020-01
+          python fetch.py BTCUSDT,ETHUSDT,BNBUSDT,LTCUSDT,XRPUSDT,ADAUSDT,TRXUSDT,LINKUSDT,DOGEUSDT,EOSUSDT,ETCUSDT,XLMUSDT,NEOUSDT,IOTAUSDT,ONTUSDT 4h 2017-08 2019-12 spot
+          curl -sfL --retry 3 "https://api.alternative.me/fng/?limit=0&format=json" -o fng.json
+          python -c "import json; d=json.load(open('fng.json'))['data']; print(len(d), 'days of Fear & Greed')"
+      - working-directory: research/pro
+        run: node --max-old-space-size=6000 improve.js BTCUSDT,ETHUSDT,BNBUSDT,SOLUSDT,XRPUSDT,DOGEUSDT,ADAUSDT,AVAXUSDT,LINKUSDT,DOTUSDT,TRXUSDT,LTCUSDT ETCUSDT,BCHUSDT,XLMUSDT,EOSUSDT,ATOMUSDT,NEARUSDT,FILUSDT,AAVEUSDT,UNIUSDT,ALGOUSDT,MATICUSDT,FTMUSDT,SANDUSDT,MANAUSDT,AXSUSDT,ICPUSDT,APTUSDT,OPUSDT,ARBUSDT,INJUSDT,SUIUSDT,XTZUSDT,THETAUSDT,VETUSDT,ZECUSDT BTCUSDT,ETHUSDT,BNBUSDT,LTCUSDT,XRPUSDT,ADAUSDT,TRXUSDT,LINKUSDT,DOGEUSDT,EOSUSDT,ETCUSDT,XLMUSDT,NEOUSDT,IOTAUSDT,ONTUSDT
+      - name: Publish improve.json (branch research-results)
+        run: |
+          cp research/pro/improve.json /tmp/improve.json
+          bash .github/publish_result.sh improve /tmp/improve.json
 
   newsprobe:
     # Which free news sources answer a plain app request (no browser, no key), and what they return.

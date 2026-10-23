@@ -1380,6 +1380,8 @@ window.EVIDENCE = {"strategy":"squeeze3_ls (Squeeze v2)","source":"Binance USD-M
  * Optional scale-out (opt.tps = [{r, frac}], fractions summing to less than 1): part of the position is sold at
  * entry + r x risk; the rest still leaves by the stop or the channel, so entries are the same as without it. When a bar
  * touches both the stop and a take profit, the stop is assumed to come first.
+ * Optional opt.beAfterTp (research only, off by default): once the first take profit fills, the stop of the rest moves to
+ * entry + beAfterTp x risk from the next bar on.
  */
 (function (root, factory) {
   if (typeof module === "object" && module.exports) module.exports = factory();
@@ -1443,6 +1445,10 @@ window.EVIDENCE = {"strategy":"squeeze3_ls (Squeeze v2)","source":"Binance USD-M
           var fill = (pos.dir > 0 ? x.open >= level : x.open <= level) ? x.open : level;
           pos.fills.push({ px: fill, frac: t.frac, hours: (x.time - pos.entry_time) / H, time: x.time });
           pos.left -= t.frac;
+        }
+        if (o.beAfterTp != null && pos.fills.length) {
+          var moved = pos.entry + pos.dir * o.beAfterTp * pos.risk;
+          if (pos.dir > 0 ? moved > pos.stop : moved < pos.stop) pos.stop = moved;
         }
       }
       if (i + 1 >= n && !o.live) break;
