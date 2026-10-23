@@ -1300,9 +1300,10 @@
       var cap = money();
       return m > cap ? '<div class="callout warn sm">' + ic("alert") + "<span>Margin ≈ " + fmt(m, 0) + " ฿ มากกว่าทุนที่ใส่ไว้ (" + fmt(cap, 0) + " ฿) · ใส่ทุนจริงในช่องด้านบน ขนาดไม้จะคำนวณใหม่</span></div>" : "";
     }
-    // Whether someone without the position can still join it now (research/pro "late entry"), and the order if so.
+    // Whether someone without the position can still join it now (research/pro "late entry"): the evidence and the order
+    // sized at the last 4-hour close; paintLive re-checks the price and re-sizes the order every second.
     function joinInfo(it, r) {
-      var x = r.position, lg = x.late, v = lateVerdict(it), cap = money();
+      var x = r.position, lg = x.late, v = lateVerdict(it);
       if (it.tpLevels.some(function (t) { return t.done; })) return { ok: false, html: "ไม่ต้องตาม: ระบบขาย TP ไปแล้ว รอไม้ใหม่" };
       if (!lg) return { ok: false, html: "ไม่ต้องตาม: ราคาห่างจุดเข้าเกิน 0.5R แล้ว รอไม้ใหม่" };
       if (lg.below_minimum) return { ok: false, html: "ไม่ต้องตาม: " + esc(lg.reject) };
@@ -1311,39 +1312,76 @@
       // Only where the test shows joining this late was clearly profitable (its 95% range above zero): 1-2 bars.
       if (!(v.avgRCI && v.avgRCI[0] > 0)) return { ok: false, html: "ไม่ต้องตาม: เข้าช้า " + it.barsSince + " แท่งแล้ว ผลทดสอบไม่ชัดว่ากำไร (เข้าช้า " + v.bars + " แท่ง: เฉลี่ย " +
         fmt(v.avgR, 2, true) + "R ช่วง 95% " + fmt(v.avgRCI[0], 2, true) + " ถึง " + fmt(v.avgRCI[1], 2, true) + "R) · รอไม้ใหม่" };
-      var z = sized(lg), tp1 = it.tpLevels[0];
-      return { ok: true, html: '<b class="up">เข้าตามได้</b> ที่ ≈ ' + price(lg.entry) + " · SL " + price(lg.stop) +
-        (tp1 ? " · TP1 " + price(tp1.price) : "") + " · x" + lg.lev + " · " + qtyTxt(z.qty) + " " + r.symbol.replace("USDT", "") + " · Margin ≈ " + fmt(z.marginB, 0) + " ฿ · เสี่ยง " +
-        fmt(z.lossB / cap * 100, 2) + "%" + (lg.minSize ? " (ขนาดขั้นต่ำ Binance)" : "") + marginNote(z.marginB) + "<small>ทดสอบเข้าช้า " + v.bars + " แท่ง: " + v.n + " ไม้ · ชนะ " + v.win + "% · เฉลี่ย " + fmt(v.avgR, 2, true) + "R</small>" };
+      return { ok: true, order: lg, ev: v };
+    }
+    // Joining in the 4-hour bar the system entered, after the 15 minutes: the test's nearest case is joining 1 bar late.
+    function lateFirstBar() {
+      var v = lateVerdict({ barsSince: 1 });
+      return v && v.n >= 30 && v.avgRCI && v.avgRCI[0] > 0 ? v : null;
     }
     function sidePill(dir, prefix, solid) {
       var cls = dir === 0 ? "x" : dir > 0 ? "l" : "s";
       return '<span class="side-pill ' + cls + (solid ? " solid" : "") + '">' + (prefix ? prefix + " " : "") + (dir === 0 ? "" : dir > 0 ? "LONG" : "SHORT") + "</span>";
     }
     function fact(k, v) { return "<div><small>" + k + "</small><b>" + v + "</b></div>"; }
+    // The live cards of the main screen (new signals and the system's positions), by element id: what paintLive needs to
+    // put each one under "follow now", "holding, too late to follow" or "ended", and to refresh its numbers.
+    var LC = {}, LCended = 0, noteOf = { list: [], held: [] };
+    // An order re-sized at the live price p: the same money at risk to the same SL (Binance's step and minimum), so a
+    // price that moved since the 4-hour close does not change what a stop costs.
+    function liveSize(g, p) {
+      var f = g.minSize ? 1 : money() / (g.balanceUsdt * fx), k = 2 * (FUT.fee + FUT.slippage), cost = k * p, dist = Math.abs(p - g.stop), st = g.step || 0;
+      var q = g.minSize ? g.qty : Math.min(g.qty * f * (Math.abs(g.entry - g.stop) + k * g.entry) / (dist + cost), LOCK.marginShare * money() / fx * g.lev / p);
+      if (st) q = Math.max(1, Math.round(q / st)) * st;   // the nearest size Binance takes, as the sheet shows it
+      var minQ = Math.max(g.minQty || 0, (g.minNotional || 0) / p);
+      if (q < minQ) q = st ? Math.ceil(minQ / st - 1e-9) * st : minQ;
+      return { qty: q, marginB: q * p / g.lev * fx, lossB: q * (dist + cost) * fx };
+    }
+    // The status line and the live price line every live card carries.
+    function liveHead(sym, p0) {
+      return '<div class="live-row"><span class="chip" data-st>…</span><span class="live-px">ตอนนี้ <b data-now="' + sym + '">' + price(p0) + '</b> <small data-off></small></span></div>' +
+        '<p class="fine live-why" data-why></p>';
+    }
     // One position the system holds: live move and R, its levels and exit, and whether to join it now. Chart on request.
     function holdCard(it, r, i) {
       var long = it.dir > 0, coin = it.symbol.replace("USDT", ""), mv = it.dir * (it.now - it.entry) / it.entry * 100, k = Math.abs(it.entry - it.stop), j = joinInfo(it, r);
-      var tp = it.tpLevels[0];
-      return '<div class="card hold ' + (long ? "l" : "s") + '"><div class="card-hd">' + sidePill(it.dir) + ' <b class="sym">' + coin + '</b> <b class="big ' + tone(mv) + '" data-livepos="' + r.symbol +
-          '" data-e="' + it.entry + '" data-d="' + it.dir + '" data-k="' + k + '" data-big="1">' + fmt(mv, 2, true) + "% (" + fmt(it.dir * (it.now - it.entry) / k, 2, true) + "R)</b></div>" +
-        '<div class="facts">' + fact("เข้า " + thai(it.entryTime).slice(0, 5) + " " + thai(it.entryTime).slice(9, 14), price(it.entry)) +
-          fact("ตอนนี้", '<span data-now="' + r.symbol + '">' + price(it.now) + "</span>") + fact("Stop Loss", '<span class="down">' + price(it.stop) + "</span>") +
-          (tp ? fact(tp.label + (tp.done ? " (ขายแล้ว)" : ""), '<span class="up">' + price(tp.price) + "</span>") : fact("TP", "ไม่ตั้ง")) + "</div>" +
+      var tp = it.tpLevels.filter(function (t) { return !t.done; })[0], done = it.tpLevels.filter(function (t) { return t.done; }).length, hid = "smHoldCard" + i;
+      LC[hid] = { kind: "hold", sym: r.symbol, dir: it.dir, e: it.entry, k: k, sl: it.stop, tp: tp ? tp.price : null, tpDone: done > 0, joinOk: j.ok, order: j.order,
+        since: it.entryTime, p0: it.now, ord: 100 + i };
+      var cap = money(), z = j.ok ? sized(j.order) : null;
+      return '<div class="card hold ' + (long ? "l" : "s") + '" id="' + hid + '"><div class="card-hd">' + sidePill(it.dir) + ' <b class="sym">' + coin + '</b> <b class="big ' + tone(mv) + '" data-livepos="' + r.symbol +
+          '" data-e="' + it.entry + '" data-d="' + it.dir + '" data-k="' + k + '" data-big="1">' + fmt(mv, 2, true) + "% (" + fmt(it.dir * (it.now - it.entry) / k, 2, true) + "R)</b></div>" + liveHead(r.symbol, it.now) +
+        '<div class="facts">' + fact("ระบบเข้า " + thai(it.entryTime).slice(0, 5) + " " + thai(it.entryTime).slice(9, 14), price(it.entry)) +
+          fact("Stop Loss", '<span class="down">' + price(it.stop) + '</span><small data-dsl></small>') +
+          (tp ? fact(tp.label + (done ? " (TP" + done + " ขายแล้ว)" : ""), '<span class="up">' + price(tp.price) + '</span><small data-dtp></small>')
+            : it.tpLevels.length ? fact("TP", "ขายครบแล้ว") : fact("TP", "ไม่ตั้ง")) +
+          fact(it.locks ? "TP เลื่อน (ปิดแท่ง)" : "จุดออก (ปิดแท่ง)", it.exitOn ? price(it.exitLevel) : "—") + "</div>" +
         '<p class="fine">' + exitText(it) + " · ถ้าถืออยู่: ถือต่อ ห้ามเลื่อน SL</p>" +
-        '<div class="follow ' + (j.ok ? "ok" : "no") + '">' + ic(j.ok ? "check" : "minus") + "<div><b>ถ้ายังไม่ได้เข้า</b> " + j.html + "</div></div>" + moodLine(r.symbol, it.dir) +
+        (j.ok ? '<div class="follow ok join-yes">' + ic("check") + '<div><b>ถ้ายังไม่ได้เข้า</b> <b class="up">เข้าตามได้</b> ที่ราคาตลาด ≈ <span data-now="' + r.symbol + '">' + price(it.now) + "</span> · SL " +
+            price(j.order.stop) + (tp ? " · " + tp.label + " " + price(tp.price) : "") + " · x" + j.order.lev + ' · <span data-q>' + qtyTxt(z.qty) + "</span> " + coin + ' · Margin ≈ <span data-m>' + fmt(z.marginB, 0) +
+            '</span> ฿ · เสี่ยง <span data-rk>' + fmt(z.lossB / cap * 100, 2) + "%</span>" + (j.order.minSize ? " (ขนาดขั้นต่ำ Binance)" : "") + marginNote(z.marginB) +
+            "<small>ทดสอบเข้าช้า " + j.ev.bars + " แท่ง: " + j.ev.n + " ไม้ · ชนะ " + j.ev.win + "% · เฉลี่ย " + fmt(j.ev.avgR, 2, true) + "R</small></div></div>" : "") +
+        '<div class="follow no join-no">' + ic("minus") + "<div><b>ถ้ายังไม่ได้เข้า</b> <span data-jno>" + (j.ok ? "ไม่ต้องตาม: ราคาห่างจุดเข้าเกิน 0.5R แล้ว รอไม้ใหม่" : j.html) + "</span></div></div>" +
+        moodLine(r.symbol, it.dir) +
         '<details class="more-chart" data-draw="hold:' + i + '"><summary>กราฟ</summary><div id="smHold' + i + '" class="sm-chart" style="height:220px;margin-top:6px"></div></details></div>';
     }
-    // A new signal as an order to copy: side, leverage, entry, SL, TP1, size, margin, risk, deadline. The full sheet folds.
+    // A new signal as an order to copy: side, leverage, entry, SL, TP1, size, margin, risk, deadline. Size, margin and risk
+    // follow the live price; once the 15 minutes pass the card stays while joining is still within the test. The full
+    // sheet folds.
     function orderCard(r, g, z, i) {
       var long = g.dir > 0, coin = r.symbol.replace("USDT", ""), cap = money(), v = verdictOf(r.symbol, TREND.tf, z.lossB / cap * 100), tp1 = g.ladder && g.ladder[0];
-      return '<div class="card act ' + (long ? "l" : "s") + '" id="smAct' + i + '"><div class="card-hd">' + sidePill(g.dir, "เข้า", true) + ' <b class="sym">' + coin + '</b> <span class="lev">x' + g.lev + "</span>" +
-          (v.win !== null ? '<span class="chip">โอกาสกำไร ' + fmt(v.win, 0) + "%</span>" : "") + "</div>" +
+      var late = lateFirstBar(), aid = "smAct" + i;
+      LC[aid] = { kind: "entry", sym: r.symbol, dir: g.dir, e: g.entry, k: Math.abs(g.entry - g.stop), sl: g.stop, tp: tp1 ? tp1.price : null, tpDone: false, until: g.expires,
+        joinOk: !!late, late: late, order: g, since: g.candle, p0: r.close, ord: i };
+      return '<div class="card act ' + (long ? "l" : "s") + '" id="' + aid + '"><div class="card-hd">' + sidePill(g.dir, "เข้า", true) + ' <b class="sym">' + coin + '</b> <span class="lev">x' + g.lev + "</span>" +
+          (v.win !== null ? '<span class="chip">โอกาสกำไร ' + fmt(v.win, 0) + "%</span>" : "") + "</div>" + liveHead(r.symbol, r.close) +
         '<div class="facts three">' + fact("ราคาเข้า ≈", price(g.entry)) + fact("Stop Loss", '<span class="down">' + price(g.stop) + "</span>") +
-          (tp1 ? fact("TP1 ขาย " + fracTxt(tp1.frac), '<span class="up">' + price(tp1.price) + "</span>") : fact("Take Profit", "ไม่ตั้ง")) + fact("ขนาด", qtyTxt(z.qty) + "<small>" + coin + "</small>") +
-          fact("Margin", fmt(z.marginB, 0) + "<small>บาท</small>") + fact("เสี่ยง", fmt(z.lossB / cap * 100, 2) + "%<small>≈ " + fmt(z.lossB, 0) + " บาท</small>") + "</div>" +
+          (tp1 ? fact("TP1 ขาย " + fracTxt(tp1.frac), '<span class="up">' + price(tp1.price) + "</span>") : fact("Take Profit", "ไม่ตั้ง")) +
+          fact("ขนาด", '<span data-q>' + qtyTxt(z.qty) + "</span><small>" + coin + "</small>") +
+          fact("Margin", '<span data-m>' + fmt(z.marginB, 0) + "</span><small>บาท</small>") +
+          fact("เสี่ยง", '<span data-rk>' + fmt(z.lossB / cap * 100, 2) + '%</span><small data-rb>≈ ' + fmt(z.lossB, 0) + " บาท</small>") + "</div>" +
         '<p class="fine">Isolated x' + g.lev + " · เข้าภายใน " + thai(g.expires).slice(9, 14) + " น. · ตั้ง SL ใน Binance ทันที · ที่เหลือปิดเมื่อแอปเด้ง \"ปิดไม้\"" +
-          (g.minSize ? " · ขนาดขั้นต่ำของ Binance" : "") + "</p>" + marginNote(z.marginB) + moodLine(r.symbol, g.dir) +
+          (g.minSize ? " · ขนาดขั้นต่ำของ Binance" : " · ขนาดคิดจากราคาตอนนี้ ให้เสี่ยงเท่าเดิมถึง SL") + "</p>" + marginNote(z.marginB) + moodLine(r.symbol, g.dir) +
         '<details class="more-chart" data-draw="sig:' + i + '"><summary>รายละเอียดทั้งหมด + กราฟ</summary>' + tradeSheet(r, g, z, TREND.tf, i) + "</details></div>";
     }
     // A trade's news read: the coin's good and bad headlines, whether they point the trade's way, and how the rule's past
@@ -1357,19 +1395,20 @@
     }
     // The system's note for now, written from rules like a trader's read: market mood and headlines, releases due, then
     // what it does with each signal, exit and position.
-    function traderNote(list, held) {
+    function traderNote(list, held, stopped) {
       var m = News.mood(null), soon = News.upcoming(4), day = News.upcoming(24), lines = [], coin = function (s) { return s.replace("USDT", ""); };
       var add = function (kind, text) { lines.push('<li class="' + kind + '">' + esc(text) + "</li>"); };
       if (m.fng && (m.fng.v < 25 || m.fng.v > 75)) add("warn", "ตลาด" + m.fng.label + ": ราคามักแกว่งแรง ทุกไม้ต้องมี SL ใน Binance");
       if (soon.length) add("warn", "ข่าวแรงก่อนแท่งถัดไปปิด: " + soon.map(function (e) { return e.title + " " + thai(e.time).slice(9, 14) + " น."; }).join(", ") + " · ราคาอาจกระชาก");
       else if (day.length) add("info", "ข่าวแรงใน 24 ชม.: " + day.map(function (e) { return e.title + " " + thai(e.time).slice(9, 14) + " น."; }).join(", "));
+      (stopped || []).forEach(function (c) { add("x", (c.dir > 0 ? "LONG " : "SHORT ") + coin(c.sym) + " แตะ SL แล้ว · จบสัญญาณ (ระบบ ≈ −1R)"); });
       results.filter(function (r) { return r.exit; }).forEach(function (r) { add("x", "ปิด " + (r.exit.dir > 0 ? "LONG " : "SHORT ") + coin(r.symbol) + " ตามระบบ (ระบบได้ " + fmt(r.exit.r, 2, true) + "R)"); });
       list.forEach(function (x) {
         var g = x.signal, mr = moodRead(x.symbol, g.dir);
         add(g.dir > 0 ? "l" : "s", (g.dir > 0 ? "เข้า LONG " : "เข้า SHORT ") + coin(x.symbol) + " ตามระบบ · " + mr.fitText + (mr.fit === "against" ? " (ข่าวไม่ได้ทดสอบว่าช่วย จึงยังเข้า)" : ""));
       });
       if (held.length) add("info", "ถือ " + held.length + " ไม้ต่อตามระบบ (" + held.map(function (it) { return coin(it.symbol) + " " + (it.dir > 0 ? "LONG" : "SHORT"); }).join(", ") + ") · ห้ามเลื่อน SL");
-      if (!list.length && !results.some(function (r) { return r.exit; })) add("info", "ไม่มีไม้ใหม่ · รอแท่ง 4 ชม. ถัดไป");
+      if (!list.length && !results.some(function (r) { return r.exit; }) && !(stopped || []).length) add("info", "ไม่มีไม้ใหม่ · รอแท่ง 4 ชม. ถัดไป");
       var moodCls = m.fng ? (m.fng.v < 45 ? "bad" : m.fng.v > 55 ? "good" : "") : "";
       return '<div class="card note"><div class="card-hd"><b>มุมมองของระบบ</b><small>อ่านจากข่าวและอารมณ์ตลาด</small></div><div class="chips">' +
           (m.fng ? '<span class="chip ' + moodCls + '">ตลาด' + m.fng.label + " " + m.fng.v + (m.fng.change ? " " + (m.fng.change > 0 ? "↑" : "↓") + Math.abs(m.fng.change) + " ใน 7 วัน" : "") + "</span>" : "") +
@@ -1402,8 +1441,9 @@
           : "<p>ยังไม่มีไม้ที่ปิดใน 30 วันของเหรียญที่เลือก</p>") +
         '<p class="fine">สูตรชนะราว 1 ใน 3 กำไรมาจากไม้ใหญ่ไม่กี่ไม้ · ดูยอดรวม ไม่ใช่จำนวนครั้งที่ชนะ</p></div>';
     }
-    // Trend 4H for someone who follows the system: its status, the system's read, what to do now, what it holds (live),
-    // its last 30 days. Everything else (confidence details, news, plan and routine, what is normal) folds into one section.
+    // Trend 4H for someone who follows the system: its status, the system's read, then its signals and positions in three
+    // groups that follow the live price (paintLive moves the cards): can follow now, ended, holding but too late to follow;
+    // then its last 30 days. Everything else (confidence, news, plan and routine, what is normal) folds into one section.
     function followView(list, items) {
       var sch = trendSchedule(Date.now()), c = trendConfidence(), bg = {}, lc = null, coin = function (r) { return r.symbol.replace("USDT", ""); };
       try { bg = window.NativeHttp && window.NativeHttp.lastScanStatus ? JSON.parse(window.NativeHttp.lastScanStatus() || "{}") : {}; } catch (e) { /* none */ }
@@ -1417,26 +1457,40 @@
         (bad ? '<p class="fine down">แจ้งเตือนเบื้องหลัง: ' + esc(bg.text || "").slice(0, 140) + "</p>" : "") +
         (lastError ? '<p class="fine down">เช็กไม่สำเร็จ: ' + esc(lastError).slice(0, 120) + "</p>" : "") +
         (lc && (lc.level === "watch" || lc.level === "broken") ? '<div class="callout ' + (lc.level === "broken" ? "bad" : "warn") + ' sm">' + ic("alert") + "<span>" + esc(lc.text) + "</span></div>" : "") + "</div>";
-      var held = items.filter(function (it) { return it.kind === "hold"; });
-      var todo = results.filter(function (r) { return r.exit; }).map(function (r) {
+      LC = {};
+      var now = Date.now(), held = items.filter(function (it) { return it.kind === "hold"; }), resOf = function (sym) { return results.filter(function (r) { return r.symbol === sym; })[0]; };
+      // Entries past their 15 minutes: the system has been in since this bar's open; the card stays (as joining late).
+      var entries = list.concat(results.filter(function (r) { return r.signal && !r.signal.below_minimum && now >= r.signal.expires; }));
+      var cards = entries.map(function (x, i) { return orderCard(x, x.signal, sized(x.signal), i); }).join("") +
+        held.map(function (it, i) { return holdCard(it, resOf(it.symbol), i); }).join("");
+      var exits = results.filter(function (r) { return r.exit; }).map(function (r) {
         var x = r.exit;
         return '<div class="card act x" id="smExit' + r.symbol + '"><div class="card-hd">' + sidePill(x.dir, "ปิด", true) + ' <b class="sym">' + coin(r) + "</b>" +
-          '<span class="chip ' + (x.r >= 0 ? "good" : "bad") + '">ระบบได้ ' + fmt(x.r, 2, true) + "R</span></div><p>ปิดด้วย Market ตอนนี้ (ถ้าถืออยู่) · ถ้าไม่ได้ถือ ไม่ต้องทำอะไร</p>" +
+          '<span class="chip ' + (x.r >= 0 ? "good" : "bad") + '">ระบบได้ ' + fmt(x.r, 2, true) + "R</span></div><p>จบสัญญาณ · ถ้ายังถืออยู่: ปิดด้วย Market ตอนนี้ · ถ้าไม่ได้ถือ ไม่ต้องทำอะไร</p>" +
           '<p class="fine">แท่ง 4 ชม. ปิด ' + price(x.close) + (x.dir > 0 ? " ต่ำกว่า " : " สูงกว่า ") + price(x.level) + " · ระบบเข้าเมื่อ " + thai(x.entry_time).slice(0, 14) + " น. ที่ " + price(x.entry) + "</p></div>";
-      }).join("") + list.map(function (x, i) { return orderCard(x, x.signal, sized(x.signal), i); }).join("");
-      if (!todo) {
-        todo = busyNow ? '<div class="card idle">' + ic("clock") + "<div><b>กำลังเช็ก " + selectedCoins().length + " เหรียญ…</b></div></div>"
-          : '<div class="card idle">' + ic("check") + "<div><b>ตอนนี้ไม่ต้องทำอะไร</b><p>ไม่มีไม้ใหม่ · แอปจะเด้งแจ้งเตือนเองเมื่อมีไม้เข้าหรือต้องปิดไม้" +
-            (held.some(function (it) { return joinInfo(it, results.filter(function (r) { return r.symbol === it.symbol; })[0]).ok; }) ? " · หรือเข้าตามไม้ที่ระบบถืออยู่ได้ (ด้านล่าง)" : "") + "</p></div></div>";
-      }
-      todo += results.filter(function (r) { return r.signal && r.signal.below_minimum; }).map(function (r) {
-        return '<p class="fine">' + coin(r) + " " + (r.signal.dir > 0 ? "LONG" : "SHORT") + " มีสัญญาณแต่ไม่ผ่าน: " + esc(r.signal.reject) + "</p>";
       }).join("");
+      // Signals that ended in the last 24 hours (stop or the channel exit), newest first.
+      var why = { exit: "ออกตามสูตร", stop: "โดน SL", stop_gap: "โดน SL", end: "" }, ended = [];
+      results.forEach(function (r) { (r.recent || []).forEach(function (t) { if (!t.open && now - t.exit_time < 86400000) ended.push(Object.assign({ symbol: r.symbol }, t)); }); });
+      ended.sort(function (a, b) { return b.exit_time - a.exit_time; });
+      var endedRows = ended.map(function (t) {
+        return '<div class="perf-row">' + sidePill(t.dir) + " <b>" + t.symbol.replace("USDT", "") + "</b> <small>จบ " + thai(t.exit_time).slice(9, 14) + " น. · " + (why[t.reason] || "") +
+          '</small><b class="r ' + tone(t.r) + '">' + fmt(t.r, 2, true) + "R</b></div>";
+      }).join("");
+      var idle = '<div class="card idle" id="emptyFollow">' + (busyNow ? ic("clock") + "<div><b>กำลังเช็ก " + selectedCoins().length + " เหรียญ…</b></div></div>"
+        : ic("check") + "<div><b>ตอนนี้ไม่ต้องทำอะไร</b><p>ยังไม่มีไม้ที่ตามได้ · แอปจะเด้งแจ้งเตือนเองเมื่อมีไม้ใหม่หรือต้องปิดไม้" +
+          (entries.length + held.length ? "" : " · ระบบยังไม่มีไม้เปิด") + "</p></div></div>");
+      noteOf = { list: list, held: held };
       h += '<div id="smNote">' + traderNote(list, held) + "</div>";
-      h += '<div class="sec-hd">ตอนนี้ต้องทำอะไร</div><div id="smNewsTop">' + News.topHtml() + "</div>" + todo;
-      h += '<div class="sec-hd">ระบบถืออยู่ ' + (held.length ? held.length + " ไม้ <small>ราคาสด</small>" : "") + "</div>" + (held.length ? held.map(function (it, i) {
-        return holdCard(it, results.filter(function (r) { return r.symbol === it.symbol; })[0], i);
-      }).join("") : '<div class="card idle">' + ic("minus") + "<div><b>ระบบยังไม่มีไม้เปิด</b></div></div>");
+      h += '<div class="sec-hd">ตามได้ตอนนี้ <span class="cnt" id="cntFollow"></span><small>ราคาสด</small></div><div id="smNewsTop">' + News.topHtml() + "</div>" +
+        '<div id="grpFollow">' + cards + "</div>" + idle +
+        results.filter(function (r) { return r.signal && r.signal.below_minimum; }).map(function (r) {
+          return '<p class="fine">' + coin(r) + " " + (r.signal.dir > 0 ? "LONG" : "SHORT") + " มีสัญญาณแต่ไม่ผ่าน: " + esc(r.signal.reject) + "</p>";
+        }).join("");
+      h += '<div id="secEnded"><div class="sec-hd">จบสัญญาณแล้ว <span class="cnt" id="cntEnded"></span><small>ถ้ายังถืออยู่ ปิดตามนี้</small></div>' + exits + '<div id="grpEnded"></div>' +
+        (endedRows ? '<div class="card ended-list"><div class="card-hd"><b>จบใน 24 ชม.</b></div>' + endedRows + "</div>" : "") + "</div>";
+      h += '<div id="secHold"><div class="sec-hd">ถืออยู่ · ตามไม่ทันแล้ว <span class="cnt" id="cntHold"></span><small>สำหรับคนที่เข้าไปแล้ว</small></div><div id="grpHold"></div></div>';
+      var endedStatic = (exits ? results.filter(function (r) { return r.exit; }).length : 0) + ended.length;
       h += perfHtml();
       var T = window.EVIDENCE_TREND, port = T && T.portfolio && T.portfolio[String(trendRiskPct())];
       h += '<details class="sm-more" id="smMore"><summary>ข้อมูลเพิ่มเติม · ความมั่นใจ · ข่าว · แผนเทรด · ปกติของสูตร</summary>' + confidenceHtml() +
@@ -1445,7 +1499,8 @@
         (port ? '<div class="card"><p>ผลทดสอบ ' + trendPeriod() + " (12 เหรียญ, walk-forward): เสี่ยง " + trendRiskPct() + "%/ไม้ → พอร์ตโตเฉลี่ยปีละ " +
           fmt(port.cagr, 1, true) + "% · ช่วงแย่สุด −" + fmt(port.maxDD, 1) + "% · ชนะ " + fmt(T.all.win, 0) + '% ของไม้</p><p class="fine">ผลจริงมักแย่กว่าทดสอบ · สัญญาณไม่ใช่คำสั่งซื้อขาย</p></div>' : "") +
         Routine.html() + newsBox() + "</details>";
-      return { html: h, held: held };
+      LCended = endedStatic;
+      return { html: h, held: held, entries: entries };
     }
     // Everything about one trade: the signal, the price levels and take profits, the size in coins / USDT / baht at the
     // user's balance and risk, how often trades like it went right in the test (with its 95% range), and what the user
@@ -1568,12 +1623,12 @@
     }
     function draw() {
       clearPlans();
-      var list = signals(), tf = curTf(), cap = money(), items = isTrend(tf) ? planItems() : [], held = [], head;
+      var list = signals(), tf = curTf(), cap = money(), items = isTrend(tf) ? planItems() : [], held = [], ents = list, head;
       var rtOpen = $("smRoutine") && $("smRoutine").open, moreOpen = $("smMore") && $("smMore").open;
       if (isTrend(tf)) {
         var view = followView(list, items);
         head = '<div id="smLive">' + liveHtml() + "</div>" + view.html;
-        held = view.held;
+        held = view.held; ents = view.entries;
       } else {
         // Debug builds only (the app trades Trend 4H): the trial strategies' full sheets.
         head = statusLine() + squeezeHead(tf) + (list.length ? list.map(function (x, i) { return tradeSheet(x, x.signal, sized(x.signal), tf, i); }).join("")
@@ -1592,7 +1647,7 @@
           d.setAttribute("data-drawn", "1");
           var p = d.getAttribute("data-draw").split(":"), i = +p[1];
           try {
-            if (p[0] === "sig") drawPlan($("smChart" + i), items.filter(function (y) { return y.symbol === list[i].symbol && y.kind === "entry"; })[0]);
+            if (p[0] === "sig") drawPlan($("smChart" + i), items.filter(function (y) { return y.symbol === ents[i].symbol && y.kind === "entry"; })[0]);
             else drawPlan($("smHold" + i), held[i]);
           } catch (e) { /* the chart is a convenience; the numbers are complete */ }
         });
@@ -1600,8 +1655,9 @@
       floatAlerts(list, tf, cap);
       Array.prototype.forEach.call(document.querySelectorAll("#smMain [data-save]"), function (b) {
         b.onclick = function () {
-          var x = list[+b.getAttribute("data-save")], z = sized(x.signal);
-          Portfolio.open(Object.assign(recordOf(x, x.signal, fx), { qty: z.qty, risk: z.lossB }));
+          // At the live price when there is one: the size that keeps the set risk to the SL from there.
+          var x = ents[+b.getAttribute("data-save")], live = px[x.symbol] > 0 && isTrend(tf) ? px[x.symbol] : 0, z = live ? liveSize(x.signal, live) : sized(x.signal);
+          Portfolio.open(Object.assign(recordOf(x, x.signal, fx), { qty: z.qty, risk: z.lossB }, live ? { entry: live } : {}));
           draw();
           if ($("smLive")) $("smLive").scrollIntoView({ behavior: "smooth", block: "start" });
         };
@@ -1646,7 +1702,24 @@
     }
     // Live mark prices (the price Binance uses for unrealized P&L): Binance's free WebSocket, every second, for the coins on
     // screen and the trades entered; when it cannot connect, one REST request per coin every 3 seconds. Only while open.
-    var px = {}, ws = null, wsKey = "", poll = null, wsFail = 0, paintTimer = null, feed = "";
+    var px = {}, ws = null, wsKey = "", poll = null, wsFail = 0, paintTimer = null, feed = "", ticker = null, barHL = {};
+    // The 4-hour bar now forming: the system's stop or take profit counts as soon as the price touches it in this bar, so
+    // its high and low since the open (from Binance once, then every live price) decide "ended" and "TP1 sold".
+    function barOpen() { return Math.floor(Date.now() / 14400000) * 14400000; }
+    function loadBars() {
+      var t = barOpen();
+      Object.keys(LC).forEach(function (id) {
+        var sym = LC[id].sym;
+        if (barHL[sym] && barHL[sym].t === t && barHL[sym].full) return;
+        barHL[sym] = barHL[sym] && barHL[sym].t === t ? barHL[sym] : { t: t, hi: -Infinity, lo: Infinity };
+        futuresApi("/fapi/v1/klines?symbol=" + sym + "&interval=4h&limit=1").then(function (rows) {
+          var k = rows && rows[rows.length - 1], b = barHL[sym];
+          if (!k || +k[0] !== t || !b || b.t !== t) return;
+          b.hi = Math.max(b.hi, +k[2]); b.lo = Math.min(b.lo, +k[3]); b.full = true;
+          paintLive();
+        }, function () { /* the live prices still count */ });
+      });
+    }
     function liveSymbols() {
       var s = {};
       Array.prototype.forEach.call(document.querySelectorAll("#smMain [data-now]"), function (el) { s[el.getAttribute("data-now")] = 1; });
@@ -1656,11 +1729,14 @@
     function onPrice(sym, p) {
       if (!(p > 0)) return;
       px[sym] = p;
+      var b = barHL[sym];
+      if (b && b.t === barOpen()) { b.hi = Math.max(b.hi, p); b.lo = Math.min(b.lo, p); }
       if (!paintTimer) paintTimer = setTimeout(function () { paintTimer = null; paintLive(); }, 200);
     }
     function stopFeed() {
       if (ws) { try { ws.onclose = ws.onerror = null; ws.close(); } catch (e) { /* already closed */ } ws = null; }
       clearInterval(poll); poll = null; wsKey = "";
+      clearInterval(ticker); ticker = null;
     }
     function startPoll(syms) {
       if (poll) return;
@@ -1676,8 +1752,11 @@
     function watch() {
       var syms = liveSymbols(), key = syms.join(",");
       if (!syms.length || document.hidden || !document.body.classList.contains("simple")) { stopFeed(); return; }
+      loadBars();
       if (key === wsKey && (ws || poll)) return;
       stopFeed(); wsKey = key;
+      // Countdowns and statuses move every second even when the price does not.
+      ticker = setInterval(function () { if (!document.hidden) paintLive(); }, 1000);
       if (window.WebSocket && wsFail < 3) {
         try {
           ws = new WebSocket("wss://fstream.binance.com/stream?streams=" + syms.map(function (s) { return s.toLowerCase() + "@markPrice@1s"; }).join("/"));
@@ -1716,9 +1795,10 @@
         var v = px[el.getAttribute("data-livepos")], e = +el.getAttribute("data-e"), d = +el.getAttribute("data-d"), k = +el.getAttribute("data-k");
         if (!(v > 0)) return;
         var mv = d * (v - e) / e * 100;
-        if (el.getAttribute("data-big")) { el.textContent = fmt(mv, 2, true) + "% (" + fmt(d * (v - e) / k, 2, true) + "R)"; el.className = "hold-pct " + (mv >= 0 ? "up" : "down"); }
+        if (el.getAttribute("data-big")) { el.textContent = fmt(mv, 2, true) + "% (" + fmt(d * (v - e) / k, 2, true) + "R)"; el.className = "big " + (mv >= 0 ? "up" : "down"); }
         else { el.textContent = " · " + fmt(mv, 2, true) + "% · " + fmt(d * (v - e) / k, 2, true) + "R"; el.className = mv >= 0 ? "up" : "down"; }
       });
+      placeCards();
       var cap = money(), tot = 0, n = 0, open = Portfolio.openTrades();
       open.forEach(function (t) {
         var p = px[t.symbol];
@@ -1735,6 +1815,67 @@
       });
       if (n) setText("lvTotal", "รวม " + fmt(tot, 0, true) + " ฿ (" + fmt(tot / cap * 100, 2, true) + "% ของทุน)", "big " + (tot >= 0 ? "up" : "down"));
       if (open.length) setText("lvFeed", feed === "ws" ? "ราคาสดทุก 1 วินาที (Binance Mark)" : feed === "rest" ? "ราคาทุก 3 วินาที (Binance Mark)" : "กำลังต่อราคาสด…", "fine " + (feed ? "live" : ""));
+    }
+    // Where a live card belongs now. follow: a new signal within its 15 minutes, or joining late is within the test (price
+    // within 0.5R of the entry, no take profit yet); hold: the system is in but it is too late to follow; ended: the price
+    // touched the system's stop in this 4-hour bar (the 4-hour close decides the channel exit, the alert says so).
+    function cardState(c, p, now) {
+      var b = barHL[c.sym], hi = Math.max(p, b && b.t === barOpen() ? b.hi : p), lo = Math.min(p, b && b.t === barOpen() ? b.lo : p), d = c.dir;
+      var off = d * (p - c.e) / c.k, tp = c.tpDone || (c.tp && (d > 0 ? hi >= c.tp : lo <= c.tp));
+      if (c.ended || (d > 0 ? lo <= c.sl : hi >= c.sl)) return { g: "ended", why: "sl", off: off, x: d > 0 ? lo : hi };
+      if (c.kind === "entry" && now < c.until) return !tp && Math.abs(off) <= 0.5 ? { g: "follow", why: "window", off: off } : { g: "hold", why: tp ? "tp" : "far", off: off };
+      if (tp) return { g: "hold", why: "tp", off: off };
+      if (!c.joinOk) return { g: "hold", why: Math.abs(off) > 0.5 ? "far" : c.kind === "entry" ? "expired" : "nojoin", off: off };
+      return Math.abs(off) <= 0.5 ? { g: "follow", why: "late", off: off } : { g: "hold", why: "far", off: off };
+    }
+    function placeCards() {
+      var grp = { follow: $("grpFollow"), hold: $("grpHold"), ended: $("grpEnded") };
+      if (!grp.follow) return;
+      var now = Date.now(), cnt = { follow: 0, hold: 0, ended: 0 }, moved = false, ids = Object.keys(LC).sort(function (a, b) { return LC[a].ord - LC[b].ord; });
+      ids.forEach(function (id) {
+        var c = LC[id], el = $(id);
+        if (!el) return;
+        var p = px[c.sym] > 0 ? px[c.sym] : c.p0, st = cardState(c, p, now), pc = function (v) { return fmt((v / p - 1) * 100 * c.dir, 2, true) + "%"; };
+        if (st.g === "ended") {
+          c.ended = true;
+          var big = el.querySelector("[data-livepos]");
+          if (big) { big.removeAttribute("data-livepos"); big.textContent = "แตะ SL ≈ −1.00R"; big.className = "big down"; }
+        }
+        cnt[st.g]++;
+        if (c.at !== st.g) { c.at = st.g; moved = true; }
+        el.classList.remove("st-follow", "st-hold", "st-ended"); el.classList.add("st-" + st.g);
+        var q = function (sel) { return el.querySelector(sel); }, set = function (sel, text, cls) { var x = q(sel); if (x) { x.textContent = text; if (cls !== undefined) x.className = cls; } };
+        var chip = { follow: st.why === "window" ? "ตามได้" : "ตามได้ (เข้าช้า)", hold: st.why === "tp" ? "ถืออยู่ · ขาย TP1 แล้ว" : "ถืออยู่ · ตามไม่ทัน", ended: "จบแล้ว · แตะ SL" }[st.g];
+        set("[data-st]", chip, "chip " + { follow: "good", hold: "", ended: "bad" }[st.g]);
+        set("[data-off]", "(" + fmt(c.dir * (p / c.e - 1) * 100, 2, true) + "% · " + fmt(st.off, 2, true) + "R จากจุดเข้า)", st.off >= 0 ? "up" : "down");
+        var left = c.until - now, mm = function (ms) { var t = Math.max(0, Math.round(ms / 1000)); return Math.floor(t / 60) + ":" + ("0" + t % 60).slice(-2); };
+        set("[data-why]", {
+          window: "เหลือเวลาเข้า " + mm(left) + " นาที (ถึง " + thai(c.until).slice(9, 14) + " น.) · ตามได้ถ้าราคาห่างจุดเข้าไม่เกิน 0.5R",
+          late: c.kind === "entry" ? "เลยเวลาเข้ามา " + Math.max(1, Math.round(-left / 60000)) + " นาที แต่ราคายังห่างจุดเข้าไม่เกิน 0.5R · ผลทดสอบเข้าช้า 1 แท่ง: " + (c.late ? c.late.n + " ไม้ เฉลี่ย " + fmt(c.late.avgR, 2, true) + "R" : "")
+            : "ระบบเข้าเมื่อ " + thai(c.since).slice(0, 5) + " " + thai(c.since).slice(9, 14) + " น. · ราคายังห่างจุดเข้าไม่เกิน 0.5R",
+          far: "ราคาห่างจุดเข้า " + fmt(st.off, 2, true) + "R (เกิน 0.5R) · อย่าไล่ราคา · ถ้าเข้าไปแล้ว ถือต่อ ห้ามเลื่อน SL",
+          tp: "ราคาถึง TP1 แล้ว: ระบบขายส่วนแรก ส่วนที่เหลือถือต่อ · ไม่ต้องเข้าตาม",
+          expired: "หมดเวลาเข้าแล้ว · ถ้าเข้าไปแล้ว ถือต่อ ห้ามเลื่อน SL",
+          nojoin: "ถ้าเข้าไปแล้ว ถือต่อ ห้ามเลื่อน SL",
+          sl: "ราคาแตะ SL " + price(c.sl) + " ในแท่ง 4 ชม. นี้ (ไปถึง " + price(st.x) + ") · ระบบออกที่ราว −1R · ถ้ายังถือ เช็กใน Binance ว่าโดน SL แล้ว"
+        }[st.why], "fine live-why" + (st.g === "ended" ? " down" : ""));
+        set("[data-dsl]", "ห่าง " + pc(c.sl));
+        if (c.tp) set("[data-dtp]", "อีก " + pc(c.tp));
+        if (st.g === "follow" && c.order) {
+          var z = liveSize(c.order, p), cap = money();
+          set("[data-q]", qtyTxt(z.qty)); set("[data-m]", fmt(z.marginB, 0)); set("[data-rk]", fmt(z.lossB / cap * 100, 2) + "%"); set("[data-rb]", "≈ " + fmt(z.lossB, 0) + " บาท");
+        }
+        if (st.g === "hold" && st.why !== "nojoin") set("[data-jno]", st.why === "tp" ? "ไม่ต้องตาม: ระบบขาย TP ไปแล้ว รอไม้ใหม่" : st.why === "expired" ? "ไม่ต้องตาม: หมดเวลาเข้าแล้ว รอไม้ใหม่" : "ไม่ต้องตาม: ราคาห่างจุดเข้าเกิน 0.5R แล้ว รอไม้ใหม่");
+      });
+      if (moved) {
+        ids.forEach(function (id) { var el = $(id); if (el && grp[LC[id].at]) grp[LC[id].at].appendChild(el); });
+        // The system's note follows: a position that touched its stop is no longer "held", a signal that did is no entry.
+        var gone = ids.filter(function (id) { return LC[id].ended; }).map(function (id) { return LC[id]; }), out = function (sym) { return gone.some(function (c) { return c.sym === sym; }); };
+        if (gone.length && $("smNote")) $("smNote").innerHTML = traderNote(noteOf.list.filter(function (x) { return !out(x.symbol); }), noteOf.held.filter(function (it) { return !out(it.symbol); }), gone);
+      }
+      var show = function (id, on) { var x = $(id); if (x) x.classList.toggle("hidden", !on); };
+      show("emptyFollow", !cnt.follow); show("secHold", cnt.hold > 0); show("secEnded", cnt.ended + LCended > 0);
+      setText("cntFollow", cnt.follow ? String(cnt.follow) : ""); setText("cntHold", String(cnt.hold)); setText("cntEnded", cnt.ended + LCended ? String(cnt.ended + LCended) : "");
     }
     function bindLive() {
       Array.prototype.forEach.call(document.querySelectorAll("[data-lvfix]"), function (b) {
@@ -1969,6 +2110,7 @@
         var lg = sizeOrder(last.close, p.dir, Math.abs(last.close - p.stop), fx, lev, rule, riskPct);
         checkOrder(lg, rule);
         if (lg.tooSmall) minimumSize(lg, rule);
+        Object.assign(lg, { step: rule.step, minQty: rule.minQty, minNotional: rule.minNotional });
         out.position.late = lg;
       }
       out.position.barsSince = Math.round((candle - p.entry_time) / tfMs);
@@ -1976,7 +2118,7 @@
     if (res.pend && res.pend.dir) {
       var dir = res.pend.dir, g = sizeOrder(last.close, dir, L.stopDist, fx, lev, rule, riskPct);
       var ladder = lad ? lad.tps.map(function (t) { return { r: t.r, frac: t.frac, price: toGrid(g.entry + dir * t.r * g.dist, rule.tick) }; }) : null;
-      Object.assign(g, { kind: "entry", tps: [], ladder: ladder, tpPlan: ladder ? ladderText(ladder) : "", step: rule.step, minQty: rule.minQty,
+      Object.assign(g, { kind: "entry", tps: [], ladder: ladder, tpPlan: ladder ? ladderText(ladder) : "", step: rule.step, minQty: rule.minQty, minNotional: rule.minNotional,
         expires: candle + Math.min(FUT.enterWithinMin * 60000, tfMs), candle: candle, trend: out.trend,
         exitLevel: dir > 0 ? L.next.exitLong : L.next.exitShort,
         stratName: TREND.name, hold: 0, tf: TREND.tf, stopAtr: 3,

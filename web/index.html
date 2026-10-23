@@ -240,6 +240,15 @@ a{color:var(--accent)}
 .float-alert .fa-x{position:absolute;top:6px;right:6px;width:32px;height:32px;margin:0;padding:0;border-radius:8px;background:rgba(0,0,0,.28);color:#fff;display:flex;align-items:center;justify-content:center}
 @keyframes faIn{from{transform:translateY(-16px);opacity:0}to{transform:none;opacity:1}}
 @media (prefers-reduced-motion:reduce){.float-alert{animation:none}}
+/* Live statuses: a card sits under "follow now", "holding, too late" or "ended" as the price moves. */
+.live-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px}.live-px{font-size:13px;color:var(--muted)}.live-px b{color:var(--ink);font-size:15px;font-variant-numeric:tabular-nums}
+.live-row .chip{margin:0}.card .live-why{margin-top:4px}
+.sec-hd .cnt{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:20px;padding:0 6px;border-radius:10px;background:var(--deep);font-size:12px;font-weight:700}.sec-hd .cnt:empty{display:none}
+.facts b small[data-dsl],.facts b small[data-dtp]{color:var(--muted)}
+.st-follow .join-no,.st-hold .join-yes,.st-ended .join-yes,.st-ended .join-no{display:none}
+.act.st-hold,.act.st-ended{background:var(--panel);border-color:var(--line)}.card.st-ended{opacity:.75}
+.ended-list .perf-row:first-of-type{border-top:0}
+#emptyFollow.hidden,#secHold.hidden,#secEnded.hidden{display:none}
 </style>
 </head>
 <body>

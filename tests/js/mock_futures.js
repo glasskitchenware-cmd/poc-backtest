@@ -4,9 +4,9 @@
   var Q = new URLSearchParams(location.search), CASE = Q.get("case") || "all";
   var cfg = JSON.parse(Q.get("cfg") || "{}");   // URLSearchParams has decoded it already (cfg text may contain "%")
   // cfg.justClosed (ms): the page sees a clock one minute after the latest candle of that size closed, so a foreground
-  // test can show a signal that is still within its entry window.
+  // test can show a signal that is still within its entry window (cfg.afterCloseMs: that long after the close instead).
   if (cfg.justClosed) {
-    var realNow = Date.now.bind(Date), shift = realNow() % cfg.justClosed - 60000;
+    var realNow = Date.now.bind(Date), shift = realNow() % cfg.justClosed - (cfg.afterCloseMs || 60000);
     Date.now = function () { return realNow() - shift; };
   }
   localStorage.clear();
@@ -38,7 +38,10 @@
       if (cfg.wsDown) { if (self.onerror) self.onerror({}); return; }
       var tick = function () {
         syms.forEach(function (sy) {
-          if (SPEC[sy] && self.onmessage) self.onmessage({ data: JSON.stringify({ stream: sy.toLowerCase() + "@markPrice@1s", data: { e: "markPriceUpdate", s: sy, p: String(SPEC[sy][0] * (1 + (cfg.livePct || 0) / 100)) } }) });
+          // cfg.livePct: the coin's base price moved that much; otherwise the last closed bar's close (as /premiumIndex).
+          // cfg.liveMove[SYMBOL]: % away from that close.
+          var mark = cfg.livePct != null ? SPEC[sy][0] * (1 + cfg.livePct / 100) : price(sy, Math.floor(Date.now() / 14400000) * 14400000) * (1 + ((cfg.liveMove || {})[sy] || 0) / 100);
+          if (SPEC[sy] && self.onmessage) self.onmessage({ data: JSON.stringify({ stream: sy.toLowerCase() + "@markPrice@1s", data: { e: "markPriceUpdate", s: sy, p: String(mark) } }) });
         });
       };
       tick(); self._t = setInterval(tick, 1000);
@@ -81,6 +84,12 @@
           { filterType: "PRICE_FILTER", tickSize: String(x[1]) }, { filterType: "LOT_SIZE", stepSize: String(x[2]), minQty: String(x[2]) },
           { filterType: "MARKET_LOT_SIZE", stepSize: String(x[2]), minQty: String(x[2]) }, { filterType: "MIN_NOTIONAL", notional: String(x[3]) }] };
       }) });
+      // The 4-hour bar still forming (Binance returns it last; limit=1 without a start time): open at the last close,
+      // cfg.forming[SYMBOL] = % the price went down (negative) or up within it.
+      if (u.pathname === "/fapi/v1/klines" && !p.get("startTime") && p.get("limit") === "1") {
+        var fo = Math.floor(Date.now() / 14400000) * 14400000, c0 = price(sym, fo), mv = (cfg.forming || {})[sym] || 0;
+        return reply(id, true, [[fo, String(c0), String(c0 * (1 + Math.max(mv, 0.1) / 100)), String(c0 * (1 + Math.min(mv, -0.1) / 100)), String(c0), "10", fo + 14399999, "0", 1, "5", "0", "0"]]);
+      }
       if (u.pathname === "/fapi/v1/klines") return reply(id, true, klines(sym, p.get("interval"), +p.get("startTime") || (Date.now() - 500 * 900000), +p.get("endTime") || Date.now(), +p.get("limit")));
       if (u.pathname === "/fapi/v1/premiumIndex") {
         var step = { "5m": 300000, "15m": 900000, "1h": 3600000, "4h": 14400000 }[localStorage.getItem("tradeTf") || "4h"];

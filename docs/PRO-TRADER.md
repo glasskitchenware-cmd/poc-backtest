@@ -1,4 +1,4 @@
-# Trading Trend 4H as a profession — v6.3 (2026-10-23)
+# Trading Trend 4H as a profession — v6.4 (2026-10-23)
 
 What the app does for a full-time trader, and what the tests say about relying on it. Every number below comes from
 `research/pro/pro.js`, `research/pro/robust.js` and `research/pro/sentiment.js`, run on GitHub Actions on real Binance bars (results on branch
@@ -107,6 +107,40 @@ It wins more often than Trend 4H but loses money in every test; even the best ca
 below zero in four of the five picks. Run beside Trend 4H at 0.5% risk each (2023-2026), the pair grew 11.2% a year
 against 23.3% for Trend 4H alone, with the same drawdown (monthly correlation −0.11). It is not added to the app.
 
+## Trying to improve the rule (tested, nothing adopted)
+
+`research/pro/improve.js` (GitHub Actions run 39929350368, `research/pro/improve_20261023.json`): candidates and pass rules
+written before the run; chosen on the 12 coins 2020-2022 by CAGR / max drawdown (MAR) at 0.5% risk; adopted only if it
+also beats the current rule on 2023-2026, on the 25 unseen coins and on spot 2017-2019, and the trades it skips are
+clearly worse than the ones it keeps.
+
+| Candidate | 2020-22 MAR | 2023-26 avg R / MAR | Unseen coins avg R / MAR | Spot 2017-19 avg R / MAR |
+|---|---|---|---|---|
+| none (the app) | 2.19 | +0.105 / 0.71 | +0.116 / 0.85 | +0.282 / 4.14 |
+| trade only in BTC's direction (BTC vs its EMA200) — **chosen** | 3.20 | +0.130 / 0.95 | +0.140 / **0.73** | +0.301 / 1.86 |
+| breakout bar volume ≥ 1.5× its 20-bar average | 3.18 | +0.140 / 0.90 | +0.154 / 1.28 | **+0.243** / 3.14 |
+| ADX(14) ≥ 20 | 1.64 | +0.098 / 0.56 | +0.126 / 0.60 | +0.355 / 3.46 |
+| ADX(14) ≥ 25 | 0.42 | +0.053 / 0.14 | +0.136 / 0.44 | +0.339 / 2.38 |
+| close no more than 1 ATR past the channel | 1.76 | +0.060 / 0.41 | +0.078 / 0.49 | +0.290 / 3.41 |
+| breakout from a quiet market (ATR20 < ATR100) | 2.36 | +0.137 / 0.76 | +0.101 / 0.50 | +0.229 / 2.67 |
+| EMA200 sloping the trade's way | 1.89 | +0.104 / 0.66 | +0.101 / 0.49 | +0.341 / 3.14 |
+| no LONG at greed ≥ 75, no SHORT at fear ≤ 25 | 1.98 | +0.140 / 1.34 | +0.127 / 0.83 | +0.316 / 4.52 |
+| no entries at Fear & Greed ≤ 20 or ≥ 80 | 1.17 | +0.137 / 1.42 | +0.128 / 0.86 | +0.326 / 4.75 |
+| after TP1, the rest's stop to breakeven | 2.20 | +0.104 / 0.70 | +0.114 / 0.83 | +0.277 / 4.06 |
+| after TP1, the rest's stop to +1R | 2.14 | +0.101 / 0.68 | +0.112 / 0.81 | +0.266 / 3.97 |
+| 24 coins instead of 12, same risk per trade | 1.74 | +0.112 / 0.85, drawdown 45.6% | — | — |
+| 37 coins instead of 12, same risk per trade | 1.82 | +0.108 / 0.79, drawdown 60.8% | — | — |
+
+The filter chosen on 2020-2022 (BTC's direction) raised the average trade everywhere but made the unseen coins'
+portfolio worse (MAR 0.73 against 0.85, drawdown 43.6%), so it fails. The volume filter, nearly tied in 2020-2022, failed
+on 2017-2019. Moving the stop after TP1 cut profit everywhere. More coins added profit and more drawdown, and in
+2020-2022 the drawdown grew faster. The Fear & Greed "extremes" filters did better on every period except 2020-2022,
+the period they would have been chosen on; they stay a candidate to re-test as more data comes, not a rule.
+
+Win rate: the only lever that raises it is taking profit earlier, and that lowers profit (research/pro, 2023-2026:
+1/3 at +1R and 1/3 at +2R wins 40.4% of trades but averages +0.064R; the app's 50% at +3R wins 34.1% and averages
++0.105R). The app keeps the plan that earns more.
+
 ## The professional's routine (main screen → "แผนเทรดและกิจวัตรแบบมืออาชีพ")
 
 - Written plan: one rule, the coins, risk per trade, exits, trade every signal, when to stop, what is forbidden.
@@ -127,6 +161,20 @@ an order card per new signal with leverage, entry, SL, TP1, size, margin, risk a
 (closed trades in R and in % at the set risk). Confidence details, news, the plan and routine, and what is normal fold
 into one section; full trade sheets and charts open on tap. Opening the app mid-bar no longer reports "stale": Android
 now tells that apart from a lagging exchange.
+
+## Live statuses: follow now, holding, ended (v6.4)
+
+The system's signals and positions sit in three groups that follow Binance's mark price every second (REST every 3 s
+when the socket fails), and a card moves between them as the price moves:
+- **ตามได้ตอนนี้ (can follow now)**: a new signal within its 15 minutes and within 0.5R of the entry, with a live
+  countdown; or a position still within 0.5R of the system's entry, no take profit yet, where the late-entry test was
+  clearly profitable (95% range above zero; a signal past its 15 minutes uses the 1-bar-late test, 1,874 trades, +0.10R).
+  Size, margin and risk are re-sized at the live price so a stop still costs the set risk.
+- **ถืออยู่ · ตามไม่ทันแล้ว (holding, too late to follow)**: the price is more than 0.5R from the entry, TP1 has sold,
+  or the test does not support joining this late; for those already in: hold, never move the SL.
+- **จบสัญญาณแล้ว (ended)**: the system's exit (close now if still holding), a position whose stop was touched in the
+  4-hour bar now forming (its high and low from Binance, then every live price; shown as ≈ −1R), and signals that ended
+  in the last 24 hours. The system's note at the top follows.
 
 ## Live P&L of the trades entered (v6.1)
 

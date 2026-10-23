@@ -244,11 +244,16 @@ def main():
     r = run(page, "h4_coach", {"storage": h4, "capital": 1_000_000, "trendForce": {"BTCUSDT": "LONG", "ETHUSDT": "SHORT", "SOLUSDT": "HOLD_LONG"}, "clickTf": "4h",
                                "waitMs": 15000, "justClosed": 14_400_000, "openDetails": 8000}, bg=False)
     shown = r["smMain"] + r["coach"]
-    check("ตอนนี้ต้องทำอะไร" in r["smMain"] and "เข้า LONG BTC x" in r["smMain"] and "เข้า SHORT ETH x" in r["smMain"] and "BTCUSDT Perp" in r["smMain"],
-          "what to do now: one order card per signal (BTC LONG, ETH SHORT), the full sheet folded inside")
+    follow = r["smMain"].split("ตามได้ตอนนี้", 1)[-1].split("จบสัญญาณแล้ว", 1)[0]
+    check("เข้า LONG BTC x" in follow and "เข้า SHORT ETH x" in follow and "BTCUSDT Perp" in follow and r["acts"] == ["card act l st-follow", "card act s st-follow"],
+          "can follow now: one order card per signal (BTC LONG, ETH SHORT), the full sheet folded inside")
+    check("เหลือเวลาเข้า 13:" in follow and "(ถึง 15:15 น.)" in follow and "ตอนนี้ 60,808.60 (+0.00% · +0.00R จากจุดเข้า)" in follow,
+          "live: entry countdown and the price against the entry, every second")
+    check("ขนาด0.0550BTC" in follow and "≈ 2,480 บาท" in follow, "live size at the entry price equals the sheet's size (0.0550 BTC, 2,480 baht at risk)")
     check(all(k in r["smMain"] for k in ["ราคาเข้า ≈", "Stop Loss", "TP1 ขาย 50%", "ขนาด", "Margin", "เสี่ยง", "เข้าภายใน"]), "the order card holds every number to type in Binance")
     check(r["charts"] >= 3, "charts draw when opened: one per signal and one for the held position (" + str(r["charts"]) + ")")
-    check("ระบบถืออยู่ 1 ไม้" in r["smMain"] and "LONG SOL +" in r["smMain"], "the system's open SOL position listed")
+    check("ถืออยู่ · ตามไม่ทันแล้ว 1" in r["smMain"] and "LONG SOL +" in r["smMain"].split("ถืออยู่ · ตามไม่ทันแล้ว", 1)[1] and "(เกิน 0.5R)" in r["smMain"],
+          "the system's SOL position, +1R from its entry, sits under holding / too late to follow, with how far it is")
     for must in ["LONG x", "SHORT x", "โอกาสกำไร", "เสี่ยง ", "ไม้ที่ชนะได้เฉลี่ย", "เป็นสถิติ ไม่ใช่การรับประกัน", "Leverage", "ความเสี่ยงต่อไม้", "Margin ที่วาง", "ทำไม x", "ความเสี่ยง", "LONG (Buy)", "SHORT (Sell)", "แท่งสัญญาณปิด", "เข้าภายใน", "ราคาเข้าอ้างอิง", "Stop Loss", "TP1 · ขาย", "ส่วนที่เหลือ", "Liquidation (ประมาณ)",
                  "Isolated", "Leverage", "ขนาด (Size)", "มูลค่าสัญญา", "Margin ที่ใช้", "ค่าธรรมเนียม+slippage", "ราคาขยับ 1%", "ผิดทาง: โดน SL ทั้งไม้",
                  "ถึง TP1 แล้วกลับมาโดน SL", "ถึงทุก TP แล้วส่วนที่เหลือวิ่งถึง +5R", "ปิดกำไร", "ราคาไปถึง +1R", "ไม่ถึง +1R เลย", "กำไรเฉลี่ยต่อไม้",
@@ -258,7 +263,7 @@ def main():
     check(r["floatShown"] and "LONG BTC x" in fa and "SHORT ETH x" in fa and fa.count("เสี่ยง ") == 2 and "SL " in fa and "แตะดู" in fa,
           "new signals pop a floating bar: side, coin, leverage, risk, entry/SL")
     check(sorted(r["floatCls"]) == ["fa l", "fa s"], "floating bars coloured by side (green LONG, red SHORT)")
-    check(sorted(r["sheets"]) == ["sm-sum sm-sheet l", "sm-sum sm-sheet s"] and r["holds"] == ["card hold l"], "sheets and the held SOL LONG card in their side's colour")
+    check(sorted(r["sheets"]) == ["sm-sum sm-sheet l", "sm-sum sm-sheet s"] and r["holds"] == ["card hold l st-hold"], "sheets and the held SOL LONG card in their side's colour")
     check(r["tfButtons"] == 0 and "ระบบเทรด Trend 4H" in r["smMain"] and "เช็กครั้งถัดไป" in r["smMain"] and "ผลงานระบบ 30 วัน" in r["smMain"],
           "main screen: the system's status and next check, no timeframe buttons, its 30-day record")
     check("ขั้นที่" not in shown and "ภาพจำลองหน้า Binance" not in shown and "ทำตามภาพ" not in shown, "no coaching steps or Binance look-alike")
@@ -272,7 +277,7 @@ def main():
     check("ETHUSDT Perp" in r["smMain"] and "(ขั้นต่ำที่ Binance ยอม)" in r["smMain"] and "ทุนไม่พอ" not in r["smMain"] and "ยังเทรดตามสูตรไม่ได้" not in r["smMain"],
           "37 THB: full trade sheet at the smallest order, no capital lecture")
     check("มากกว่าทุนที่ใส่ไว้ (37 ฿) · ใส่ทุนจริงในช่องด้านบน" in r["smMain"], "37 THB: the card says the margin is above the balance typed, and where to fix it")
-    check("ระบบถืออยู่ 1 ไม้" in r["smMain"] and "ผลงานระบบ 30 วัน" in r["smMain"] and "เช็กล่าสุด" in r["smMain"],
+    check("ถืออยู่ · ตามไม่ทันแล้ว 1" in r["smMain"] and "ผลงานระบบ 30 วัน" in r["smMain"] and "เช็กล่าสุด" in r["smMain"],
           "the system's open position, its 30-day record and the status line are shown")
     check(r["chart"] or r["charts"] >= 2, "charts drawn for the signal and the open position")
     check("NaN" not in r["smMain"] and "undefined" not in r["smMain"], "37 THB: no NaN/undefined")
@@ -282,18 +287,39 @@ def main():
                                     "justClosed": 14_400_000}, bg=False)
     check(r["floatShown"] and r["floatCls"] == ["fa x"] and "ปิดไม้ LONG BTC ตอนนี้" in r["floatAlert"] and "+1.00R" in r["floatAlert"],
           "an exit pops an orange floating bar: close BTC LONG now, R now")
-    todo = r["smMain"].split("ตอนนี้ต้องทำอะไร", 1)[-1]
-    check(todo.find("ปิด LONG BTC") >= 0 and todo.find("ปิด LONG BTC") < 200 and "ปิดด้วย Market ตอนนี้ (ถ้าถืออยู่)" in todo and r["acts"][:1] == ["card act x"],
-          "the exit is the first orange card under what to do now")
+    ended = r["smMain"].split("จบสัญญาณแล้ว", 1)[-1]
+    check(ended.find("ปิด LONG BTC") >= 0 and ended.find("ปิด LONG BTC") < 60 and "ถ้ายังถืออยู่: ปิดด้วย Market ตอนนี้" in ended and r["acts"] == ["card act x"],
+          "the exit is the first orange card under signals that ended")
 
     r = run(page, "h4_open", {"storage": h4, "capital": 1_000_000, "trendForce": {"BTCUSDT": "NEAR_LONG", "ETHUSDT": "HOLD_SHORT"}, "clickTf": "4h", "waitMs": 15000,
                               "justClosed": 14_400_000, "openDetails": 8000}, bg=False)
     s = r["smMain"]
-    check("ตอนนี้ไม่ต้องทำอะไร" in s and "ระบบถืออยู่ 2 ไม้" in s, "nothing new to do, and the system's 2 open positions listed right after")
+    check(r["holds"] == ["card hold l st-follow", "card hold s st-hold"] and "ตามได้ (เข้าช้า)" in s and "ถืออยู่ · ตามไม่ทันแล้ว 1" in s,
+          "BTC 0.2R from its entry can still be followed; ETH +1R is holding, too late to follow")
     check("ถ้ายังไม่ได้เข้า" in s and "ราคาห่างจุดเข้าเกิน 0.5R" in s, "a position already +1R away: do not join late")
     check(("เข้าตามได้" in s) or ("ไม่แนะนำให้เข้าตาม" in s) or ("ยังไม่มีผลทดสอบการเข้าตาม" in s) or ("ผลทดสอบไม่ชัดว่ากำไร" in s), "a position 0.2R from its entry: the late-entry test decides")
     check("ผลทดสอบบวกน้อย" not in s, "joining late is offered only where the test was clearly profitable, never 'small and unclear'")
     check(r["charts"] >= 2 and "Stop Loss" in s and "TP1" in s, "each open position has its SL/TP and its chart")
+
+    # Live statuses: the price touches the system's SL in the 4-hour bar now forming -> ended; it runs past 0.5R -> too late;
+    # 20 minutes after the close a new signal is still followable while the price is within 0.5R (the test of joining late).
+    r = run(page, "live_sl", {"storage": h4, "capital": 1_000_000, "trendForce": {"BTCUSDT": "NEAR_LONG"}, "clickTf": "4h", "waitMs": 15000,
+                              "justClosed": 14_400_000, "forming": {"BTCUSDT": -7}}, bg=False)
+    ended = r["smMain"].split("จบสัญญาณแล้ว", 1)[-1]
+    check(r["holds"] == ["card hold l st-ended"] and "จบแล้ว · แตะ SL" in ended and "ราคาแตะ SL 57,160.09 ในแท่ง 4 ชม. นี้" in ended,
+          "live: the forming 4-hour bar touched the system's SL -> the BTC card moves under ended, with the price reached")
+    note = r["smMain"].split("ตามได้ตอนนี้", 1)[0]
+    check("แตะ SL ≈ −1.00R" in ended and "LONG BTC แตะ SL แล้ว · จบสัญญาณ" in note and "ถือ 1 ไม้ต่อ" not in note,
+          "the ended card shows its result, and the system's note no longer says it holds BTC")
+    r = run(page, "live_far", {"storage": h4, "capital": 1_000_000, "trendForce": {"BTCUSDT": "NEAR_LONG"}, "clickTf": "4h", "waitMs": 15000,
+                               "justClosed": 14_400_000, "liveMove": {"BTCUSDT": 3}}, bg=False)
+    check(r["holds"] == ["card hold l st-hold"] and "ราคาห่างจุดเข้า +0.80R (เกิน 0.5R)" in r["smMain"] and "ตอนนี้ไม่ต้องทำอะไร" in r["smMain"],
+          "live: price 3% up = 0.8R from the entry -> too late to follow, nothing to follow now")
+    r = run(page, "live_late", {"storage": h4, "capital": 1_000_000, "trendForce": {"ETHUSDT": "SHORT"}, "clickTf": "4h", "waitMs": 15000,
+                                "justClosed": 14_400_000, "afterCloseMs": 20 * 60000}, bg=False)
+    check(r["acts"] == ["card act s st-follow"] and "ตามได้ (เข้าช้า)" in r["smMain"] and "เลยเวลาเข้ามา 5 นาที" in r["smMain"] and "ผลทดสอบเข้าช้า 1 แท่ง: 1874 ไม้" in r["smMain"],
+          "20 minutes after the close: the ETH SHORT card stays, followable late within 0.5R, with the late-entry test")
+    check(not r["floatShown"], "a signal past its 15 minutes does not pop the floating bar")
 
     # A native reply that never comes back must not hang the scan: it fails with a timeout and is reported.
     # (two futures hosts are tried in turn, 50 s each)
