@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       job:
-        description: "mtf10000, skills, evidence, tune, pro, robust, sentiment, meanrev, improve or newsprobe"
+        description: "mtf10000, skills, evidence, tune, pro, robust, sentiment, meanrev, improve, tf or newsprobe"
         default: "skills"
 
 jobs:
@@ -206,6 +206,40 @@ jobs:
         run: |
           cp research/pro/improve.json /tmp/improve.json
           bash .github/publish_result.sh improve /tmp/improve.json
+
+  tf:
+    # The Trend rule family on 15m / 30m / 1h / 2h (signals more often than every 4 hours), research/pro/tf.js.
+    if: ${{ inputs.job == 'tf' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: python -m pip install requests
+      - name: 15m bars (12 coins and 25 unseen coins, 4 downloads at once) and the 12 coins' 4h bars
+        working-directory: research/evidence
+        run: |
+          python fetch.py BTCUSDT,ETHUSDT,BNBUSDT,SOLUSDT,XRPUSDT,DOGEUSDT 15m 2020-01 > f1.log 2>&1 &
+          python fetch.py ADAUSDT,AVAXUSDT,LINKUSDT,DOTUSDT,TRXUSDT,LTCUSDT 15m 2020-01 > f2.log 2>&1 &
+          python fetch.py ETCUSDT,BCHUSDT,XLMUSDT,EOSUSDT,ATOMUSDT,NEARUSDT,FILUSDT,AAVEUSDT,UNIUSDT,ALGOUSDT,MATICUSDT,FTMUSDT 15m 2020-01 > f3.log 2>&1 &
+          python fetch.py SANDUSDT,MANAUSDT,AXSUSDT,ICPUSDT,APTUSDT,OPUSDT,ARBUSDT,INJUSDT,SUIUSDT,XTZUSDT,THETAUSDT,VETUSDT,ZECUSDT 15m 2020-01 > f4.log 2>&1 &
+          python fetch.py BTCUSDT,ETHUSDT,BNBUSDT,SOLUSDT,XRPUSDT,DOGEUSDT,ADAUSDT,AVAXUSDT,LINKUSDT,DOTUSDT,TRXUSDT,LTCUSDT 4h 2020-01 > f5.log 2>&1 &
+          fail=0; for j in $(jobs -p); do wait $j || fail=1; done
+          cat f1.log f2.log f3.log f4.log f5.log
+          exit $fail
+      - working-directory: research/pro
+        run: node --max-old-space-size=6000 tf.js BTCUSDT,ETHUSDT,BNBUSDT,SOLUSDT,XRPUSDT,DOGEUSDT,ADAUSDT,AVAXUSDT,LINKUSDT,DOTUSDT,TRXUSDT,LTCUSDT ETCUSDT,BCHUSDT,XLMUSDT,EOSUSDT,ATOMUSDT,NEARUSDT,FILUSDT,AAVEUSDT,UNIUSDT,ALGOUSDT,MATICUSDT,FTMUSDT,SANDUSDT,MANAUSDT,AXSUSDT,ICPUSDT,APTUSDT,OPUSDT,ARBUSDT,INJUSDT,SUIUSDT,XTZUSDT,THETAUSDT,VETUSDT,ZECUSDT
+      - name: Publish tf.json (branch research-results)
+        run: |
+          cp research/pro/tf.json /tmp/tf.json
+          bash .github/publish_result.sh tf /tmp/tf.json
 
   newsprobe:
     # Which free news sources answer a plain app request (no browser, no key), and what they return.
