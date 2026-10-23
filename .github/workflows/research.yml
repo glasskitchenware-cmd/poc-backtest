@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       job:
-        description: "mtf10000, skills, evidence, tune, pro, robust, sentiment or newsprobe"
+        description: "mtf10000, skills, evidence, tune, pro, robust, sentiment, meanrev or newsprobe"
         default: "skills"
 
 jobs:
@@ -148,6 +148,33 @@ jobs:
         run: |
           cp research/pro/sentiment.json /tmp/sentiment.json
           bash .github/publish_result.sh sentiment /tmp/sentiment.json
+
+  meanrev:
+    # A second rule with a higher win rate (mean reversion inside the trend), walk-forward, to pair with Trend 4H.
+    if: ${{ inputs.job == 'meanrev' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: python -m pip install requests
+      - working-directory: research/evidence
+        run: |
+          python fetch.py BTCUSDT,ETHUSDT,BNBUSDT,SOLUSDT,XRPUSDT,DOGEUSDT,ADAUSDT,AVAXUSDT,LINKUSDT,DOTUSDT,TRXUSDT,LTCUSDT 4h,1d 2020-01
+          python fetch.py ETCUSDT,BCHUSDT,XLMUSDT,EOSUSDT,ATOMUSDT,NEARUSDT,FILUSDT,AAVEUSDT,UNIUSDT,ALGOUSDT,MATICUSDT,FTMUSDT,SANDUSDT,MANAUSDT,AXSUSDT,ICPUSDT,APTUSDT,OPUSDT,ARBUSDT,INJUSDT,SUIUSDT,XTZUSDT,THETAUSDT,VETUSDT,ZECUSDT 4h,1d 2020-01
+      - working-directory: research/pro
+        run: node --max-old-space-size=6000 meanrev.js BTCUSDT,ETHUSDT,BNBUSDT,SOLUSDT,XRPUSDT,DOGEUSDT,ADAUSDT,AVAXUSDT,LINKUSDT,DOTUSDT,TRXUSDT,LTCUSDT ETCUSDT,BCHUSDT,XLMUSDT,EOSUSDT,ATOMUSDT,NEARUSDT,FILUSDT,AAVEUSDT,UNIUSDT,ALGOUSDT,MATICUSDT,FTMUSDT,SANDUSDT,MANAUSDT,AXSUSDT,ICPUSDT,APTUSDT,OPUSDT,ARBUSDT,INJUSDT,SUIUSDT,XTZUSDT,THETAUSDT,VETUSDT,ZECUSDT
+      - name: Publish meanrev.json (branch research-results)
+        run: |
+          cp research/pro/meanrev.json /tmp/meanrev.json
+          bash .github/publish_result.sh meanrev /tmp/meanrev.json
 
   newsprobe:
     # Which free news sources answer a plain app request (no browser, no key), and what they return.

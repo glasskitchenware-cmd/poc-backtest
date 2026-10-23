@@ -2579,7 +2579,13 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
     if (m.fng) parts.push("ตลาด" + m.fng.label + " " + m.fng.v + (m.fng.change ? " (" + (m.fng.change > 0 ? "↑" : "↓") + Math.abs(m.fng.change) + " ใน 7 วัน)" : ""));
     parts.push(m.coin && m.coin.n ? "ข่าว " + coin + " 24 ชม.: ดี " + m.coin.good + " · ร้าย " + m.coin.bad : "ไม่มีข่าว " + coin + " ใน 24 ชม.");
     var fit = m.coin && m.coin.tone ? (m.coin.tone === dir ? "with" : "against") : "none";
-    return { text: parts.join(" · "), fit: fit, fitText: { with: "ข่าวไปทางเดียวกับไม้นี้", against: "ข่าวสวนทางไม้นี้", none: "ข่าวไม่ชี้ทาง" }[fit], m: m };
+    // Trades of the rule taken in the same mood and direction, 2020-2026 (research/pro/sentiment.js): history, not a filter.
+    var S = window.EVIDENCE_TREND && window.EVIDENCE_TREND.sentiment, B = S && S.modes && S.modes[trendLadder() ? "ladder" : "rule"], past = null;
+    if (B && m.fng) {
+      var name = (dir > 0 ? "LONG " : "SHORT ") + m.fng.label + " ", key = Object.keys(B.bands).filter(function (k) { return k.indexOf(name) === 0; })[0], b = key && B.bands[key];
+      if (b && b.n >= 30) past = "ในอดีต (2020–2026) " + (dir > 0 ? "LONG" : "SHORT") + " ตอนตลาด" + m.fng.label + ": " + b.n + " ไม้ · ชนะ " + b.win + "% · เฉลี่ย " + fmt(b.avgR, 2, true) + "R";
+    }
+    return { text: parts.join(" · "), past: past, fit: fit, fitText: { with: "ข่าวไปทางเดียวกับไม้นี้", against: "ข่าวสวนทางไม้นี้", none: "ข่าวไม่ชี้ทาง" }[fit], m: m };
   }
   // What the mood study found (research/pro/sentiment.js, filters chosen on 2020-2022, checked on 2023-2026): a filter is
   // used only if it beat "no filter" on 2023-2026 in average R and in portfolio growth; otherwise the news is context.
@@ -2590,7 +2596,9 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
     var apply = ch && ch.id !== "none" && ch.test.avgR > none.test.avgR && ch.port.cagr > none.port.cagr;
     return { apply: apply, filter: apply ? ch.id : null, row: ch, none: none,
       text: apply ? "ใช้อารมณ์ตลาดกรองตามผลทดสอบ: " + ch.name
-        : "ทดสอบ " + S.days + " วันของดัชนี Fear & Greed: การกรองด้วยอารมณ์ตลาดไม่ได้ทำให้ผลปี 2023–2026 ดีขึ้น → ข่าวใช้ประกอบ เข้าตามระบบ" };
+        : ch && ch.id !== "none" ? "ทดสอบกับดัชนี Fear & Greed " + S.days + " วัน: ตัวกรองที่ดีที่สุดในปี 2020–2022 (" + ch.name + ") ทำปี 2023–2026 แย่ลง (เฉลี่ย " +
+            fmt(ch.test.avgR, 3, true) + "R เทียบ " + fmt(none.test.avgR, 3, true) + "R ถ้าไม่กรอง) → ข่าวใช้ประกอบ เข้าตามระบบ"
+          : "ทดสอบกับดัชนี Fear & Greed " + S.days + " วัน: ไม่กรองดีที่สุดในปี 2020–2022 → ข่าวใช้ประกอบ เข้าตามระบบ" };
   }
   // One line for alerts and sheets: "ปานกลาง–สูง (ผ่าน 4/6 การทดสอบ) · ปีที่กำไร ≈81%".
   function confidenceLine() {
@@ -2743,8 +2751,11 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
       if (lg.below_minimum) return { ok: false, html: "ไม่ต้องตาม: " + esc(lg.reject) };
       if (!v || !(v.n >= 30)) return { ok: false, html: "ยังไม่มีผลทดสอบการเข้าตามช่วงนี้ · รอไม้ใหม่" };
       if (!(v.avgR > 0)) return { ok: false, html: "ไม่แนะนำให้เข้าตาม: ทดสอบเข้าช้า " + v.bars + " แท่ง เฉลี่ย " + fmt(v.avgR, 2, true) + "R" };
+      // Only where the test shows joining this late was clearly profitable (its 95% range above zero): 1-2 bars.
+      if (!(v.avgRCI && v.avgRCI[0] > 0)) return { ok: false, html: "ไม่ต้องตาม: เข้าช้า " + it.barsSince + " แท่งแล้ว ผลทดสอบไม่ชัดว่ากำไร (เข้าช้า " + v.bars + " แท่ง: เฉลี่ย " +
+        fmt(v.avgR, 2, true) + "R ช่วง 95% " + fmt(v.avgRCI[0], 2, true) + " ถึง " + fmt(v.avgRCI[1], 2, true) + "R) · รอไม้ใหม่" };
       var z = sized(lg), tp1 = it.tpLevels[0];
-      return { ok: true, html: '<b class="up">✅ เข้าตามได้</b>' + (v.avgRCI && v.avgRCI[0] <= 0 ? " (ผลทดสอบบวกน้อย ไม่ชัด)" : "") + " ที่ ≈ " + price(lg.entry) + " · SL " + price(lg.stop) +
+      return { ok: true, html: '<b class="up">✅ เข้าตามได้</b> ที่ ≈ ' + price(lg.entry) + " · SL " + price(lg.stop) +
         (tp1 ? " · TP1 " + price(tp1.price) : "") + " · x" + lg.lev + " · " + qtyTxt(z.qty) + " " + r.symbol.replace("USDT", "") + " · Margin ≈ " + fmt(z.marginB, 0) + " ฿ · เสี่ยง " +
         fmt(z.lossB / cap * 100, 2) + "%" + (lg.minSize ? " (ขนาดขั้นต่ำ Binance)" : "") + marginNote(z.marginB) + "<small>ทดสอบเข้าช้า " + v.bars + " แท่ง: " + v.n + " ไม้ · ชนะ " + v.win + "% · เฉลี่ย " + fmt(v.avgR, 2, true) + "R</small>" };
     }
@@ -2775,7 +2786,7 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
     // A trade's news line: the mood, whether it points the trade's way, and what the system does about it.
     function moodLine(symbol, dir) {
       var r = moodRead(symbol, dir);
-      return '<div class="mood ' + r.fit + '">📰 ' + esc(r.text) + " → <b>" + r.fitText + "</b><small>" + esc(moodRule().text) + "</small></div>";
+      return '<div class="mood ' + r.fit + '">📰 ' + esc(r.text) + " → <b>" + r.fitText + "</b>" + (r.past ? "<small>" + esc(r.past) + "</small>" : "") + "<small>" + esc(moodRule().text) + "</small></div>";
     }
     // The system's note for today, written from rules like a trader's morning read: market mood and headlines, releases
     // due, then what it does with each signal, exit and position.
@@ -2803,7 +2814,16 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
       var closed = all.filter(function (t) { return !t.open; }).sort(function (a, b) { return b.exit_time - a.exit_time; });
       var sumR = closed.reduce(function (a, t) { return a + t.r; }, 0), wins = closed.filter(function (t) { return t.r > 0; }).length;
       var why = { exit: "ออกตามสูตร", stop: "SL", stop_gap: "SL", end: "" };
-      return '<div class="sec-hd">ผลงานระบบ 30 วัน</div><div class="perf">' +
+      var nm = trendNormal(), w = nm && nm.normal.windows, N = w ? [100, 50, 30, 20, 10].filter(function (k) { return closed.length >= k && w[k]; })[0] : null, verdict = "";
+      if (N) {
+        var b = w[N], last = closed.slice(0, N).reduce(function (a, t) { return a + t.r; }, 0);
+        var lvl = last < b.min ? "broken" : last < b.p5 ? "watch" : "ok";
+        verdict = '<div class="live-chk ' + lvl + '" style="margin:6px 0">' + { ok: "✅ อยู่ในช่วงปกติของผลทดสอบ", watch: "⚠️ ต่ำกว่าปกติ: แย่กว่า 95% ของช่วงในผลทดสอบ แต่ยังไม่แย่เท่าที่เคยเจอ",
+          broken: "⛔ แย่กว่าที่ผลทดสอบเคยเจอ: สูตรอาจเสื่อม หยุดเข้าไม้ใหม่และทบทวน" }[lvl] + "<small>" + N + " ไม้ล่าสุดรวม " + fmt(last, 1, true) + "R · ผลทดสอบ " + N +
+          " ไม้ติดกัน: ปกติ " + fmt(b.p50, 1, true) + "R · แย่ 5% ล่างสุด " + fmt(b.p5, 1, true) + "R · แย่สุดที่เคยเจอ " + fmt(b.min, 1, true) + "R" +
+          (lvl === "ok" ? "" : " · ช่วงแบบนี้ควรเสี่ยงต่ำสุด (0.25%) หรือรอให้กลับเข้ากรอบปกติก่อนใช้เงินเพิ่ม") + "</small></div>";
+      }
+      return '<div class="sec-hd">ผลงานระบบ 30 วัน</div><div class="perf">' + verdict +
         (closed.length ? "<div>" + closed.length + " ไม้ที่ปิด · ชนะ " + wins + " · แพ้ " + (closed.length - wins) + ' · รวม <b class="' + tone(sumR) + '">' + fmt(sumR, 1, true) + "R</b> ≈ " +
             '<b class="' + tone(sumR) + '">' + fmt(sumR * risk, 1, true) + "% ของทุน</b> <small>(เสี่ยง " + risk + "%/ไม้)</small></div>" +
             closed.slice(0, 8).map(function (t) {

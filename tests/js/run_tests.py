@@ -285,7 +285,8 @@ def main():
     s = r["smMain"]
     check("✅ ตอนนี้ไม่ต้องทำอะไร" in s and "ระบบถืออยู่ 2 ไม้" in s, "nothing new to do, and the system's 2 open positions listed right after")
     check("ถ้ายังไม่ได้เข้า" in s and "ราคาห่างจุดเข้าเกิน 0.5R" in s, "a position already +1R away: do not join late")
-    check(("เข้าตามได้" in s) or ("ไม่แนะนำให้เข้าตาม" in s) or ("ยังไม่มีผลทดสอบการเข้าตาม" in s), "a position 0.2R from its entry: the late-entry test decides")
+    check(("เข้าตามได้" in s) or ("ไม่แนะนำให้เข้าตาม" in s) or ("ยังไม่มีผลทดสอบการเข้าตาม" in s) or ("ผลทดสอบไม่ชัดว่ากำไร" in s), "a position 0.2R from its entry: the late-entry test decides")
+    check("ผลทดสอบบวกน้อย" not in s, "joining late is offered only where the test was clearly profitable, never 'small and unclear'")
     check(r["charts"] >= 2 and "Stop Loss" in s and "TP1" in s, "each open position has its SL/TP and its chart")
 
     # A native reply that never comes back must not hang the scan: it fails with a timeout and is reported.
