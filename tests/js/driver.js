@@ -63,7 +63,7 @@
       scanCards: text("scanCards"), smMain: text("smMain"), coach: text("coach"), paper: text("ppSimple") + " | " + text("ppHero") + " | " + text("ppTrades"),
       paperStatus: text("ppStatus"), paperTitle: text("ppTitle"), help: text("sgHelp"), chartPlan: text("cvAnalysis"), news: text("smNews"), newsTop: text("smNewsTop"), aiLeft: localStorage.getItem("aiKeys"), conf: text("smMain").indexOf("ความมั่นใจของสูตร") >= 0, chart: !!document.querySelector("#smChart canvas"),
       charts: Array.prototype.filter.call(document.querySelectorAll("#smMain .sm-chart"), function (el) { return !!el.querySelector("canvas"); }).length,
-      paperCheck: text("ppCheck"), routine: text("smRoutine"), rtStatus: text("rtStatus"), shared: __T.shared || "", floatAlert: text("floatAlert"), floatShown: !document.getElementById("floatAlert").classList.contains("hidden"),
+      paperCheck: text("ppCheck"), live: text("smLive"), ws: __T.ws || "", routine: text("smRoutine"), rtStatus: text("rtStatus"), shared: __T.shared || "", floatAlert: text("floatAlert"), floatShown: !document.getElementById("floatAlert").classList.contains("hidden"),
       floatCls: Array.prototype.map.call(document.querySelectorAll("#floatAlert .fa"), function (el) { return el.className; }),
       sheets: Array.prototype.map.call(document.querySelectorAll("#smMain .sm-sheet"), function (el) { return el.className; }) });
   }, cfg.waitMs || 12000);

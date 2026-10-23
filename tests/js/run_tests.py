@@ -323,6 +323,24 @@ def main():
     check(b.get("app") == "POC Signal" and "SOLUSDT" in b.get("data", {}).get("portfolio.v1", "") and "routine.v1" in b.get("data", {}),
           "backup: the saved trades, the routine and the settings go out as one text through the share sheet")
     check("กู้คืนไม่ได้: ไม่ใช่ข้อความสำรองของแอปนี้" in r["rtStatus"], "restore refuses a text that is not this app's backup")
+    # Trades already entered: live P&L at Binance's mark price (WebSocket every second, REST every 3 s when it fails).
+    now_ms = int(time.time() * 1000)
+    held = {"trades": [
+        {"id": 1, "symbol": "SOLUSDT", "entry": 150, "stop": 147, "qty": 10, "fx": 33, "risk": 1000, "dir": 1, "fee": 0.0007, "lev": 10, "tp1": 159, "entry_time": now_ms - 3_600_000, "closed": False},
+        {"id": 2, "symbol": "BTCUSDT", "entry": 60000, "stop": 61500, "qty": 0.01, "fx": 33, "risk": 500, "dir": -1, "fee": 0.0007, "lev": 5, "entry_time": now_ms - 3_600_000, "closed": False}], "nextId": 3}
+    r = run(page, "live_pnl", {"storage": dict(h4, **{"portfolio.v1": json.dumps(held)}), "capital": 100_000, "trendForce": {}, "clickTf": "4h",
+                               "waitMs": 15000, "justClosed": 14_400_000, "livePct": 2}, bg=False)
+    lv = r["live"]
+    check("ไม้ที่เข้าแล้ว 2 ไม้" in lv and "+20.00%" in lv and "ราคา 150.0000 → 153.0000 (+2.00%) · +990 ฿ · +0.92R" in lv,
+          "entered LONG SOL x10: price +2% at mark -> ROI +20.00% like Binance, +990 baht, +0.92R after fees")
+    check("-10.00%" in lv and "(-2.00%)" in lv and "-396 ฿" in lv, "entered SHORT BTC x5, price up 2% -> ROI -10.00%, -396 baht")
+    check("TP1 159.0000 (อีก +3.92%)" in lv and "SL 147.0000 (ห่าง -3.92%)" in lv, "distance to SL and TP1 from the live price")
+    check("รวม +496 ฿" in lv and "ราคาสดทุก 1 วินาที" in lv and "markPrice@1s" in r["ws"] and "btcusdt" in r["ws"] and "solusdt" in r["ws"],
+          "total after fees, fed by Binance's mark-price WebSocket every second")
+    r = run(page, "live_rest", {"storage": dict(h4, **{"portfolio.v1": json.dumps(held)}), "capital": 100_000, "trendForce": {}, "clickTf": "4h",
+                                "waitMs": 15000, "justClosed": 14_400_000, "wsDown": True}, bg=False)
+    check("ราคาทุก 3 วินาที" in r["live"] and "ROI" in r["live"] and "—" not in r["live"].split("ไม้ที่เข้าแล้ว")[1][:200],
+          "WebSocket refused -> live P&L from REST mark price every 3 seconds")
     r = run(page, "news_down", {"storage": h4, "capital": 1_000_000, "trendForce": {"ETHUSDT": "LONG"}, "newsDown": True})
     check([x["kind"] for x in r["packet"]["signals"]] == ["ENTRY"] and r["packet"]["signals"][0]["news"] == "", "every news source down: the entry alert still goes out")
 

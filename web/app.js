@@ -536,7 +536,15 @@
       try { var v = localStorage.getItem(id); if (v !== null) $(id).value = v; } catch (e) { /* ignore */ }
       $(id).addEventListener("input", function () { try { localStorage.setItem(id, $(id).value); } catch (e) { /* ignore */ } render(); });
     });
-    return { plan: plan, open: open, render: render };
+    // The price actually filled replaces the signal's reference price; the risk follows (distance to the same SL).
+    function setEntry(id, px) {
+      var t = data.trades.filter(function (x) { return x.id === id; })[0];
+      if (!t || !(px > 0)) return;
+      t.entry = px; t.risk = Math.abs(px - t.stop) * t.qty * t.fx + (t.fee || 0) * 2 * px * t.qty * t.fx;
+      save(); render();
+    }
+    return { plan: plan, open: open, render: render, close: close, setEntry: setEntry,
+      openTrades: function () { return data.trades.filter(function (t) { return !t.closed; }); } };
   })();
 
   // ---- Live signal scan ----
@@ -1147,7 +1155,7 @@
 
   // ---- Main screen: what to trade now and every number of the trade, sized from the user's own money ----
   var Simple = (function () {
-    var lastScan = 0, timer = null, results = [], fx = 33, live = null, busyNow = false, chartSym = "", meta = null, lastError = "";
+    var lastScan = 0, timer = null, results = [], fx = 33, busyNow = false, chartSym = "", meta = null, lastError = "";
     function money() { return readNumber("pfCapital", 10000); }
     function signals() {
       var now = Date.now();
@@ -1246,7 +1254,8 @@
       }
       return '<div class="sm-sum sm-sheet ' + (long ? "l" : "s") + '"><div class="sm-sheet-hd"><b>' + r.symbol.replace("USDT", "") + ' <small>เปิดอยู่ · เข้า ' + thai(it.entryTime) + '</small></b><span class="pill ' + (long ? "go" : "short") + '">' +
           (long ? "LONG" : "SHORT") + " " + fmt(it.r, 2, true) + "R</span></div><div class=\"sm-order\">" +
-        row("จุดเข้า", price(it.entry)) + row("ราคาตอนนี้", '<span data-now="' + r.symbol + '">' + price(it.now) + "</span>") +
+        row("จุดเข้า", price(it.entry)) + row("ราคาตอนนี้", '<span data-now="' + r.symbol + '">' + price(it.now) + '</span><span data-livepos="' + r.symbol + '" data-e="' + it.entry +
+          '" data-d="' + it.dir + '" data-k="' + Math.abs(it.entry - it.stop) + '"></span>') +
         row("Stop Loss", '<span class="down">' + price(it.stop) + "</span> (" + dist(it.stop) + ")") + tps +
         row(it.tpLevels.length ? "ส่วนที่เหลือออก" : "จุดออก", exitText(it)) + row("ถ้าถืออยู่", "ถือต่อ · ห้ามเลื่อน SL · แอปเด้งเมื่อถึงจุดออก") +
         row("ถ้ายังไม่ได้เข้า", join) + "</div>" + (lg && !lg.below_minimum && v && v.avgR > 0 ? headline(lg.dir, lg.lev, Object.assign(verdictOf(r.symbol, TREND.tf, sized(lg).lossB / cap * 100),
@@ -1387,7 +1396,9 @@
         '<small class="muted">ความมั่นใจคือสถิติของไม้ลักษณะเดียวกันในช่วงทดสอบ ไม่ใช่การรับประกันไม้นี้ · ผลลัพธ์คิดจากขนาดไม้นี้ รวมค่าธรรมเนียมโดยประมาณ</small>' +
         newsFor(r.symbol) +
         '<div class="sm-chart-hd" style="margin-top:8px">กราฟ 4 ชม. · ' + coin + '</div><div id="smChart' + i + '" class="sm-chart"></div>' +
-        '<button type="button" class="mini" data-save="' + i + '" style="width:100%;margin-top:8px">เข้าแล้ว · บันทึกลงพอร์ต</button></div>';
+        (Portfolio.openTrades().some(function (t) { return t.symbol === r.symbol && (t.dir || 1) === g.dir && t.entry_time >= g.candle; })
+          ? '<button type="button" class="mini" disabled style="width:100%;margin-top:8px">บันทึกแล้ว ✓ ดูกำไร/ขาดทุนสดด้านบน</button></div>'
+          : '<button type="button" class="mini" data-save="' + i + '" style="width:100%;margin-top:8px">เข้าแล้ว · บันทึกลงพอร์ต (ดูกำไร/ขาดทุนสด)</button></div>');
     }
     // The coin's headlines of the last 24 hours and high-impact US releases before the next 4-hour close.
     function newsFor(symbol) {
@@ -1418,7 +1429,7 @@
         return '<button type="button" data-tf="' + k + '" class="' + (k === tf ? "on" : "") + '">' + TF[k].name + (k === "4h" ? " Trend" : "") + "</button>";
       }).join("") + "</div>";
       var items = isTrend(tf) ? planItems() : [], parts = isTrend(tf) ? trendParts(items) : { top: squeezeHead(tf), open: "", bottom: "", held: [] };
-      head += statusLine() + '<div id="smNewsTop">' + News.topHtml() + "</div>" + parts.top;
+      head += statusLine() + '<div id="smLive">' + liveHtml() + "</div>" + '<div id="smNewsTop">' + News.topHtml() + "</div>" + parts.top;
       if (list.length) {
         var tot = list.reduce(function (a, x) { var z = sized(x.signal); a.m += z.marginB; a.l += z.lossB; return a; }, { m: 0, l: 0 });
         head += '<div class="sm-bt" style="font-size:13px"><b>สัญญาณน่าเข้า ' + list.length + " ตัว</b>" + (list.length > 1 ? " (เรียงจากสถิติเหรียญดีสุด)" : "") +
@@ -1441,6 +1452,8 @@
       $("smMain").innerHTML = head;
       if (rtOpen && $("smRoutine")) $("smRoutine").open = true;
       Routine.bind(draw);
+      bindLive();
+      paintLive();
       list.forEach(function (x, i) {
         var it = items.filter(function (y) { return y.symbol === x.symbol && y.kind === "entry"; })[0];
         try { drawPlan($("smChart" + i), it); } catch (e) { /* the chart is a convenience; the numbers are complete */ }
@@ -1452,7 +1465,8 @@
         b.onclick = function () {
           var x = list[+b.getAttribute("data-save")], z = sized(x.signal);
           Portfolio.open(Object.assign(recordOf(x, x.signal, fx), { qty: z.qty, risk: z.lossB }));
-          b.textContent = "บันทึกแล้ว ✓"; b.disabled = true;
+          draw();
+          if ($("smLive")) $("smLive").scrollIntoView({ behavior: "smooth", block: "start" });
         };
       });
       Array.prototype.forEach.call(document.querySelectorAll("#smMain [data-plan]"), function (el) {
@@ -1503,23 +1517,110 @@
       });
       clearTimeout(floatTimer); floatTimer = setTimeout(hide, 25000);
     }
-    // Live prices for every coin on the sheets (one request for all symbols) while the screen is open.
-    function watch() {
-      if (live) return;
-      var busyPull = false, pull = function () {
-        var cells = document.querySelectorAll("#smMain [data-now]");
-        if (busyPull || document.hidden || !document.body.classList.contains("simple") || !cells.length) return;
-        busyPull = true;
-        futuresApi("/fapi/v1/ticker/price").then(function (all) {
-          var px = {};
-          (all || []).forEach(function (t) { px[t.symbol] = +t.price; });
-          Array.prototype.forEach.call(document.querySelectorAll("#smMain [data-now]"), function (el) {
-            var v = px[el.getAttribute("data-now")];
-            if (v > 0) el.textContent = price(v);
-          });
-        }).catch(function () { /* keep the last value */ }).then(function () { busyPull = false; });
+    // Live mark prices (the price Binance uses for unrealized P&L): Binance's free WebSocket, every second, for the coins on
+    // screen and the trades entered; when it cannot connect, one REST request per coin every 3 seconds. Only while open.
+    var px = {}, ws = null, wsKey = "", poll = null, wsFail = 0, paintTimer = null, feed = "";
+    function liveSymbols() {
+      var s = {};
+      Array.prototype.forEach.call(document.querySelectorAll("#smMain [data-now]"), function (el) { s[el.getAttribute("data-now")] = 1; });
+      Portfolio.openTrades().forEach(function (t) { s[t.symbol] = 1; });
+      return Object.keys(s).sort();
+    }
+    function onPrice(sym, p) {
+      if (!(p > 0)) return;
+      px[sym] = p;
+      if (!paintTimer) paintTimer = setTimeout(function () { paintTimer = null; paintLive(); }, 200);
+    }
+    function stopFeed() {
+      if (ws) { try { ws.onclose = ws.onerror = null; ws.close(); } catch (e) { /* already closed */ } ws = null; }
+      clearInterval(poll); poll = null; wsKey = "";
+    }
+    function startPoll(syms) {
+      if (poll) return;
+      var busy = false, pull = function () {
+        if (busy || document.hidden) return;
+        busy = true;
+        Promise.all(syms.map(function (s) {
+          return futuresApi("/fapi/v1/premiumIndex?symbol=" + s).then(function (r) { feed = "rest"; onPrice(s, +r.markPrice); }, function () { /* keep the last price */ });
+        })).then(function () { busy = false; });
       };
-      pull(); live = setInterval(pull, 4000);
+      pull(); poll = setInterval(pull, 3000);
+    }
+    function watch() {
+      var syms = liveSymbols(), key = syms.join(",");
+      if (!syms.length || document.hidden || !document.body.classList.contains("simple")) { stopFeed(); return; }
+      if (key === wsKey && (ws || poll)) return;
+      stopFeed(); wsKey = key;
+      if (window.WebSocket && wsFail < 3) {
+        try {
+          ws = new WebSocket("wss://fstream.binance.com/stream?streams=" + syms.map(function (s) { return s.toLowerCase() + "@markPrice@1s"; }).join("/"));
+          ws.onmessage = function (m) { try { var d = JSON.parse(m.data).data; if (d && d.s) { feed = "ws"; onPrice(d.s, +d.p); } } catch (e) { /* not a price */ } };
+          ws.onerror = ws.onclose = function () { ws = null; wsFail++; startPoll(syms); };
+          return;
+        } catch (e) { wsFail++; }
+      }
+      startPoll(syms);
+    }
+    document.addEventListener("visibilitychange", function () { if (document.hidden) stopFeed(); else if (document.body.classList.contains("simple")) watch(); });
+    // One entered trade at mark price p: price move, ROI on margin as Binance shows it (before fees), baht, R after fees.
+    function pnlOf(t, p) {
+      var d = t.dir || 1, move = d * (p - t.entry) / t.entry, gross = d * (p - t.entry) * t.qty * t.fx, fee = (t.fee || 0) * (p + t.entry) * t.qty * t.fx;
+      return { move: move * 100, roi: move * (t.lev || 1) * 100, baht: gross, fee: fee, r: t.risk > 0 ? (gross - fee) / t.risk : null, stopped: d * (p - t.stop) <= 0 };
+    }
+    // The trades the user entered (recorded with "เข้าแล้ว"), at the top of the screen; the numbers fill in live.
+    function liveHtml() {
+      var open = Portfolio.openTrades();
+      if (!open.length) return "";
+      return '<div class="lv"><div class="lv-hd"><b>ไม้ที่เข้าแล้ว ' + open.length + ' ไม้</b><b id="lvTotal">…</b><small id="lvFeed">กำลังต่อราคาสด…</small></div>' + open.map(function (t) {
+        var long = (t.dir || 1) > 0;
+        return '<div class="lv-card" id="lvCard' + t.id + '"><div class="lv-top"><span class="pill ' + (long ? "go" : "short") + '">' + (long ? "LONG" : "SHORT") + "</span><b>" + t.symbol.replace("USDT", "") +
+          (t.lev ? " x" + t.lev : "") + '</b><b class="lv-roi" id="lvRoi' + t.id + '">—</b></div>' +
+          '<div class="lv-line" id="lvLine' + t.id + '">เข้า ' + price(t.entry) + " · รอราคาสด</div><div class=\"lv-line\" id=\"lvDist" + t.id + '"></div>' +
+          '<details class="lv-act"><summary>แก้ราคาเข้าจริง · ปิดไม้</summary>' +
+          '<div class="inline"><input type="number" inputmode="decimal" step="any" id="lvEntry' + t.id + '" value="' + t.entry + '"><button class="mini ghost" type="button" data-lvfix="' + t.id + '">บันทึกราคาเข้าจริง</button></div>' +
+          '<div class="inline"><input type="number" inputmode="decimal" step="any" id="lvExit' + t.id + '" placeholder="ราคาที่ปิด (ว่าง = ราคาตอนนี้)"><button class="mini" type="button" data-lvclose="' + t.id + '">ปิดไม้</button></div></details></div>';
+      }).join("") + '<small class="muted">ROI = กำไร/ขาดทุนเทียบ Margin แบบใน Binance (ยังไม่หักค่าธรรมเนียม) · ราคา Mark ของ Binance · R และยอดรวมหักค่าธรรมเนียมแล้ว · ถ้าขาย TP1 ไปแล้ว ตัวเลขจริงจะต่างจากนี้</small></div>';
+    }
+    function setText(id, text, cls) { var el = $(id); if (!el) return; el.textContent = text; if (cls !== undefined) el.className = cls; }
+    function paintLive() {
+      Array.prototype.forEach.call(document.querySelectorAll("#smMain [data-now]"), function (el) { var v = px[el.getAttribute("data-now")]; if (v > 0) el.textContent = price(v); });
+      // The rule's open positions: move and R since its entry.
+      Array.prototype.forEach.call(document.querySelectorAll("#smMain [data-livepos]"), function (el) {
+        var v = px[el.getAttribute("data-livepos")], e = +el.getAttribute("data-e"), d = +el.getAttribute("data-d"), k = +el.getAttribute("data-k");
+        if (!(v > 0)) return;
+        var mv = d * (v - e) / e * 100;
+        el.textContent = " · " + fmt(mv, 2, true) + "% · " + fmt(d * (v - e) / k, 2, true) + "R";
+        el.className = mv >= 0 ? "up" : "down";
+      });
+      var cap = money(), tot = 0, n = 0, open = Portfolio.openTrades();
+      open.forEach(function (t) {
+        var p = px[t.symbol];
+        if (!(p > 0) || !$("lvCard" + t.id)) return;
+        var x = pnlOf(t, p), c = x.baht >= 0 ? "up" : "down", d = t.dir || 1;
+        tot += x.baht - x.fee; n++;
+        $("lvCard" + t.id).className = "lv-card " + c;
+        setText("lvRoi" + t.id, fmt(x.roi, 2, true) + "%", "lv-roi " + c);
+        setText("lvLine" + t.id, "ราคา " + price(t.entry) + " → " + price(p) + " (" + fmt(x.move, 2, true) + "%) · " + fmt(x.baht, 0, true) + " ฿" +
+          (x.r !== null ? " · " + fmt(x.r, 2, true) + "R" : "") + " · " + fmt((x.baht - x.fee) / cap * 100, 2, true) + "% ของทุน");
+        setText("lvDist" + t.id, x.stopped ? "⛔ ราคาเลย SL " + price(t.stop) + " แล้ว: ใน Binance น่าจะโดน SL ไปแล้ว กดปิดไม้เพื่อบันทึก"
+          : "SL " + price(t.stop) + " (ห่าง " + fmt((t.stop / p - 1) * 100, 2, true) + "%)" +
+            (t.tp1 || (t.tps && t.tps[0]) ? " · TP1 " + price(t.tp1 || t.tps[0]) + " (อีก " + fmt(((t.tp1 || t.tps[0]) / p - 1) * 100 * d, 2, true) + "%)" : ""), "lv-line" + (x.stopped ? " down" : ""));
+      });
+      if (n) setText("lvTotal", "รวม " + fmt(tot, 0, true) + " ฿ (" + fmt(tot / cap * 100, 2, true) + "% ของทุน)", tot >= 0 ? "up" : "down");
+      if (open.length) setText("lvFeed", feed === "ws" ? "● ราคาสดทุก 1 วินาที (Binance Mark)" : feed === "rest" ? "● ราคาทุก 3 วินาที (Binance Mark)" : "กำลังต่อราคาสด…");
+    }
+    function bindLive() {
+      Array.prototype.forEach.call(document.querySelectorAll("[data-lvfix]"), function (b) {
+        b.onclick = function () { var id = +b.getAttribute("data-lvfix"); Portfolio.setEntry(id, parseFloat($("lvEntry" + id).value)); draw(); };
+      });
+      Array.prototype.forEach.call(document.querySelectorAll("[data-lvclose]"), function (b) {
+        b.onclick = function () {
+          var id = +b.getAttribute("data-lvclose"), t = Portfolio.openTrades().filter(function (x) { return x.id === id; })[0], v = parseFloat($("lvExit" + id).value);
+          if (!t) return;
+          Portfolio.close(id, v > 0 ? v : px[t.symbol]);
+          draw();
+        };
+      });
     }
     function show(simple) {
       document.body.classList.toggle("simple", simple);
@@ -1768,6 +1869,7 @@
     return hasTp(g) ? { symbol: r.symbol, dir: g.dir, entry: g.entry, stop: g.stop, target: g.tps[2], tps: g.tps, qty: g.qty, fx: fx, risk: g.riskUsdt * fx,
       fee: FUT.fee + FUT.slippage, lev: g.lev, hold_hours: g.hold }
       : { symbol: r.symbol, dir: g.dir, entry: g.entry, stop: g.stop, qty: g.qty, fx: fx, risk: g.riskUsdt * fx, fee: FUT.fee + FUT.slippage, lev: g.lev,
+        tp1: g.ladder && g.ladder[0] ? g.ladder[0].price : null,
         exit_rule: (g.ladder ? ladderText(g.ladder) + " · " : "") + "ออกเมื่อแอปเด้งปิดไม้ (แท่ง 4 ชม. ปิดหลุด 10 แท่ง)" };
   }
 

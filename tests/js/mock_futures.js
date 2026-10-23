@@ -29,6 +29,22 @@
     return out;
   }
   function reply(id, ok, body, delay) { setTimeout(function () { window.__nativeDone(id, ok, typeof body === "string" ? body : JSON.stringify(body)); }, delay || 1); }
+  // Binance's mark-price WebSocket: every requested coin at cfg.livePct % above its base price, once a second.
+  // cfg.wsDown: the socket fails at once, so the app falls back to REST polling.
+  window.WebSocket = function (url) {
+    var self = this, syms = (url.split("streams=")[1] || "").split("/").map(function (x) { return x.split("@")[0].toUpperCase(); });
+    __T.ws = url;
+    setTimeout(function () {
+      if (cfg.wsDown) { if (self.onerror) self.onerror({}); return; }
+      var tick = function () {
+        syms.forEach(function (sy) {
+          if (SPEC[sy] && self.onmessage) self.onmessage({ data: JSON.stringify({ stream: sy.toLowerCase() + "@markPrice@1s", data: { e: "markPriceUpdate", s: sy, p: String(SPEC[sy][0] * (1 + (cfg.livePct || 0) / 100)) } }) });
+        });
+      };
+      tick(); self._t = setInterval(tick, 1000);
+    }, 50);
+  };
+  window.WebSocket.prototype.close = function () { clearInterval(this._t); };
   window.NativeHttp = {
     get: function (id, url) {
       var u = new URL(url), p = u.searchParams, sym = p.get("symbol");

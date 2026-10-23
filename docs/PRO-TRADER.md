@@ -74,6 +74,15 @@ signal: the rule was not tested with news.
   no rule changes after a short losing run, never above 1% risk.
 - Backup and restore of trades, the live record and settings as one text through Android's share sheet.
 
+## Live P&L of the trades entered (v6.1)
+
+Trades recorded with "เข้าแล้ว · บันทึกลงพอร์ต" sit at the top of the main screen with their P&L at Binance's mark price
+(the price Binance uses for unrealized P&L), from Binance's free WebSocket every second (`<symbol>@markPrice@1s`), or
+from `/fapi/v1/premiumIndex` every 3 seconds when the socket cannot connect. Per trade: ROI on margin as Binance shows it
+(price move × leverage, before fees), the price move, baht, R after fees, % of the balance, distance to SL and TP1, and a
+warning once the price is past the SL. The real fill can replace the signal price, and a trade is closed at the live price
+or a typed one. The rule's open positions show their live move and R next to the price. Only while the app is open.
+
 ## Limits
 
 - No test guarantees the future; the confidence figures describe the past and assume independent trades.
