@@ -55,8 +55,9 @@ public class SignalAlertsTest {
         for (SignalAlerts.Note n : p.notes) ids.add(n.id());
         check(ids.size() == 12, "notification ids are distinct per coin");
         SignalAlerts.Note first = p.notes.get(0);
-        check(first.title.startsWith("ทดลอง · BTCUSDT LONG · M15"), "title says trial + symbol + side + timeframe");
-        for (String must : new String[]{"UTC+7", "เข้าอ้างอิง 100.00", "SL 98.20", "TP1 101.80 (1R)", "TP2 103.60 (2R)", "TP5 109.00 (5R)",
+        check(first.title.equals("เข้า LONG BTCUSDT · M15 · ≤10x"), "title says the action: enter + side + symbol + timeframe + leverage");
+        check(first.body.startsWith("เข้า 100.00 · SL 98.20 · TP 101.80 / 103.60 / 109.00 · โดน SL เสีย ≈ 25 ฿"), "first line (collapsed view) is the whole order");
+        for (String must : new String[]{"UTC+7", "เข้า 100.00", "SL 98.20", "TP1 101.80 (1R)", "TP2 103.60 (2R)", "TP5 109.00 (5R)",
                 "Margin ≈ 5.00 USDT (≈ 165 ฿)", "ถ้าโดน SL เสีย ≈ 25 ฿", "Leverage ≤10x (เพดานที่เลือก 20x)", "Liq ประมาณ 91.00", "squeeze3_ls", "ข้อมูลยืนยัน 2026",
                 "ไม่ใช่คำสั่งซื้อขาย", "ยกเลิกถ้ายังไม่เข้าภายใน"}) {
             check(first.body.contains(must), "body contains: " + must);
@@ -119,13 +120,15 @@ public class SignalAlertsTest {
         JSONObject trend = item("BTCUSDT", "LONG", "H4", c4).put("strategy", "donchian4h").put("tp1", "").put("tp2", "").put("tp5", "")
             .put("exit_rule", "ไม่มี TP ตายตัว: ปิดเมื่อแท่ง 4 ชม. ปิดต่ำกว่าจุดต่ำสุด 10 แท่ง");
         SignalAlerts.Plan t4 = SignalAlerts.plan(packet(240, c4, new JSONArray().put(trend)), n4, key -> -1L);
-        check(t4.ok && t4.notes.size() == 1 && t4.notes.get(0).title.startsWith("ทดลอง · BTCUSDT LONG · H4"), "H4 entry without TP is notified, title says H4");
+        check(t4.ok && t4.notes.size() == 1 && t4.notes.get(0).title.startsWith("เข้า LONG BTCUSDT · H4"), "H4 entry without TP is notified, title says H4");
+        check(t4.notes.get(0).body.startsWith("เข้า 100.00 · SL 98.20 · ไม่มี TP (ออกตามสูตร)"), "H4 without TP: the first line says so");
         check(t4.notes.get(0).body.contains("ไม่มี TP ตายตัว") && !t4.notes.get(0).body.contains("TP5") && t4.notes.get(0).body.contains("SL 98.20"),
             "H4 entry shows SL and the exit rule instead of TP levels");
         JSONObject laddered = new JSONObject(trend.toString()).put("tp1", "102.00").put("tp2", "104.00")
             .put("tp_plan", "TP แบ่งขาย: TP1 102.00 (+1R ขาย 1/3) · TP2 104.00 (+2R ขาย 1/3) · ที่เหลือถือจนแอปเด้งปิดไม้");
         String lb = SignalAlerts.plan(packet(240, c4, new JSONArray().put(laddered)), n4, key -> -1L).notes.get(0).body;
         check(lb.contains("TP1 102.00 (+1R ขาย 1/3)") && lb.contains("ไม่มี TP ตายตัว"), "H4 entry with a scale-out plan shows the plan and the runner's exit");
+        check(lb.startsWith("เข้า 100.00 · SL 98.20 · TP1 102.00 · TP2 104.00"), "scale-out: TP1/TP2 on the first line");
         JSONObject neither = new JSONObject(trend.toString()).put("exit_rule", "");
         check(SignalAlerts.plan(packet(240, c4, new JSONArray().put(neither)), n4, key -> -1L).invalid == 1, "entry with neither TP nor exit rule is dropped");
         check(SignalAlerts.plan(packet(240, c4, new JSONArray().put(trend)), c4 + 16 * 60_000L, key -> -1L).notes.isEmpty(), "H4 alert older than 15 minutes is refused");
@@ -137,7 +140,8 @@ public class SignalAlertsTest {
         SignalAlerts.Plan both = SignalAlerts.plan(packet(240, c4, new JSONArray().put(trend).put(exit)), n4, lookup4);
         check(both.notes.size() == 2 && !both.notes.get(0).key.equals(both.notes.get(1).key), "entry and exit of the same coin/side/candle are separate notifications");
         SignalAlerts.Note ex = both.notes.get(1);
-        check(ex.exit && ex.title.startsWith("ทดลอง · ปิดไม้ BTCUSDT LONG · H4"), "exit title says close + symbol + side + H4");
+        check(ex.kind.equals("EXIT") && ex.title.equals("ปิดไม้ LONG BTCUSDT · H4"), "exit title says close + side + symbol + H4");
+        check(ex.body.startsWith("ปิดด้วย Market ตอนนี้ (ถ้าถืออยู่) · ปิดแท่ง 66000.0 · ≈ +2.00R"), "exit first line says what to do");
         for (String must : new String[]{"ที่เข้า 60000.0", "ปิด 66000.0 ต่ำกว่า 66100.0", "≈ +2.00R", "SL เดิม 57000.0", "Close → Market", "ถ้าไม่ได้ถือ", "ไม่ใช่คำสั่งซื้อขาย"}) {
             check(ex.body.contains(must), "exit body contains: " + must);
         }
@@ -148,6 +152,22 @@ public class SignalAlertsTest {
             "exit without a reference price is dropped");
         check(SignalAlerts.plan(packet(240, c4, new JSONArray().put(new JSONObject(exit.toString()).put("kind", "CLOSE_ALL"))), n4, key -> -1L).invalid == 1,
             "unknown kind is dropped");
+
+        // Capital too small for the rule's risk: an information notification with its own dedup key, never an entry call.
+        JSONObject blocked = new JSONObject().put("kind", "BLOCKED").put("symbol", "AVAXUSDT").put("side", "SHORT").put("tf", "H4").put("strategy", "donchian4h")
+            .put("candle_close", c4).put("expires", c4 + 900_000L).put("entry", "9.3041").put("sl", "10.0162").put("tp1", "7.1678")
+            .put("reason", "ทุน 37 ฿ ไม่พอเข้าตามสูตร: ไม้เล็กสุดของ Binance ถ้าโดน SL เสีย ≈ 10.0 ฿ (27% ของทุน) แต่สูตรให้เสีย 0.25% · ต้องมีทุนอย่างน้อย ≈ 3,950 ฿")
+            .put("evidence", "สถิติไม้แบบนี้ (walk-forward 2023–2026): 174 ไม้").put("experimental", true);
+        SignalAlerts.Plan bp = SignalAlerts.plan(packet(240, c4, new JSONArray().put(blocked).put(trend)), n4, key -> -1L);
+        SignalAlerts.Note bn = bp.notes.get(0);
+        check(bp.notes.size() == 2 && bn.title.equals("ทุนไม่พอ · SHORT AVAXUSDT · H4") && bn.key.startsWith("sent:BLOCKED:") && bn.kind.equals("BLOCKED"),
+            "capital-blocked signal: own title and dedup key");
+        check(bn.body.startsWith("สัญญาณ SHORT ที่ 9.3041 · SL 10.0162 · TP1 7.1678 · ไม่แนะนำให้เข้า"), "blocked first line: the signal and that it is not recommended");
+        for (String must : new String[]{"สัญญาณ SHORT ที่ 9.3041", "SL 10.0162", "TP1 7.1678", "27% ของทุน", "≈ 3,950 ฿", "ไม่แนะนำให้เข้า"}) {
+            check(bn.body.contains(must), "blocked body contains: " + must);
+        }
+        check(SignalAlerts.plan(packet(240, c4, new JSONArray().put(new JSONObject(blocked.toString()).put("reason", ""))), n4, key -> -1L).invalid == 1,
+            "blocked without a reason is dropped");
 
         // Real packets produced by web/app.js in headless Chrome (tests/js) must pass the same contract.
         for (String path : args) {

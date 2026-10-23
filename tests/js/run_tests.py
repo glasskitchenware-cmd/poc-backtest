@@ -34,13 +34,13 @@ def harness():
     return tmp
 
 
-def run(page, case, cfg, bg=True):
+def run(page, case, cfg, bg=True, virtual_ms=30000):
     q = "?case=" + case + "&cfg=" + urllib.parse.quote(json.dumps(cfg))
     url = page.as_uri() + q + ("#bg" if bg else "")
     prof = tempfile.mkdtemp()
     try:
         r = subprocess.run([chrome(), "--headless", "--no-sandbox", "--disable-gpu", "--allow-file-access-from-files",
-                            f"--user-data-dir={prof}", "--virtual-time-budget=30000", "--dump-dom", url],
+                            f"--user-data-dir={prof}", f"--virtual-time-budget={virtual_ms}", "--dump-dom", url],
                            capture_output=True, text=True, timeout=180)
     finally:
         shutil.rmtree(prof, ignore_errors=True)
@@ -220,9 +220,31 @@ def main():
                                "justClosed": 14_400_000}, bg=False)
     check("ทุน 37 ฿ ยังเทรดตามสูตรไม่ได้" in r["smMain"] and "ทุนขั้นต่ำที่เสี่ยง 0.25%/ไม้" in r["smMain"], "37 THB: says the capital is too small and how much each coin needs")
     check("ETH SHORT" in r["smMain"] and "ไม่แนะนำให้เข้า" in r["smMain"] and "ต้องมีทุนอย่างน้อย" in r["smMain"], "37 THB: the refused ETH signal is shown with the reason")
-    check(r["packet"]["signals"] == [] and any("ต้องมีทุนอย่างน้อย" in x for x in r["packet"]["rejected"]), "37 THB: nothing notified, rejection names the capital needed")
+    bl = r["packet"]["signals"]
+    check(len(bl) == 1 and bl[0]["kind"] == "BLOCKED" and bl[0]["symbol"] == "ETHUSDT" and "ต้องมีทุนอย่างน้อย" in bl[0]["reason"] and "% ของทุน" in bl[0]["reason"],
+          "37 THB: no entry call, but an information notice says a signal happened and what the smallest order would risk")
+    check(any("ต้องมีทุนอย่างน้อย" in x for x in r["packet"]["rejected"]), "37 THB: rejection names the capital needed")
+    check("สแกนล่าสุด" in r["smMain"] and "สัญญาณ 7 วันล่าสุด" in r["smMain"] and "SOL" in r["smMain"], "status line and the last 7 days of signals are shown")
     check(r["chart"] and "NaN" not in r["smMain"] and "undefined" not in r["smMain"], "37 THB: chart drawn, no NaN/undefined")
+    (OUT / "h4_blocked.json").write_text(json.dumps(r["packet"], ensure_ascii=False), encoding="utf-8")
+    r = run(page, "h4_small_quiet", {"storage": dict(h4, notifyBlocked="0"), "capital": 37, "trendForce": {"ETHUSDT": "SHORT"}})
+    check(r["packet"]["signals"] == [], "setting off: capital-blocked signals are not notified")
+
+    # A native reply that never comes back must not hang the scan: it fails with a timeout and is reported.
+    # (two futures hosts are tried in turn, 50 s each)
+    r = run(page, "hang", {"storage": h4n, "capital": 1_000_000, "hang": "/fapi/v1/exchangeInfo", "waitMs": 115000}, virtual_ms=135000)
+    check(r["packet"] and "หมดเวลารอ" in r["packet"]["error"], "lost native reply: scan ends with a timeout error instead of hanging")
     check("Trend 4H" in r["help"] and "SL 3 ATR" in r["help"], "settings explain the Trend 4H rule")
+
+    r = run(page, "chart_hold", {"storage": h4, "capital": 1_000_000, "trendForce": {"BTCUSDT": "HOLD_SHORT"}, "clickTab": "chartTab", "waitMs": 15000}, bg=False)
+    c = r["chartPlan"]
+    check("แผน Trend 4H · BTC" in c and "สูตรถือ SHORT อยู่" in c and "จุดเข้า" in c and "Stop Loss" in c and "TP1" in c and "ไม่ต้องเข้าตาม" in c,
+          "chart tab: the rule's position on BTC with entry, SL and TP")
+    check("โซนรอซื้อ" not in c and "Spot ไม่ซื้อ" not in c, "chart tab: the untested Fibonacci buy-zone plan is gone")
+    r = run(page, "chart_flat", {"storage": h4, "capital": 1_000_000, "trendForce": {}, "clickTab": "chartTab", "waitMs": 15000}, bg=False)
+    c = r["chartPlan"]
+    check("จุดเข้า LONG" in c and "จุดเข้า SHORT" in c and "แท่ง 4 ชม. ปิดเหนือ" in c and "SL ถ้าเข้า LONG" in c and "NaN" not in c,
+          "chart tab, no position: the 4h closes that would start a LONG or a SHORT, with SL and TP")
 
     r = run(page, "paper_trend", {"storage": h4, "capital": 100_000, "clickId": "pp2026", "waitMs": 20000}, bg=False)
     check("Trend 4H · 3 เหรียญ" in r["paperTitle"] and "บาท" in r["paper"] and "อัปเดต" in r["paperStatus"], "Paper runs Trend 4H on the selected coins: " + r["paperStatus"][:60])

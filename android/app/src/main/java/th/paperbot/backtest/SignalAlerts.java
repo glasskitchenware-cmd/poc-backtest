@@ -35,9 +35,9 @@ final class SignalAlerts {
         final String tf;
         final String title;
         final String body;
-        final boolean exit;
+        final String kind;
 
-        Note(String key, long candle, String symbol, String side, String tf, String title, String body, boolean exit) {
+        Note(String key, long candle, String symbol, String side, String tf, String title, String body, String kind) {
             this.key = key;
             this.candle = candle;
             this.symbol = symbol;
@@ -45,7 +45,7 @@ final class SignalAlerts {
             this.tf = tf;
             this.title = title;
             this.body = body;
-            this.exit = exit;
+            this.kind = kind;
         }
 
         int id() {
@@ -140,6 +140,7 @@ final class SignalAlerts {
         if (close != candle) return null;
         String kind = item.optString("kind", "ENTRY").trim().toUpperCase(Locale.US);
         if (kind.equals("EXIT")) return exitNote(item, tf, candle, symbol, side);
+        if (kind.equals("BLOCKED")) return blockedNote(item, tf, candle, symbol, side);
         if (!kind.equals("ENTRY")) return null;
         String entry = item.optString("entry", "");
         String sl = item.optString("sl", "");
@@ -152,11 +153,17 @@ final class SignalAlerts {
         int cap = item.optInt("leverage_cap", leverage);
         long expires = item.optLong("expires", 0);
         String key = "sent:" + tf + ":" + symbol + ":" + side;
-        String title = "ทดลอง · " + symbol + " " + side + " · " + tf + (leverage > 0 ? " · ≤" + leverage + "x" : "");
+        String title = "เข้า " + side + " " + symbol + " · " + tf + (leverage > 0 ? " · ≤" + leverage + "x" : "");
         StringBuilder b = new StringBuilder();
-        b.append("แท่งปิด ").append(bangkok(candle, "dd/MM HH:mm")).append(" น. (เวลาไทย UTC+7)");
+        // First line is what the collapsed notification shows: the whole order.
+        b.append("เข้า ").append(entry).append(" · SL ").append(sl).append(" · ");
+        if (!tp5.isEmpty()) b.append("TP ").append(tp1).append(" / ").append(tp2).append(" / ").append(tp5);
+        else if (!tp1.isEmpty()) b.append("TP1 ").append(tp1).append(tp2.isEmpty() ? "" : " · TP2 " + tp2);
+        else b.append("ไม่มี TP (ออกตามสูตร)");
+        String risk = item.optString("risk_thb", "");
+        if (!risk.isEmpty()) b.append(" · โดน SL เสีย ≈ ").append(risk).append(" ฿");
+        b.append("\nแท่งปิด ").append(bangkok(candle, "dd/MM HH:mm")).append(" น. (เวลาไทย UTC+7)");
         if (expires > candle) b.append(" · ยกเลิกถ้ายังไม่เข้าภายใน ").append(bangkok(expires, "HH:mm")).append(" น.");
-        b.append("\nเข้าอ้างอิง ").append(entry).append(" · SL ").append(sl);
         if (!tp5.isEmpty()) b.append("\nTP1 ").append(tp1).append(" (1R) · TP2 ").append(tp2).append(" (2R) · TP5 ").append(tp5).append(" (5R)");
         else {
             String plan = item.optString("tp_plan", "");
@@ -178,7 +185,7 @@ final class SignalAlerts {
         String evidence = item.optString("evidence", "");
         b.append("\n").append(evidence.isEmpty() ? "ยังไม่มีข้อมูลยืนยัน" : cut(evidence, 220));
         b.append("\nสัญญาณทดลอง ไม่ใช่คำสั่งซื้อขาย · Paper เท่านั้น · ตรวจราคาล่าสุดก่อนตัดสินใจ");
-        return new Note(key, candle, symbol, side, tf, title, b.toString(), false);
+        return new Note(key, candle, symbol, side, tf, title, b.toString(), "ENTRY");
     }
 
     /** The rule closes the position it opened, at the next open. Says what to do only if the user holds it. */
@@ -190,9 +197,12 @@ final class SignalAlerts {
         String level = item.optString("exit_level", "");
         String r = item.optString("r_now", "");
         String key = "sent:EXIT:" + tf + ":" + symbol + ":" + side;
-        String title = "ทดลอง · ปิดไม้ " + symbol + " " + side + " · " + tf;
+        String title = "ปิดไม้ " + side + " " + symbol + " · " + tf;
         StringBuilder b = new StringBuilder();
-        b.append("แท่งปิด ").append(bangkok(candle, "dd/MM HH:mm")).append(" น. (เวลาไทย UTC+7)");
+        b.append("ปิดด้วย Market ตอนนี้ (ถ้าถืออยู่) · ปิดแท่ง ").append(ref);
+        String rNow = item.optString("r_now", "");
+        if (!rNow.isEmpty()) b.append(" · ≈ ").append(rNow).append("R");
+        b.append("\nแท่งปิด ").append(bangkok(candle, "dd/MM HH:mm")).append(" น. (เวลาไทย UTC+7)");
         b.append("\nสูตรปิด ").append(side).append(" ที่เข้า ").append(entry);
         if (opened > 0) b.append(" เมื่อ ").append(bangkok(opened, "dd/MM HH:mm")).append(" น.");
         b.append("\nแท่ง ").append(tf).append(" ปิด ").append(ref);
@@ -205,14 +215,35 @@ final class SignalAlerts {
         b.append("\nกลยุทธ์ ").append(item.optString("strategy", "?"));
         if (!why.isEmpty()) b.append(": ").append(cut(why, 160));
         b.append("\nสัญญาณทดลอง ไม่ใช่คำสั่งซื้อขาย · ตรวจราคาล่าสุดก่อนตัดสินใจ");
-        return new Note(key, candle, symbol, side, tf, title, b.toString(), true);
+        return new Note(key, candle, symbol, side, tf, title, b.toString(), "EXIT");
+    }
+
+    /** The rule signalled, but the balance cannot keep its risk at Binance's smallest order: information, not a call to enter. */
+    static Note blockedNote(JSONObject item, String tf, long candle, String symbol, String side) {
+        String entry = item.optString("entry", "");
+        String sl = item.optString("sl", "");
+        String reason = item.optString("reason", "");
+        if (entry.isEmpty() || sl.isEmpty() || reason.isEmpty()) return null;
+        String key = "sent:BLOCKED:" + tf + ":" + symbol + ":" + side;
+        String title = "ทุนไม่พอ · " + side + " " + symbol + " · " + tf;
+        StringBuilder b = new StringBuilder();
+        b.append("สัญญาณ ").append(side).append(" ที่ ").append(entry).append(" · SL ").append(sl);
+        String tp1 = item.optString("tp1", "");
+        if (!tp1.isEmpty()) b.append(" · TP1 ").append(tp1);
+        b.append(" · ไม่แนะนำให้เข้า");
+        b.append("\nแท่งปิด ").append(bangkok(candle, "dd/MM HH:mm")).append(" น. (เวลาไทย UTC+7)");
+        b.append("\n").append(cut(reason, 220));
+        String evidence = item.optString("evidence", "");
+        if (!evidence.isEmpty()) b.append("\n").append(cut(evidence, 200));
+        b.append("\nสัญญาณทดลอง ไม่ใช่คำสั่งซื้อขาย");
+        return new Note(key, candle, symbol, side, tf, title, b.toString(), "BLOCKED");
     }
 
     static String summaryText(List<Note> notes) {
         StringBuilder s = new StringBuilder();
         for (Note n : notes) {
             if (s.length() > 0) s.append(" · ");
-            s.append(n.exit ? "ปิด " : "").append(n.symbol.replace("USDT", "")).append(" ").append(n.side);
+            s.append(n.kind.equals("EXIT") ? "ปิด " : n.kind.equals("BLOCKED") ? "ทุนไม่พอ " : "").append(n.symbol.replace("USDT", "")).append(" ").append(n.side);
         }
         return s.toString();
     }

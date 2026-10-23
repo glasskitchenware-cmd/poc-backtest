@@ -34,6 +34,7 @@
       var u = new URL(url), p = u.searchParams, sym = p.get("symbol");
       __T.requests.push(u.host + u.pathname);
       if (cfg.offline) return reply(id, false, "UnknownHostException: fapi.binance.com");
+      if (cfg.hang && u.pathname === cfg.hang) return;   // the native side never answers
       if (u.host === "api.bitkub.com") return reply(id, true, { THB_USDT: { last: 33 } });
       if (u.host === "open.er-api.com") return reply(id, true, { rates: { THB: 33 } });
       if (u.pathname === "/fapi/v1/time") return reply(id, true, { serverTime: Date.now() });
