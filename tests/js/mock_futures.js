@@ -36,6 +36,9 @@
     __T.ws = url;
     setTimeout(function () {
       if (cfg.wsDown) { if (self.onerror) self.onerror({}); return; }
+      if (self.onopen) self.onopen({});
+      // cfg.wsSilent: connects and sends nothing, as Binance's retired /stream address does since 2026-04-23.
+      if (cfg.wsSilent || url.indexOf("/market/") < 0) return;
       var tick = function () {
         syms.forEach(function (sy) {
           // cfg.livePct: the coin's base price moved that much; otherwise the last closed bar's close (as /premiumIndex).

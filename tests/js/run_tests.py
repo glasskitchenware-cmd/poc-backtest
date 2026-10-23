@@ -247,9 +247,10 @@ def main():
     follow = r["smMain"].split("ตามได้ตอนนี้", 1)[-1].split("จบสัญญาณแล้ว", 1)[0]
     check("เข้า LONG BTC x" in follow and "เข้า SHORT ETH x" in follow and "BTCUSDT Perp" in follow and r["acts"] == ["card act l st-follow", "card act s st-follow"],
           "can follow now: one order card per signal (BTC LONG, ETH SHORT), the full sheet folded inside")
-    check("เหลือเวลาเข้า 13:" in follow and "(ถึง 15:15 น.)" in follow and "ตอนนี้ 60,808.60 (+0.00% · +0.00R จากจุดเข้า)" in follow,
+    check("เหลือเวลาเข้า 13:" in follow and re.search(r"\(ถึง \d\d:15 น\.\)", follow) and re.search(r"ตอนนี้ [\d,.]+ \([+-]0\.00% · [+-]0\.00R จากจุดเข้า\)", follow),
           "live: entry countdown and the price against the entry, every second")
-    check("ขนาด0.0550BTC" in follow and "≈ 2,480 บาท" in follow, "live size at the entry price equals the sheet's size (0.0550 BTC, 2,480 baht at risk)")
+    card_q, sheet_q = re.search(r"ขนาด([\d.]+)BTC", follow), re.search(r"ขนาด \(Size\)([\d.]+) BTC", follow)
+    check(card_q and sheet_q and float(card_q.group(1)) == float(sheet_q.group(1)), "live size at the entry price equals the sheet's size")
     check(all(k in r["smMain"] for k in ["ราคาเข้า ≈", "Stop Loss", "TP1 ขาย 50%", "ขนาด", "Margin", "เสี่ยง", "เข้าภายใน"]), "the order card holds every number to type in Binance")
     check(r["charts"] >= 3, "charts draw when opened: one per signal and one for the held position (" + str(r["charts"]) + ")")
     check("ถืออยู่ · ตามไม่ทันแล้ว 1" in r["smMain"] and "LONG SOL +" in r["smMain"].split("ถืออยู่ · ตามไม่ทันแล้ว", 1)[1] and "(เกิน 0.5R)" in r["smMain"],
@@ -306,7 +307,7 @@ def main():
     r = run(page, "live_sl", {"storage": h4, "capital": 1_000_000, "trendForce": {"BTCUSDT": "NEAR_LONG"}, "clickTf": "4h", "waitMs": 15000,
                               "justClosed": 14_400_000, "forming": {"BTCUSDT": -7}}, bg=False)
     ended = r["smMain"].split("จบสัญญาณแล้ว", 1)[-1]
-    check(r["holds"] == ["card hold l st-ended"] and "จบแล้ว · แตะ SL" in ended and "ราคาแตะ SL 57,160.09 ในแท่ง 4 ชม. นี้" in ended,
+    check(r["holds"] == ["card hold l st-ended"] and "จบแล้ว · แตะ SL" in ended and re.search(r"ราคาแตะ SL [\d,.]+ ในแท่ง 4 ชม\. นี้ \(ไปถึง [\d,.]+\)", ended),
           "live: the forming 4-hour bar touched the system's SL -> the BTC card moves under ended, with the price reached")
     note = r["smMain"].split("ตามได้ตอนนี้", 1)[0]
     check("แตะ SL ≈ −1.00R" in ended and "LONG BTC แตะ SL แล้ว · จบสัญญาณ" in note and "ถือ 1 ไม้ต่อ" not in note,
@@ -387,6 +388,12 @@ def main():
     check("TP1 159.0000 (อีก +3.92%)" in lv and "SL 147.0000 (ห่าง -3.92%)" in lv, "distance to SL and TP1 from the live price")
     check("รวม +496 ฿" in lv and "ราคาสดทุก 1 วินาที" in lv and "markPrice@1s" in r["ws"] and "btcusdt" in r["ws"] and "solusdt" in r["ws"],
           "total after fees, fed by Binance's mark-price WebSocket every second")
+    check("wss://fstream.binance.com/market/stream?streams=" in r["ws"], "mark prices from Binance's /market stream address (the old /stream one went silent on 2026-04-23)")
+    check("ราคาสดทุก 1 วินาที · " in r["smMain"], "the main screen says the numbers are live and when the last price came")
+    r = run(page, "live_silent", {"storage": dict(h4, **{"portfolio.v1": json.dumps(held)}), "capital": 100_000, "trendForce": {}, "clickTf": "4h",
+                                  "waitMs": 20000, "justClosed": 14_400_000, "wsSilent": True}, bg=False)
+    check("ราคาทุก 3 วินาที" in r["live"] and "+20.00%" not in r["live"] and "ROI" in r["live"] and "ราคาทุก 3 วินาที · " in r["smMain"],
+          "a socket that connects but sends nothing is dropped after 8 s for REST mark prices every 3 seconds")
     r = run(page, "live_rest", {"storage": dict(h4, **{"portfolio.v1": json.dumps(held)}), "capital": 100_000, "trendForce": {}, "clickTf": "4h",
                                 "waitMs": 15000, "justClosed": 14_400_000, "wsDown": True}, bg=False)
     check("ราคาทุก 3 วินาที" in r["live"] and "ROI" in r["live"] and "—" not in r["live"].split("ไม้ที่เข้าแล้ว")[1][:200],

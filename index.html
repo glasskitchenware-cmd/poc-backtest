@@ -249,6 +249,7 @@ a{color:var(--accent)}
 .act.st-hold,.act.st-ended{background:var(--panel);border-color:var(--line)}.card.st-ended{opacity:.75}
 .ended-list .perf-row:first-of-type{border-top:0}
 #emptyFollow.hidden,#secHold.hidden,#secEnded.hidden{display:none}
+#feedSt.live,#lvFeed.live{color:var(--up)}#feedSt.down,#lvFeed.down{color:var(--down)}
 </style>
 </head>
 <body>
@@ -2978,7 +2979,7 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
           (entries.length + held.length ? "" : " · ระบบยังไม่มีไม้เปิด") + "</p></div></div>");
       noteOf = { list: list, held: held };
       h += '<div id="smNote">' + traderNote(list, held) + "</div>";
-      h += '<div class="sec-hd">ตามได้ตอนนี้ <span class="cnt" id="cntFollow"></span><small>ราคาสด</small></div><div id="smNewsTop">' + News.topHtml() + "</div>" +
+      h += '<div class="sec-hd">ตามได้ตอนนี้ <span class="cnt" id="cntFollow"></span><small id="feedSt">กำลังต่อราคาสด…</small></div><div id="smNewsTop">' + News.topHtml() + "</div>" +
         '<div id="grpFollow">' + cards + "</div>" + idle +
         results.filter(function (r) { return r.signal && r.signal.below_minimum; }).map(function (r) {
           return '<p class="fine">' + coin(r) + " " + (r.signal.dir > 0 ? "LONG" : "SHORT") + " มีสัญญาณแต่ไม่ผ่าน: " + esc(r.signal.reject) + "</p>";
@@ -3198,7 +3199,10 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
     }
     // Live mark prices (the price Binance uses for unrealized P&L): Binance's free WebSocket, every second, for the coins on
     // screen and the trades entered; when it cannot connect, one REST request per coin every 3 seconds. Only while open.
-    var px = {}, ws = null, wsKey = "", poll = null, wsFail = 0, paintTimer = null, feed = "", ticker = null, barHL = {};
+    var px = {}, ws = null, wsKey = "", poll = null, wsFail = 0, paintTimer = null, feed = "", ticker = null, barHL = {}, lastTick = 0, wsSince = 0;
+    // Binance moved USD-M futures market streams (mark price, klines) to /market on 2026-04-23; the old /stream address
+    // still connects but sends nothing, so a socket silent for 8 s is dropped for REST polling.
+    var FSTREAM = "wss://fstream.binance.com/market/stream?streams=";
     // The 4-hour bar now forming: the system's stop or take profit counts as soon as the price touches it in this bar, so
     // its high and low since the open (from Binance once, then every live price) decide "ended" and "TP1 sold".
     function barOpen() { return Math.floor(Date.now() / 14400000) * 14400000; }
@@ -3224,7 +3228,7 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
     }
     function onPrice(sym, p) {
       if (!(p > 0)) return;
-      px[sym] = p;
+      px[sym] = p; lastTick = Date.now();
       var b = barHL[sym];
       if (b && b.t === barOpen()) { b.hi = Math.max(b.hi, p); b.lo = Math.min(b.lo, p); }
       if (!paintTimer) paintTimer = setTimeout(function () { paintTimer = null; paintLive(); }, 200);
@@ -3252,12 +3256,20 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
       if (key === wsKey && (ws || poll)) return;
       stopFeed(); wsKey = key;
       // Countdowns and statuses move every second even when the price does not.
-      ticker = setInterval(function () { if (!document.hidden) paintLive(); }, 1000);
+      ticker = setInterval(function () {
+        if (document.hidden) return;
+        if (ws && Date.now() - Math.max(lastTick, wsSince) > 8000) {   // connected but silent
+          try { ws.onclose = ws.onerror = null; ws.close(); } catch (e) { /* already closed */ }
+          ws = null; wsFail++; feed = ""; startPoll(syms);
+        }
+        paintLive();
+      }, 1000);
       if (window.WebSocket && wsFail < 3) {
         try {
-          ws = new WebSocket("wss://fstream.binance.com/stream?streams=" + syms.map(function (s) { return s.toLowerCase() + "@markPrice@1s"; }).join("/"));
+          ws = new WebSocket(FSTREAM + syms.map(function (s) { return s.toLowerCase() + "@markPrice@1s"; }).join("/"));
+          wsSince = Date.now();
           ws.onmessage = function (m) { try { var d = JSON.parse(m.data).data; if (d && d.s) { feed = "ws"; onPrice(d.s, +d.p); } } catch (e) { /* not a price */ } };
-          ws.onerror = ws.onclose = function () { ws = null; wsFail++; startPoll(syms); };
+          ws.onerror = ws.onclose = function () { ws = null; wsFail++; feed = ""; startPoll(syms); };
           return;
         } catch (e) { wsFail++; }
       }
@@ -3310,7 +3322,11 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
             (t.tp1 || (t.tps && t.tps[0]) ? " · TP1 " + price(t.tp1 || t.tps[0]) + " (อีก " + fmt(((t.tp1 || t.tps[0]) / p - 1) * 100 * d, 2, true) + "%)" : ""), "lv-line" + (x.stopped ? " down" : ""));
       });
       if (n) setText("lvTotal", "รวม " + fmt(tot, 0, true) + " ฿ (" + fmt(tot / cap * 100, 2, true) + "% ของทุน)", "big " + (tot >= 0 ? "up" : "down"));
-      if (open.length) setText("lvFeed", feed === "ws" ? "ราคาสดทุก 1 วินาที (Binance Mark)" : feed === "rest" ? "ราคาทุก 3 วินาที (Binance Mark)" : "กำลังต่อราคาสด…", "fine " + (feed ? "live" : ""));
+      // Whether the numbers are live: the feed, and the time of the last price received.
+      var age = lastTick ? Date.now() - lastTick : null, at = lastTick ? new Date(lastTick + 7 * 3600000).toISOString().slice(11, 19) : "";
+      var fs = age === null ? "กำลังต่อราคาสด…" : age > 15000 ? "ราคาสดขาด · ล่าสุด " + at + " น." : (feed === "ws" ? "ราคาสดทุก 1 วินาที" : "ราคาทุก 3 วินาที") + " · " + at + " น.";
+      setText("feedSt", fs, age !== null && age > 15000 ? "down" : age !== null ? "live" : "");
+      if (open.length) setText("lvFeed", fs + " (Binance Mark)", "fine " + (age !== null && age <= 15000 ? "live" : age !== null ? "down" : ""));
     }
     // Where a live card belongs now. follow: a new signal within its 15 minutes, or joining late is within the test (price
     // within 0.5R of the entry, no take profit yet); hold: the system is in but it is too late to follow; ended: the price
@@ -3961,7 +3977,7 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
   // ---- Realtime chart: EMA, Bollinger, RSI, auto Fibonacci, trendlines, plan ----
   var ChartView = (function () {
     var TF_MS = { "15m": 900000, "1h": 3600000, "4h": 14400000, "1d": 86400000 };
-    var STREAMS = ["wss://fstream.binance.com/ws/"];   // USD-M futures streams, same market as the signals
+    var STREAMS = ["wss://fstream.binance.com/market/ws/"];   // USD-M futures market streams (moved to /market on 2026-04-23)
     var chart = null, rsiChart = null, series = {}, priceLines = [], bars = [], socket = null, pollTimer = null,
       symbol = "BTCUSDT", tf = "4h", lastDraw = 0, token = 0, tplan = null;
 
@@ -4103,9 +4119,17 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
       var ws;
       try { ws = new WebSocket(STREAMS[attempt] + symbol.toLowerCase() + "@kline_" + tf); } catch (e) { return connect(my, attempt + 1); }
       socket = ws;
-      var opened = false;
-      ws.onopen = function () { opened = true; if (my === token) { $("cvLive").textContent = "● Realtime"; $("cvLive").className = "up"; } };
-      ws.onmessage = function (m) { if (my !== token) return; try { onKline(JSON.parse(m.data).k); } catch (e) { /* ignore bad frame */ } };
+      var opened = false, heard = false;
+      ws.onopen = function () {
+        opened = true;
+        // An address that connects but sends nothing is no feed: poll instead.
+        setTimeout(function () { if (my === token && socket === ws && !heard) { ws.onclose = null; try { ws.close(); } catch (e) { /* closed */ } poll(my); } }, 10000);
+      };
+      ws.onmessage = function (m) {
+        if (my !== token) return;
+        if (!heard) { heard = true; $("cvLive").textContent = "● Realtime"; $("cvLive").className = "up"; }
+        try { onKline(JSON.parse(m.data).k); } catch (e) { /* ignore bad frame */ }
+      };
       ws.onclose = function () { if (my !== token) return; if (!opened) connect(my, attempt + 1); else setTimeout(function () { if (my === token) connect(my, 0); }, 3000); };
       ws.onerror = function () { try { ws.close(); } catch (e) { /* ignore */ } };
     }

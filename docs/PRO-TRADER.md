@@ -1,4 +1,4 @@
-# Trading Trend 4H as a profession — v6.4 (2026-10-23)
+# Trading Trend 4H as a profession — v6.5 (2026-10-23)
 
 What the app does for a full-time trader, and what the tests say about relying on it. Every number below comes from
 `research/pro/pro.js`, `research/pro/robust.js` and `research/pro/sentiment.js`, run on GitHub Actions on real Binance bars (results on branch
@@ -164,8 +164,11 @@ now tells that apart from a lagging exchange.
 
 ## Live statuses: follow now, holding, ended (v6.4)
 
-The system's signals and positions sit in three groups that follow Binance's mark price every second (REST every 3 s
-when the socket fails), and a card moves between them as the price moves:
+The system's signals and positions sit in three groups that follow Binance's mark price every second, and a card moves
+between them as the price moves. v6.5: Binance moved USD-M futures market streams to `wss://fstream.binance.com/market/...`
+on 2026-04-23; the old `/stream` address still connects but sends nothing, which froze the numbers in v6.1-v6.4. The app
+now uses the new address, drops a socket that is silent for 8 seconds for REST mark prices every 3 seconds, and shows the
+feed and the time of the last price under "ตามได้ตอนนี้" (red when no price came for 15 seconds). The chart tab likewise.
 - **ตามได้ตอนนี้ (can follow now)**: a new signal within its 15 minutes and within 0.5R of the entry, with a live
   countdown; or a position still within 0.5R of the system's entry, no take profit yet, where the late-entry test was
   clearly profitable (95% range above zero; a signal past its 15 minutes uses the 1-bar-late test, 1,874 trades, +0.10R).
