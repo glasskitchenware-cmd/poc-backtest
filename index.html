@@ -255,6 +255,8 @@ a{color:var(--accent)}
 @keyframes tickUp{from{color:var(--up);background:var(--up-bg)}to{background:transparent}}@keyframes tickDown{from{color:var(--down);background:var(--down-bg)}to{background:transparent}}
 .tick-up{animation:tickUp .7s ease-out}.tick-down{animation:tickDown .7s ease-out}
 @media (prefers-reduced-motion:reduce){.tick-up,.tick-down{animation:none}}
+.risk-box{margin-top:10px;padding:9px 11px;border-radius:var(--r-sm);background:var(--bg)}.risk-hd{display:flex;align-items:center;gap:6px;color:var(--yel);font-size:13px;margin-bottom:4px}
+.risk-row{display:flex;justify-content:space-between;gap:12px;padding:3px 0;font-size:13px;line-height:1.45}.risk-row span{color:var(--muted);flex:none}.risk-row b{font-weight:600;text-align:right}
 </style>
 </head>
 <body>
@@ -1701,7 +1703,7 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
   }
   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return "&#" + c.charCodeAt(0) + ";"; }); }
   // The app version (android/app/build.gradle versionName; tests/js/run_tests.py checks they match).
-  var APP_VERSION = "6.6";
+  var APP_VERSION = "6.7";
   // One line-icon family for the screen (24px grid, 1.8 stroke, round ends), drawn in the text colour.
   var ICONS = { check: '<path d="M5 12.5l4.2 4.2L19 7"/>', alert: '<path d="M12 4 2.8 19.5h18.4z"/><path d="M12 10v4.5M12 17.3v.2"/>',
     news: '<rect x="3.5" y="5" width="13" height="14" rx="2"/><path d="M16.5 9h3v7.5a2.5 2.5 0 0 1-5 0"/><path d="M7 9h6M7 12.5h6M7 16h3.5"/>',
@@ -2870,6 +2872,20 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
         moodLine(r.symbol, it.dir) +
         '<details class="more-chart" data-draw="hold:' + i + '"><summary>กราฟ</summary><div id="smHold' + i + '" class="sm-chart" style="height:220px;margin-top:6px"></div></details></div>';
     }
+    // What this trade can cost, from the test: how often a trade like it lost, the baht at the SL, the longest losing run
+    // and the deepest drawdown the system had at this risk per trade (2023-2026, 12 coins), and how far liquidation is.
+    function riskBox(g, z, v) {
+      var cap = money(), nm = trendNormal(), streak = nm && nm.normal.worstStreak, dd = nm && nm.port && nm.port.maxDD, pct = z.lossB / cap * 100;
+      var rows = [
+        ["โอกาสแพ้", v.win !== null ? fmt(100 - v.win, 0) + "% ของไม้แบบนี้ในผลทดสอบ" : "ยังไม่มีข้อมูลพอ"],
+        ["ถ้าโดน SL", '<span class="down" data-rb2>−' + fmt(z.lossB, 0) + " ฿</span> (" + fmt(pct, 2) + "% ของทุน)"],
+        streak ? ["ระบบเคยแพ้ติดกัน", streak + " ไม้ ≈ −" + fmt(streak * pct, 1) + "% ของทุน"] : null,
+        dd ? ["พอร์ตเคยลงลึกสุด", "−" + fmt(dd, 1) + "% (เสี่ยง " + trendRiskPct() + "%/ไม้)"] : null,
+        g.liq ? ["Liquidation (ประมาณ)", price(g.liq) + " (ห่าง " + fmt(Math.abs(g.liq / g.entry - 1) * 100, 1) + "% · SL ห่าง " + fmt(g.stopPct, 1) + "%)"] : null
+      ].filter(Boolean);
+      return '<div class="risk-box"><div class="risk-hd">' + ic("alert") + "<b>ความเสี่ยงของไม้นี้</b></div>" +
+        rows.map(function (x) { return '<div class="risk-row"><span>' + x[0] + "</span><b>" + x[1] + "</b></div>"; }).join("") + "</div>";
+    }
     // A new signal as an order to copy: side, leverage, entry, SL, TP1, size, margin, risk, deadline. Size, margin and risk
     // follow the live price; once the 15 minutes pass the card stays while joining is still within the test. The full
     // sheet folds.
@@ -2886,7 +2902,7 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
           fact("Margin", '<span data-m>' + fmt(z.marginB, 0) + "</span><small>บาท</small>") +
           fact("เสี่ยง", '<span data-rk>' + fmt(z.lossB / cap * 100, 2) + '%</span><small data-rb>≈ ' + fmt(z.lossB, 0) + " บาท</small>") + "</div>" +
         '<p class="fine">Isolated x' + g.lev + " · เข้าภายใน " + thai(g.expires).slice(9, 14) + " น. · ตั้ง SL ใน Binance ทันที · ที่เหลือปิดเมื่อแอปเด้ง \"ปิดไม้\"" +
-          (g.minSize ? " · ขนาดขั้นต่ำของ Binance" : " · ขนาดคิดจากราคาตอนนี้ ให้เสี่ยงเท่าเดิมถึง SL") + "</p>" + marginNote(z.marginB) + moodLine(r.symbol, g.dir) +
+          (g.minSize ? " · ขนาดขั้นต่ำของ Binance" : " · ขนาดคิดจากราคาตอนนี้ ให้เสี่ยงเท่าเดิมถึง SL") + "</p>" + riskBox(g, z, v) + marginNote(z.marginB) + moodLine(r.symbol, g.dir) +
         '<details class="more-chart" data-draw="sig:' + i + '"><summary>รายละเอียดทั้งหมด + กราฟ</summary>' + tradeSheet(r, g, z, TREND.tf, i) + "</details></div>";
     }
     // A trade's news read: the coin's good and bad headlines, whether they point the trade's way, and how the rule's past
@@ -3398,6 +3414,7 @@ window.EVIDENCE_TREND = {"strategy":"donchian4h","name":"Trend 4H · Donchian 20
         if (st.g === "follow" && c.order) {
           var z = liveSize(c.order, p), cap = money();
           set("[data-q]", qtyTxt(z.qty)); set("[data-m]", fmt(z.marginB, 0)); set("[data-rk]", fmt(z.lossB / cap * 100, 2) + "%"); set("[data-rb]", "≈ " + fmt(z.lossB, 0) + " บาท");
+          set("[data-rb2]", "−" + fmt(z.lossB, 0) + " ฿");
         }
         if (st.g === "hold" && st.why !== "nojoin") set("[data-jno]", st.why === "tp" ? "ไม่ต้องตาม: ระบบขาย TP ไปแล้ว รอไม้ใหม่" : st.why === "expired" ? "ไม่ต้องตาม: หมดเวลาเข้าแล้ว รอไม้ใหม่" : "ไม่ต้องตาม: ราคาห่างจุดเข้าเกิน 0.5R แล้ว รอไม้ใหม่");
       });
