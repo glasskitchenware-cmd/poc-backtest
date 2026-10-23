@@ -135,10 +135,10 @@
    "port": {
     "taken": 1999,
     "skipped": 0,
-    "cagr": 30.3,
+    "cagr": 28.7,
     "maxDD": 31.8,
-    "mar": 0.95,
-    "losingMonths": 49
+    "mar": 0.9,
+    "losingMonths": 51
    }
   },
   "ladder": {
@@ -267,10 +267,10 @@
    "port": {
     "taken": 1999,
     "skipped": 0,
-    "cagr": 24.8,
+    "cagr": 23.3,
     "maxDD": 32.7,
-    "mar": 0.76,
-    "losingMonths": 42
+    "mar": 0.71,
+    "losingMonths": 44
    }
   }
  },
@@ -805,9 +805,9 @@
    "port": {
     "taken": 5168,
     "skipped": 0,
-    "cagr": 43.6,
+    "cagr": 42,
     "maxDD": 40.2,
-    "mar": 1.08,
+    "mar": 1.05,
     "losingMonths": 37
    },
    "evYears": {
@@ -1329,9 +1329,9 @@
    "port": {
     "taken": 5168,
     "skipped": 0,
-    "cagr": 37.7,
+    "cagr": 36.1,
     "maxDD": 42.7,
-    "mar": 0.88,
+    "mar": 0.85,
     "losingMonths": 40
    },
    "evYears": {
@@ -1662,9 +1662,9 @@
    "port": {
     "taken": 815,
     "skipped": 0,
-    "cagr": 57,
+    "cagr": 56.9,
     "maxDD": 14,
-    "mar": 4.08,
+    "mar": 4.07,
     "losingMonths": 36
    }
   },
@@ -1961,33 +1961,33 @@
    "port": {
     "taken": 815,
     "skipped": 0,
-    "cagr": 54.8,
+    "cagr": 54.6,
     "maxDD": 13.2,
-    "mar": 4.15,
+    "mar": 4.14,
     "losingMonths": 36
    }
   }
  },
  "yearly": {
   "rule": {
-   "pLoss": 20.4,
-   "pLoss10": 10.5,
-   "p5": -17.9,
-   "p50": 24.1,
-   "p95": 94.7,
+   "pLoss": 22.3,
+   "pLoss10": 11.7,
+   "p5": -19.5,
+   "p50": 22.4,
+   "p95": 92.9,
    "worst12": -7,
-   "best12": 67.8,
+   "best12": 61.8,
    "rollLoss": 9,
    "months": 45
   },
   "ladder": {
-   "pLoss": 19.1,
-   "pLoss10": 8.3,
-   "p5": -14.8,
-   "p50": 21.2,
-   "p95": 72.3,
+   "pLoss": 21,
+   "pLoss10": 9.5,
+   "p5": -16.1,
+   "p50": 19.6,
+   "p95": 70.5,
    "worst12": -3.9,
-   "best12": 54.2,
+   "best12": 48.7,
    "rollLoss": 9,
    "months": 45
   }
@@ -2000,79 +2000,79 @@
      "train": {
       "taken": 1145,
       "skipped": 0,
-      "cagr": 56,
+      "cagr": 55.5,
       "maxDD": 19.3,
-      "mar": 2.9,
+      "mar": 2.87,
       "losingMonths": 47
      },
      "test": {
       "taken": 1999,
       "skipped": 0,
-      "cagr": 30.3,
+      "cagr": 28.7,
       "maxDD": 31.8,
-      "mar": 0.95,
-      "losingMonths": 49
+      "mar": 0.9,
+      "losingMonths": 51
      }
     },
     {
      "max": 8,
      "train": {
-      "taken": 936,
-      "skipped": 209,
-      "cagr": 51.1,
-      "maxDD": 14.2,
+      "taken": 1001,
+      "skipped": 144,
+      "cagr": 54.1,
+      "maxDD": 15,
       "mar": 3.6,
-      "losingMonths": 44
+      "losingMonths": 42
      },
      "test": {
-      "taken": 442,
-      "skipped": 1557,
-      "cagr": 7.8,
-      "maxDD": 13.4,
-      "mar": 0.58,
-      "losingMonths": 44
+      "taken": 1643,
+      "skipped": 356,
+      "cagr": 24.4,
+      "maxDD": 29,
+      "mar": 0.84,
+      "losingMonths": 53
      }
     },
     {
      "max": 6,
      "train": {
-      "taken": 750,
-      "skipped": 395,
-      "cagr": 36.4,
-      "maxDD": 11.3,
-      "mar": 3.21,
-      "losingMonths": 44
+      "taken": 842,
+      "skipped": 303,
+      "cagr": 41.8,
+      "maxDD": 13.9,
+      "mar": 3.01,
+      "losingMonths": 47
      },
      "test": {
-      "taken": 349,
-      "skipped": 1650,
-      "cagr": 6,
-      "maxDD": 9.4,
-      "mar": 0.64,
-      "losingMonths": 51
+      "taken": 1334,
+      "skipped": 665,
+      "cagr": 22.6,
+      "maxDD": 25.6,
+      "mar": 0.88,
+      "losingMonths": 49
      }
     },
     {
      "max": 4,
      "train": {
-      "taken": 515,
-      "skipped": 630,
-      "cagr": 24.8,
-      "maxDD": 15.1,
-      "mar": 1.64,
-      "losingMonths": 42
+      "taken": 620,
+      "skipped": 525,
+      "cagr": 30.1,
+      "maxDD": 8.1,
+      "mar": 3.73,
+      "losingMonths": 39
      },
      "test": {
-      "taken": 314,
-      "skipped": 1685,
-      "cagr": 6.2,
-      "maxDD": 7,
-      "mar": 0.88,
-      "losingMonths": 49
+      "taken": 955,
+      "skipped": 1044,
+      "cagr": 14.5,
+      "maxDD": 17.2,
+      "mar": 0.84,
+      "losingMonths": 47
      }
     }
    ],
-   "chosen": 8,
+   "chosen": 4,
    "chosen_on": [
     2020,
     2021,
@@ -2086,74 +2086,74 @@
      "train": {
       "taken": 1145,
       "skipped": 0,
-      "cagr": 44,
+      "cagr": 43.6,
       "maxDD": 19.9,
-      "mar": 2.21,
+      "mar": 2.19,
       "losingMonths": 33
      },
      "test": {
       "taken": 1999,
       "skipped": 0,
-      "cagr": 24.8,
+      "cagr": 23.3,
       "maxDD": 32.7,
-      "mar": 0.76,
-      "losingMonths": 42
+      "mar": 0.71,
+      "losingMonths": 44
      }
     },
     {
      "max": 8,
      "train": {
-      "taken": 936,
-      "skipped": 209,
-      "cagr": 39.3,
-      "maxDD": 13.6,
-      "mar": 2.9,
-      "losingMonths": 36
+      "taken": 1001,
+      "skipped": 144,
+      "cagr": 42.4,
+      "maxDD": 14.5,
+      "mar": 2.92,
+      "losingMonths": 33
      },
      "test": {
-      "taken": 442,
-      "skipped": 1557,
-      "cagr": 6.1,
-      "maxDD": 10.5,
-      "mar": 0.58,
-      "losingMonths": 42
+      "taken": 1643,
+      "skipped": 356,
+      "cagr": 18.7,
+      "maxDD": 30.5,
+      "mar": 0.61,
+      "losingMonths": 51
      }
     },
     {
      "max": 6,
      "train": {
-      "taken": 750,
-      "skipped": 395,
-      "cagr": 27.1,
-      "maxDD": 10.8,
-      "mar": 2.51,
-      "losingMonths": 33
+      "taken": 842,
+      "skipped": 303,
+      "cagr": 31.3,
+      "maxDD": 13.3,
+      "mar": 2.35,
+      "losingMonths": 39
      },
      "test": {
-      "taken": 349,
-      "skipped": 1650,
-      "cagr": 4.8,
-      "maxDD": 8,
-      "mar": 0.6,
-      "losingMonths": 49
+      "taken": 1334,
+      "skipped": 665,
+      "cagr": 15.8,
+      "maxDD": 27.7,
+      "mar": 0.57,
+      "losingMonths": 51
      }
     },
     {
      "max": 4,
      "train": {
-      "taken": 515,
-      "skipped": 630,
-      "cagr": 17.5,
-      "maxDD": 10.8,
-      "mar": 1.62,
-      "losingMonths": 39
+      "taken": 620,
+      "skipped": 525,
+      "cagr": 22.4,
+      "maxDD": 8,
+      "mar": 2.8,
+      "losingMonths": 33
      },
      "test": {
-      "taken": 314,
-      "skipped": 1685,
-      "cagr": 5.1,
-      "maxDD": 8,
-      "mar": 0.63,
+      "taken": 955,
+      "skipped": 1044,
+      "cagr": 9.7,
+      "maxDD": 19.3,
+      "mar": 0.5,
       "losingMonths": 47
      }
     }
