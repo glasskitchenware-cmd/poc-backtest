@@ -310,15 +310,92 @@ console.log("\nper coin (walk-forward OOS):", COINS.map(c => { const s = stats(o
     console.log(`late entry ${d} bar(s) after the rule (within 0.5R, no TP yet):`, JSON.stringify(lateRows[d].late), "· same trades entered on time:", JSON.stringify(lateRows[d].original));
   }
 
+  // ---- What is normal for this rule (for the app's live record) and drawdown rules (for its stop rule) ----
+  // Normal range: what happened in the evidence years in exit order, so losses that cluster (the coins turn together)
+  // stay clustered. Windows of N consecutive trades give the range a live record of N trades is compared with.
+  const byExit = tr => tr.slice().sort((a, b) => a.exit_time - b.exit_time);
+  const normalOf = tr => {
+    const rs = byExit(tr).map(t => t.r), windows = {};
+    let run = 0, worstStreak = 0, cum = 0, top = 0, ddR = 0;
+    for (const r of rs) { run = r > 0 ? 0 : run + 1; worstStreak = Math.max(worstStreak, run); cum += r; top = Math.max(top, cum); ddR = Math.max(ddR, top - cum); }
+    for (const N of [10, 20, 30, 50, 100]) {
+      const sums = []; let acc = 0;
+      rs.forEach((r, i) => { acc += r; if (i >= N) acc -= rs[i - N]; if (i >= N - 1) sums.push(acc); });
+      windows[N] = { p5: +pct(sums, 0.05).toFixed(1), p50: +pct(sums, 0.5).toFixed(1), min: +Math.min(...sums).toFixed(1) };
+    }
+    return { n: rs.length, worstStreak, maxDDR: +ddR.toFixed(1), windows };
+  };
+  // Portfolio with entry decisions: each trade risks risk x f of the realized equity at its entry (f from the rule; 0
+  // skips it, -1 stops all later entries), P&L booked at exit. Calendar months without exits count as flat.
+  const THAI = 7 * H;
+  const simulate = (tr, risk, from, to, rule) => {
+    const ev = [], stake = {}, months = {};
+    tr.filter(t => t.entry_time >= from && t.entry_time < to).forEach((t, i) => { ev.push({ time: t.entry_time, k: 1, t, i }); ev.push({ time: t.exit_time, k: 0, t, i }); });
+    ev.sort((a, b) => a.time - b.time || a.k - b.k);
+    let eq = 1, peak = 1, dd = 0, peakTime = from, under = 0, halted = false, day = "", dayStart = 1, dayPnl = 0, taken = 0, offered = 0;
+    for (const e of ev) {
+      const d = new Date(e.time + THAI).toISOString().slice(0, 10);
+      if (d !== day) { day = d; dayStart = eq; dayPnl = 0; }
+      if (e.k === 1) {
+        offered++;
+        const f = halted ? 0 : rule({ dd: 1 - eq / peak, dayLoss: -dayPnl / dayStart });
+        if (f < 0) halted = true;
+        else if (f > 0) { stake[e.i] = eq * risk * f; taken++; }
+      } else if (stake[e.i] !== undefined) {
+        const before = eq, pnl = stake[e.i] * e.t.r;
+        eq = Math.max(0.01, eq + pnl); dayPnl += pnl;
+        if (eq >= peak) { under = Math.max(under, e.time - peakTime); peak = eq; peakTime = e.time; }
+        dd = Math.max(dd, 1 - eq / peak);
+        const m = new Date(e.time).toISOString().slice(0, 7); months[m] = (months[m] || 1) * (eq / before);
+      }
+    }
+    under = Math.max(under, Math.min(to, Date.now()) - peakTime);
+    const mv = [];
+    for (let y = new Date(from).getUTCFullYear(), mo = new Date(from).getUTCMonth(); Date.UTC(y, mo, 1) < to; mo === 11 ? (y++, mo = 0) : mo++)
+      mv.push(months[`${y}-${String(mo + 1).padStart(2, "0")}`] || 1);
+    let lr = 0, worstLosingMonths = 0, worst3 = Infinity;
+    mv.forEach((v, i) => { lr = v < 1 ? lr + 1 : 0; worstLosingMonths = Math.max(worstLosingMonths, lr); if (i >= 2) worst3 = Math.min(worst3, v * mv[i - 1] * mv[i - 2]); });
+    const yrs = (to - from) / (365.25 * 24 * H), cagr = 100 * (Math.pow(eq, 1 / yrs) - 1);
+    return { taken, skipped: offered - taken, cagr: +cagr.toFixed(1), maxDD: +(100 * dd).toFixed(1), mar: dd > 0 ? +(cagr / (100 * dd)).toFixed(2) : null,
+      losingMonths: +(100 * mv.filter(v => v < 1).length / mv.length).toFixed(0), worstLosingMonths, worst3m: +(100 * (worst3 - 1)).toFixed(1),
+      worstMonth: +(100 * (Math.min(...mv) - 1)).toFixed(1), underDays: Math.round(under / 86400000) };
+  };
+  // Stop rules, listed before the run: the app's old rule (made for the 15-minute strategy), a daily loss stop, and
+  // halving the risk below a drawdown. Chosen on 2020-2022 by CAGR / max drawdown, reported on the evidence years.
+  const RULES = [
+    { id: "none", name: "ไม่มีกติกาหยุด (เทรดทุกสัญญาณ)", f: () => 1 },
+    { id: "app", name: "กติกาเดิม: ลดครึ่งเมื่อลง 4% · หยุดถาวรเมื่อลง 8% · หยุดวันที่ขาดทุน 2%", f: s => s.dd >= 0.08 ? -1 : s.dayLoss >= 0.02 ? 0 : s.dd >= 0.04 ? 0.5 : 1 },
+    { id: "day2", name: "หยุดเข้าไม้ใหม่วันที่ขาดทุนถึง 2%", f: s => s.dayLoss >= 0.02 ? 0 : 1 },
+    { id: "half10", name: "ลดความเสี่ยงครึ่งหนึ่งเมื่อพอร์ตลง 10%", f: s => s.dd >= 0.10 ? 0.5 : 1 },
+    { id: "half15", name: "ลดความเสี่ยงครึ่งหนึ่งเมื่อพอร์ตลง 15%", f: s => s.dd >= 0.15 ? 0.5 : 1 },
+    { id: "half20", name: "ลดความเสี่ยงครึ่งหนึ่งเมื่อพอร์ตลง 20%", f: s => s.dd >= 0.20 ? 0.5 : 1 }
+  ];
+  const trainFrom = Date.UTC(TRAIN[0], 0, 1), trainTo = Date.UTC(TRAIN[TRAIN.length - 1] + 1, 0, 1);
+  const modes = { rule: all.filter(t => levLiq(t) >= 5), ladder: best.tr };
+  const normal = {}, stopRules = { chosen_on: TRAIN, risk: 0.5, by: "CAGR / max drawdown" };
+  console.log("\n== WHAT IS NORMAL (evidence years, exit order) AND STOP RULES ==");
+  for (const k of Object.keys(modes)) {
+    const evTr = modes[k].filter(t => inYears(t, evYears)), trainTr = modes[k].filter(t => inYears(t, TRAIN));
+    normal[k] = normalOf(evTr);
+    normal[k].port = {};
+    for (const risk of [0.0025, 0.005, 0.01]) normal[k].port[risk * 100] = simulate(evTr, risk, from, to, () => 1);
+    console.log(k, "normal:", JSON.stringify(normal[k]));
+    const rows = RULES.map(R => ({ id: R.id, name: R.name, train: simulate(trainTr, 0.005, trainFrom, trainTo, R.f), test: simulate(evTr, 0.005, from, to, R.f) }));
+    rows.forEach(x => console.log(`  ${k} ${x.id.padEnd(7)} train ${JSON.stringify(x.train)}  test ${JSON.stringify(x.test)}`));
+    const pick = rows.slice().sort((a, b) => (b.train.mar || 0) - (a.train.mar || 0))[0];
+    stopRules[k] = { rows, chosen: pick.id };
+    console.log(`  ${k}: chosen on 2020-2022 -> ${pick.id} (${pick.name})`);
+  }
+
   const out = { strategy: "donchian4h", name: "Trend 4H · Donchian 20/10 · SL 3 ATR · EMA200 · Long/Short",
     period: contiguous ? `${evYears[0]}-01-01..2026-09-30` : evYears.join(", "), years_chosen: evYears,
     selection: "walk-forward: each year the rule was picked using only earlier years (24 candidates)",
     costs: "fee 0.05% + slippage 0.02% per side, funding 0.01%/8h", filter: "signals whose stop needs leverage below 5x are not sent",
-    generated: "2026-10-22", all: summary(evApp), y2022: summary(y2022), years, rows, stress: summary(stress), stops: stopInfo, lev: levInfo, open: conc, portfolio: port,
+    generated: new Date().toISOString().slice(0, 10), all: summary(evApp), y2022: summary(y2022), years, rows, stress: summary(stress), stops: stopInfo, lev: levInfo, open: conc, portfolio: port,
     parity: bad ? "FAIL" : "OK", replay: miss ? "FAIL" : "OK", replay_checked: checked,
     reach: reach(evApp), reachRows, base_train: baseTrain,
     ladder: { id: best.L.id, name: best.L.name, tps: best.L.tps, chosen_on: TRAIN, train: best.train, test: best.test, portfolio: lport, rows: lrows },
-    late: lateRows,
+    late: lateRows, normal, stopRules,
     ladders: ladderRuns.map(x => ({ id: x.L.id, name: x.L.name, train: { n: x.train.n, win: x.train.win, avgR: x.train.avgR }, test: { n: x.test.n, win: x.test.win, avgR: x.test.avgR, pf: x.test.pf } })) };
   console.log("EVIDENCE_TREND=" + JSON.stringify(out));
   fs.writeFileSync("evidence_trend.json", JSON.stringify(out, null, 1) + "\n");
