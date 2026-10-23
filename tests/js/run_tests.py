@@ -249,10 +249,10 @@ def main():
           "can follow now: one order card per signal (BTC LONG, ETH SHORT), the full sheet folded inside")
     check("เหลือเวลาเข้า 13:" in follow and re.search(r"\(ถึง \d\d:15 น\.\)", follow) and re.search(r"ตอนนี้ [\d,.]+ \([+-]0\.00% · [+-]0\.00R จากจุดเข้า\)", follow),
           "live: entry countdown and the price against the entry, every second")
-    check(follow.count("ครบองค์ประกอบสูตร 9/9 (100%)") == 2 and "ไม่ใช่โอกาสชนะ" in follow, "each followable signal shows how completely the rule's conditions are met (9/9)")
+    check(follow.count("ครบองค์ประกอบสูตร 10/10 (100%)") == 2 and "ไม่ใช่โอกาสชนะ" in follow, "each followable signal shows how completely the rule's conditions are met (10/10)")
     check("ไม้ของระบบที่อยู่ +0.00R แบบนี้ จบกำไร 35%" in follow, "live odds: a trade at its entry ended in profit 35% of the time in 2020-2026")
-    check("ความมั่นใจเฝ้าระวัง" in r["smMain"].replace(" ", "")[:400] or "ความมั่นใจ" in r["smMain"] and "เฝ้าระวัง" in r["smMain"].split("มุมมองของระบบ")[0],
-          "the system's last 30 days are worse than anything in the test (mock) -> confidence shows 'เฝ้าระวัง', not medium-high")
+    check("30 วัน (" in r["smMain"] and "ก่อนหักต้นทุน" in r["smMain"] and "ค่าธรรมเนียม Taker −" in r["smMain"] and "คิดซ้ำเป็นต้นทุน" in r["smMain"] and "→ สุทธิ" in r["smMain"],
+          "the last 30 days split into gross R, taker fees, slippage (in prices and charged again), funding and net R")
     check("ปีที่กำไร" not in r["smMain"] and "79%" not in r["smMain"].split("ตามได้ตอนนี้")[0], "the untested 'profitable years ≈79%' figure is gone")
     check("ผลแยกช่วง · กฎเดียวกัน" in r["smMain"] and all(y in r["smMain"] for y in ["2023", "2024", "2025", "2026 (ถึง ก.ย.)", "รวม 2023–2026", "30 วันล่าสุด (สดของระบบ)"]),
           "results by period with the same rule: each year, all of 2023-2026 and the system's last 30 days")
@@ -307,8 +307,8 @@ def main():
     s = r["smMain"]
     check(r["holds"] == ["card hold l st-follow", "card hold s st-hold"] and "ตามได้ (เข้าช้า)" in s and "ไม้จำลองของระบบ · ตามไม่ทันแล้ว 1" in s,
           "BTC 0.2R from its entry can still be followed; ETH +1R is holding, too late to follow")
-    check("ถ้าจะเข้าเอง (ครบ 7/9" in s and "ไม่ครบ: ราคาห่างจุดเข้าเกิน 0.5R" in s,
-          "a position already +1R away: still an order to join at the market, with how complete the rule is (7/9) and what is missing")
+    check("ถ้าจะเข้าเอง (ครบ 8/10" in s and "ไม่ครบ: ราคาห่างจุดเข้าเกิน 0.5R" in s,
+          "a position already +1R away: still an order to join at the market, with how complete the rule is (8/10) and what is missing")
     check(("เข้าตามได้" in s) or ("ไม่แนะนำให้เข้าตาม" in s) or ("ยังไม่มีผลทดสอบการเข้าตาม" in s) or ("ผลทดสอบไม่ชัดว่ากำไร" in s), "a position 0.2R from its entry: the late-entry test decides")
     check("ผลทดสอบบวกน้อย" not in s, "joining late is offered only where the test was clearly profitable, never 'small and unclear'")
     check(r["charts"] >= 2 and "Stop Loss" in s and "TP1" in s, "each open position has its SL/TP and its chart")
@@ -330,12 +330,21 @@ def main():
     check("ไม้ของระบบที่อยู่ +0.80R แบบนี้ จบกำไร 79%" in r["smMain"], "live odds follow the live R: +0.8R ended in profit 79% of the time")
     check("ใกล้จุดเข้า" in r["smMain"] and re.search(r"ถ้าปิด(เหนือ|ใต้) [\d,.]+", r["smMain"]) and ("อีก " in r["smMain"] or "เลยเส้นแล้ว" in r["smMain"]),
           "coins with nothing open: live distance to the close that would start a trade")
-    check("ครบองค์ประกอบสูตร 8/9 (89%)" in r["smMain"], "a position 0.8R from its entry misses one condition (within 0.5R): 8/9")
+    check("ครบองค์ประกอบสูตร 9/10 (90%)" in r["smMain"], "a position 0.8R from its entry misses one condition (within 0.5R): 9/10")
     r = run(page, "live_late", {"storage": h4, "capital": 1_000_000, "trendForce": {"ETHUSDT": "SHORT"}, "clickTf": "4h", "waitMs": 15000,
                                 "justClosed": 14_400_000, "afterCloseMs": 20 * 60000}, bg=False)
     check(r["acts"] == ["card act s st-follow"] and "ตามได้ (เข้าช้า)" in r["smMain"] and "เลยเวลาเข้ามา 5 นาที" in r["smMain"] and "ผลทดสอบเข้าช้า 1 แท่ง: 1874 ไม้" in r["smMain"],
           "20 minutes after the close: the ETH SHORT card stays, followable late within 0.5R, with the late-entry test")
     check(not r["floatShown"], "a signal past its 15 minutes does not pop the floating bar")
+
+    # The system's own last 30 days worse than anything in the test (the mock's bars): watch, and NO TRADE for new entries.
+    r = run(page, "watch_mode", {"storage": h4, "capital": 1_000_000, "trendForce": {"BTCUSDT": "LONG", "ETHUSDT": "EXIT_SHORT"}, "realRecent": True})
+    check([x["kind"] for x in r["packet"]["signals"]] == ["EXIT"], "recent record worse than the test ever had: no ENTRY alert, the EXIT still goes out")
+    check(r["packet"]["signals"][0]["kind"] == "EXIT", "exits are never paused")
+    r = run(page, "watch_screen", {"storage": h4, "capital": 1_000_000, "trendForce": {"BTCUSDT": "LONG"}, "clickTf": "4h", "waitMs": 15000, "justClosed": 14_400_000,
+                                   "realRecent": True}, bg=False)
+    check("NO TRADE · ระบบหยุดเข้าไม้ใหม่" in r["smMain"] and "เฝ้าระวัง" in r["smMain"].split("มุมมองของระบบ")[0] and r["acts"] == [],
+          "on watch: confidence 'เฝ้าระวัง', a NO TRADE banner, no order card for the BTC signal")
 
     # A native reply that never comes back must not hang the scan: it fails with a timeout and is reported.
     # (two futures hosts are tried in turn, 50 s each)

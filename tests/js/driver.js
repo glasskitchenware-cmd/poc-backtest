@@ -5,6 +5,11 @@
   var cfg = window.__CFG, force = cfg.force || {};
   if (window.__EVIDENCE_OVERRIDE) window.EVIDENCE = window.__EVIDENCE_OVERRIDE;
   if (cfg.trendEvidence) window.EVIDENCE_TREND = cfg.trendEvidence;
+  // The mock's bars make the system's last 30 days all losses; unless a case checks that (cfg.realRecent), widen the
+  // test's normal range so the other cases still see signals.
+  if (!cfg.realRecent && !cfg.trendEvidence && window.EVIDENCE_TREND && window.EVIDENCE_TREND.normal) Object.values(window.EVIDENCE_TREND.normal).forEach(function (n) {
+    Object.values(n.windows || {}).forEach(function (w) { w.p5 = -999; w.min = -9999; });
+  });
   function coinOf(c) {
     var best = null, d = Infinity;
     Object.keys(window.__SPEC).forEach(function (s) { var x = Math.abs(Math.log(c / window.__SPEC[s][0])); if (x < d) { d = x; best = s; } });

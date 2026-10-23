@@ -46,8 +46,14 @@
         pos.fills.forEach(function (f) { gross += f.frac * pos.dir * (f.px - pos.entry) / risk; fundH += f.frac * f.hours; });
         r = gross - (2 * (o.fee + o.slippage) * pos.entry + o.funding * pos.entry * fundH / 8) / risk;
       }
+      // Where r goes, in R of the initial risk: the move on prices before slippage, the slippage already inside the fill
+      // prices (entry; channel exit), the fee, the slippage charged again as a cost, and funding. r = gross - the rest.
+      var rawEntry = pos.entry / (1 + pos.dir * o.slippage), rawPx = reason === "exit" ? px / (1 - pos.dir * o.slippage) : px, rawGross = pos.left * pos.dir * (rawPx - rawEntry) / risk, fH = pos.left * hours;
+      pos.fills.forEach(function (f) { rawGross += f.frac * pos.dir * (f.px - rawEntry) / risk; fH += f.frac * f.hours; });
+      var feeR = 2 * o.fee * pos.entry / risk, slipR = 2 * o.slippage * pos.entry / risk, fundR = o.funding * pos.entry * fH / 8 / risk;
       trades.push({ dir: pos.dir, entry: pos.entry, stop: pos.stop, risk: risk, entry_time: pos.entry_time, entry_index: pos.entry_index,
-        exit: px, exit_time: b[i].time, exit_index: i, reason: reason, r: r, mfeR: pos.dir * (pos.best - pos.entry) / risk, tpHit: pos.fills.length, fills: pos.fills });
+        exit: px, exit_time: b[i].time, exit_index: i, reason: reason, r: r, mfeR: pos.dir * (pos.best - pos.entry) / risk, tpHit: pos.fills.length, fills: pos.fills,
+        cost: { grossR: rawGross, slipInPriceR: rawGross - (r + feeR + slipR + fundR), feeR: feeR, slipR: slipR, fundR: fundR } });
       pos = null;
     }
     for (var i = warm; i < n; i++) {

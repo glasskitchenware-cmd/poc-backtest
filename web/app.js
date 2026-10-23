@@ -199,7 +199,7 @@
   }
   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return "&#" + c.charCodeAt(0) + ";"; }); }
   // The app version (android/app/build.gradle versionName; tests/js/run_tests.py checks they match).
-  var APP_VERSION = "7.0";
+  var APP_VERSION = "7.1";
   // One line-icon family for the screen (24px grid, 1.8 stroke, round ends), drawn in the text colour.
   var ICONS = { check: '<path d="M5 12.5l4.2 4.2L19 7"/>', alert: '<path d="M12 4 2.8 19.5h18.4z"/><path d="M12 10v4.5M12 17.3v.2"/>',
     news: '<rect x="3.5" y="5" width="13" height="14" rx="2"/><path d="M16.5 9h3v7.5a2.5 2.5 0 0 1-5 0"/><path d="M7 9h6M7 12.5h6M7 16h3.5"/>',
@@ -1112,6 +1112,9 @@
   // Every number comes from research/pro and research/pro/robust.js; nothing here is a forecast for one trade.
   // The system's last 30 days on the selected coins against the test's normal range (set by the main screen).
   var RECENT = null;
+  // NO TRADE for new entries while the system's own last 30 days are worse than anything the test ever had over the same
+  // number of trades (the evidence no longer covers it); exits still go out.
+  function systemPaused() { return !!(RECENT && RECENT.N && RECENT.lvl === "bad"); }
   function recentFrom(results) {
     var all = [];
     results.forEach(function (r) { (r.recent || []).forEach(function (t) { all.push(Object.assign({ symbol: r.symbol }, t)); }); });
@@ -1238,6 +1241,7 @@
     function money() { return readNumber("pfCapital", 10000); }
     function signals() {
       var now = Date.now();
+      if (isTrend(curTf()) && systemPaused()) return [];
       var score = function (r) { var st = isTrend(curTf()) ? trendStats() : null; return st && st.n >= 30 ? st.avgR : -9; };
       return results.filter(function (r) { return r.signal && !r.signal.below_minimum && now < r.signal.expires; })
         .sort(function (a, b) { return score(b) - score(a) || (b.symbol === LOCK.symbol) - (a.symbol === LOCK.symbol); });
@@ -1421,7 +1425,16 @@
         [2023, 2024, 2025, 2026].filter(function (y) { return R.years && R.years[y]; }).map(function (y) { return row(String(y) + (y === 2026 ? " (ถึง ก.ย.)" : ""), R.years[y]); }).join("") +
         row("รวม 2023–2026", all, port ? "−" + fmt(port.maxDD, 1) + "% ที่ " + trendRiskPct() + "%" : "") +
         (rec ? row("30 วันล่าสุด (สดของระบบ)", rec, RECENT && RECENT.N ? { ok: "ปกติ", warn: "ต่ำกว่าปกติ", bad: "แย่กว่าที่เคยเจอ" }[RECENT.lvl] : "") : "") + "</table></div>" +
-        '<p class="fine">ปี 2023–2026 = ผล walk-forward (กฎถูกเลือกจากปีก่อนหน้าเท่านั้น) · 30 วัน = ไม้ของระบบบนข้อมูลจริงล่าสุด ข้อมูลน้อย ผันผวนสูง · ผลของคุณเอง (บันทึกเอง): เมนู → พอร์ต → Paper</p></div>';
+        costRow(cl) + '<p class="fine">ปี 2023–2026 = ผล walk-forward (กฎถูกเลือกจากปีก่อนหน้าเท่านั้น) · 30 วัน = ไม้ของระบบบนข้อมูลจริงล่าสุด ข้อมูลน้อย ผันผวนสูง · ผลของคุณเอง (บันทึกเอง): เมนู → พอร์ต → Paper</p></div>';
+    }
+    // Gross R and where it went, for the system's closed trades of the last 30 days (web/trend.js cost fields).
+    function costRow(cl) {
+      var c = cl.filter(function (t) { return t.cost; });
+      if (!c.length) return "";
+      var sum = function (k) { return c.reduce(function (a, t) { return a + t.cost[k]; }, 0); }, net = c.reduce(function (a, t) { return a + t.r; }, 0);
+      return '<p class="fine cost-row">30 วัน (' + c.length + " ไม้): ก่อนหักต้นทุน " + fmt(sum("grossR"), 1, true) + "R · ค่าธรรมเนียม Taker −" + fmt(sum("feeR"), 1) + "R · slippage −" +
+        fmt(sum("slipR") + sum("slipInPriceR"), 1) + "R (ในราคาเข้า/ออก " + fmt(sum("slipInPriceR"), 1) + " + คิดซ้ำเป็นต้นทุน " + fmt(sum("slipR"), 1) + ") · funding −" + fmt(sum("fundR"), 1) +
+        "R → สุทธิ " + fmt(net, 1, true) + "R</p>";
     }
     function riskBox(g, z, v) {
       var cap = money(), nm = trendNormal(), streak = nm && nm.normal.worstStreak, dd = nm && nm.port && nm.port.maxDD, pct = z.lossB / cap * 100;
@@ -1553,6 +1566,8 @@
           (entries.length + held.length ? "" : " · ระบบยังไม่มีไม้เปิด") + "</p></div></div>");
       noteOf = { list: list, held: held };
       h += '<div id="smNote">' + traderNote(list, held) + "</div>";
+      if (systemPaused()) h += '<div class="callout bad">' + ic("alert") + "<div><b>NO TRADE · ระบบหยุดเข้าไม้ใหม่</b><small>" + RECENT.N + " ไม้ล่าสุดของระบบรวม " +
+        fmt(RECENT.last, 1, true) + "R แย่กว่าที่ผลทดสอบเคยเจอในช่วงยาวเท่ากัน (" + fmt(RECENT.band.min, 1, true) + "R) · ผลทดสอบไม่ครอบคลุมสภาพนี้แล้ว · ไม้ที่ถืออยู่ยังแจ้งปิดตามปกติ · กลับมาแจ้งเข้าเมื่อกลับเข้ากรอบ</small></div></div>";
       h += '<div class="sec-hd">ตามได้ตอนนี้ <span class="cnt" id="cntFollow"></span><small id="feedSt">กำลังต่อราคาสด…</small></div><div id="smNewsTop">' + News.topHtml() + "</div>" +
         '<div id="grpFollow">' + cards + "</div>" + idle +
         results.filter(function (r) { return r.signal && r.signal.below_minimum; }).map(function (r) {
@@ -1703,6 +1718,7 @@
     }
     function draw() {
       clearPlans();
+      if (isTrend(curTf())) RECENT = recentFrom(results);
       var list = signals(), tf = curTf(), cap = money(), items = isTrend(tf) ? planItems() : [], held = [], ents = list, head;
       var rtOpen = $("smRoutine") && $("smRoutine").open, moreOpen = $("smMore") && $("smMore").open;
       if (isTrend(tf)) {
@@ -1963,6 +1979,7 @@
         // Capital: the order at the live price must keep the set risk; Binance's smallest order above it is NO TRADE.
         var zz = c.order ? liveSize(c.order, p) : null;
         if (zz && zz.blocked && st.g === "follow") st = { g: "hold", why: "nocap", off: st.off };
+        if (systemPaused() && st.g === "follow") st = { g: "hold", why: "paused", off: st.off };
         if (st.g === "ended") {
           c.ended = true;
           var big = el.querySelector("[data-livepos]");
@@ -1972,7 +1989,7 @@
         if (c.at !== st.g) { c.at = st.g; moved = true; }
         el.classList.remove("st-follow", "st-hold", "st-ended"); el.classList.add("st-" + st.g);
         var q = function (sel) { return el.querySelector(sel); }, set = function (sel, text, cls) { var x = q(sel); if (x) { x.textContent = text; if (cls !== undefined) x.className = cls; } };
-        var chip = { follow: st.why === "window" ? "ตามได้" : "ตามได้ (เข้าช้า)", hold: st.why === "nocap" ? "NO TRADE · ทุนไม่พอ" : st.why === "tp" ? "ถืออยู่ · ขาย TP1 แล้ว" : "ถืออยู่ · ตามไม่ทัน", ended: "จบแล้ว · แตะ SL" }[st.g];
+        var chip = { follow: st.why === "window" ? "ตามได้" : "ตามได้ (เข้าช้า)", hold: st.why === "paused" ? "NO TRADE · ระบบหยุดเข้าไม้" : st.why === "nocap" ? "NO TRADE · ทุนไม่พอ" : st.why === "tp" ? "ถืออยู่ · ขาย TP1 แล้ว" : "ถืออยู่ · ตามไม่ทัน", ended: "จบแล้ว · แตะ SL" }[st.g];
         set("[data-st]", chip, "chip " + { follow: "good", hold: "warn", ended: "bad" }[st.g]);
         set("[data-off]", "(" + fmt(c.dir * (p / c.e - 1) * 100, 2, true) + "% · " + fmt(st.off, 2, true) + "R จากจุดเข้า)", tone(Math.round(st.off * 100) / 100));
         var left = c.until - now, mm = function (ms) { var t = Math.max(0, Math.round(ms / 1000)); return Math.floor(t / 60) + ":" + ("0" + t % 60).slice(-2); };
@@ -1984,6 +2001,7 @@
           tp: "ราคาถึง TP1 แล้ว: ระบบขายส่วนแรก ส่วนที่เหลือถือต่อ · ไม่ต้องเข้าตาม",
           expired: "หมดเวลาเข้าแล้ว · ถ้าเข้าไปแล้ว ถือต่อ ห้ามเลื่อน SL",
           nojoin: "ถ้าเข้าไปแล้ว ถือต่อ ห้ามเลื่อน SL",
+          paused: "NO TRADE: ระบบหยุดเข้าไม้ใหม่ ผล 30 วันล่าสุดแย่กว่าที่ผลทดสอบเคยเจอ · ถ้าเข้าไปแล้ว ถือต่อตามแผน SL เดิม",
           nocap: "ทุนไม่พอ ไม่สามารถเข้าไม้ตามความเสี่ยงที่กำหนด: ไม้เล็กสุดของ Binance เสี่ยง " + (zz ? fmt(zz.lossB / money() * 100, 2) : "?") + "% ของทุน (ตั้งไว้ " + trendRiskPct() + "%) · ไม่เพิ่มความเสี่ยงให้อัตโนมัติ",
           sl: "ราคาแตะ SL " + price(c.sl) + " ในแท่ง 4 ชม. นี้ (ไปถึง " + price(st.x) + ") · ระบบออกที่ราว −1R · ถ้ายังถือ เช็กใน Binance ว่าโดน SL แล้ว"
         }[st.why], "fine live-why" + (st.g === "ended" ? " down" : ""));
@@ -1998,7 +2016,8 @@
           ["ราคายังไม่แตะ SL", st.g !== "ended"],
           ["ยังไม่ถึง TP1", !(st.why === "tp")],
           ["ทุนพอ: ไม้เล็กสุดของ Binance ไม่เสี่ยงเกินที่ตั้ง และ Margin ไม่เกินทุน", !c.noCap && !(zz && zz.blocked)],
-          ["พอร์ตไม่ได้หยุดเข้าไม้ใหม่ (ไม่ลงลึกเกินผลทดสอบ)", plan.state === "ok" || plan.state === "half"]
+          ["พอร์ตไม่ได้หยุดเข้าไม้ใหม่ (ไม่ลงลึกเกินผลทดสอบ)", plan.state === "ok" || plan.state === "half"],
+          ["ผลจริง 30 วันของระบบไม่แย่กว่าที่ผลทดสอบเคยเจอ", !systemPaused()]
         ], met = items.filter(function (x) { return x[1]; }).length;
         set("[data-fit]", "ครบองค์ประกอบสูตร " + met + "/" + items.length + " (" + Math.round(100 * met / items.length) + "%)", met === items.length ? "fit-all" : "fit-part");
         var fl = q("[data-fitlist]");
@@ -2263,7 +2282,7 @@
       bars: bars.slice(-90),
       // The rule's entries in the last 30 days, closed or still open: the system's own record on the main screen.
       recent: res.trades.filter(function (t) { return t.entry_time >= week; }).map(function (t) {
-        return { dir: t.dir, entry: t.entry, entry_time: t.entry_time, exit_time: t.exit_time, r: t.r, open: false, reason: t.reason };
+        return { dir: t.dir, entry: t.entry, entry_time: t.entry_time, exit_time: t.exit_time, r: t.r, open: false, reason: t.reason, cost: t.cost };
       }).concat(res.pos && res.pos.entry_time >= week ? [{ dir: res.pos.dir, entry: res.pos.entry, entry_time: res.pos.entry_time, open: true,
         r: res.pos.dir * (last.close - res.pos.entry) / res.pos.risk }] : []) };
     var candle = last.close_time + 1, dp = decimalsOf(rule.tick);
@@ -2521,7 +2540,7 @@
     var plan = Portfolio.plan(), tf = curTf();
     if (isTrend(tf)) RECENT = recentFrom(results);
     // "half" trades on at half the risk (the sizes already use plan.riskPct); "stop" and "day" pause new entries.
-    var sigs = (plan.state === "ok" || plan.state === "half" ? results : []).filter(function (r) { return r.signal && !r.signal.below_minimum; });
+    var sigs = (plan.state === "ok" || plan.state === "half") && !(isTrend(tf) && systemPaused()) ? results.filter(function (r) { return r.signal && !r.signal.below_minimum; }) : [];
     var exits = results.filter(function (r) { return r.exit; });
     window.NativeHttp.scanDone(JSON.stringify({ v: 2, candle: end, interval_minutes: TF[tf].ms / 60000, error: error || "",
       scanned: extra && extra.scanned || 0, failed: extra && extra.failed || [],
