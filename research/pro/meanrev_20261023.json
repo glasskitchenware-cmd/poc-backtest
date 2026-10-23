@@ -1,0 +1,226 @@
+{
+ "generated": "2026-10-23",
+ "candidates": [
+  "RSI2<5 4h exit sma5 stop 2ATR",
+  "RSI2<5 4h exit sma5 stop 3ATR",
+  "RSI2<5 4h exit rsi70 stop 2ATR",
+  "RSI2<5 4h exit rsi70 stop 3ATR",
+  "RSI2<10 4h exit sma5 stop 2ATR",
+  "RSI2<10 4h exit sma5 stop 3ATR",
+  "RSI2<10 4h exit rsi70 stop 2ATR",
+  "RSI2<10 4h exit rsi70 stop 3ATR",
+  "BB(20,2) 4h exit mid stop 2ATR",
+  "BB(20,2) 4h exit mid stop 3ATR",
+  "RSI2<5 1d exit sma5 stop 2ATR",
+  "RSI2<5 1d exit sma5 stop 3ATR",
+  "RSI2<5 1d exit rsi70 stop 2ATR",
+  "RSI2<5 1d exit rsi70 stop 3ATR",
+  "RSI2<10 1d exit sma5 stop 2ATR",
+  "RSI2<10 1d exit sma5 stop 3ATR",
+  "RSI2<10 1d exit rsi70 stop 2ATR",
+  "RSI2<10 1d exit rsi70 stop 3ATR",
+  "BB(20,2) 1d exit mid stop 2ATR",
+  "BB(20,2) 1d exit mid stop 3ATR"
+ ],
+ "picks": [
+  {
+   "year": 2022,
+   "rule": "RSI2<10 4h exit sma5 stop 3ATR",
+   "train": {
+    "n": 1235,
+    "win": 66.4,
+    "avgR": -0.007,
+    "avgRCI": [
+     -0.03,
+     0.016
+    ],
+    "pf": 0.95,
+    "t": -0.58
+   }
+  },
+  {
+   "year": 2023,
+   "rule": "RSI2<10 1d exit rsi70 stop 2ATR",
+   "train": {
+    "n": 94,
+    "win": 67,
+    "avgR": 0.071,
+    "avgRCI": [
+     -0.066,
+     0.208
+    ],
+    "pf": 1.28,
+    "t": 1.01
+   }
+  },
+  {
+   "year": 2024,
+   "rule": "BB(20,2) 4h exit mid stop 2ATR",
+   "train": {
+    "n": 1323,
+    "win": 59,
+    "avgR": -0.022,
+    "avgRCI": [
+     -0.069,
+     0.024
+    ],
+    "pf": 0.95,
+    "t": -0.94
+   }
+  },
+  {
+   "year": 2025,
+   "rule": "BB(20,2) 1d exit mid stop 2ATR",
+   "train": {
+    "n": 150,
+    "win": 48,
+    "avgR": -0.082,
+    "avgRCI": [
+     -0.254,
+     0.09
+    ],
+    "pf": 0.83,
+    "t": -0.93
+   }
+  },
+  {
+   "year": 2026,
+   "rule": "BB(20,2) 4h exit mid stop 2ATR",
+   "train": {
+    "n": 2085,
+    "win": 58.8,
+    "avgR": -0.017,
+    "avgRCI": [
+     -0.054,
+     0.021
+    ],
+    "pf": 0.96,
+    "t": -0.88
+   }
+  }
+ ],
+ "years": {
+  "2022": {
+   "n": 969,
+   "win": 61.9,
+   "avgR": -0.025,
+   "avgRCI": [
+    -0.052,
+    0.002
+   ],
+   "pf": 0.85,
+   "t": -1.82
+  },
+  "2023": {
+   "n": 155,
+   "win": 58.1,
+   "avgR": -0.134,
+   "avgRCI": [
+    -0.248,
+    -0.02
+   ],
+   "pf": 0.65,
+   "t": -2.3
+  },
+  "2024": {
+   "n": 370,
+   "win": 52.2,
+   "avgR": -0.146,
+   "avgRCI": [
+    -0.235,
+    -0.057
+   ],
+   "pf": 0.69,
+   "t": -3.22
+  },
+  "2025": {
+   "n": 31,
+   "win": 45.2,
+   "avgR": -0.038,
+   "avgRCI": [
+    -0.377,
+    0.301
+   ],
+   "pf": 0.92,
+   "t": -0.22
+  },
+  "2026": {
+   "n": 270,
+   "win": 60.4,
+   "avgR": 0.011,
+   "avgRCI": [
+    -0.095,
+    0.117
+   ],
+   "pf": 1.03,
+   "t": 0.21
+  }
+ },
+ "oos": {
+  "n": 826,
+  "win": 55.7,
+  "avgR": -0.088,
+  "avgRCI": [
+   -0.147,
+   -0.03
+  ],
+  "pf": 0.8,
+  "t": -2.96
+ },
+ "oos2022": {
+  "n": 969,
+  "win": 61.9,
+  "avgR": -0.025,
+  "avgRCI": [
+   -0.052,
+   0.002
+  ],
+  "pf": 0.85,
+  "t": -1.82
+ },
+ "unseen": {
+  "n": 1591,
+  "win": 54,
+  "avgR": -0.122,
+  "avgRCI": [
+   -0.166,
+   -0.078
+  ],
+  "pf": 0.73,
+  "t": -5.46
+ },
+ "costs2x": {
+  "n": 827,
+  "win": 54.3,
+  "avgR": -0.143,
+  "avgRCI": [
+   -0.201,
+   -0.085
+  ],
+  "pf": 0.68,
+  "t": -4.83
+ },
+ "pair": {
+  "corr": -0.11,
+  "trend": {
+   "cagr": 23.3,
+   "maxDD": 22.4,
+   "losingMonths": 44
+  },
+  "meanrev": {
+   "cagr": -9.8,
+   "maxDD": 36.2,
+   "losingMonths": 56
+  },
+  "both_half_risk": {
+   "cagr": 6.7,
+   "maxDD": 11,
+   "losingMonths": 53
+  },
+  "both_full_risk": {
+   "cagr": 11.2,
+   "maxDD": 22.7,
+   "losingMonths": 53
+  }
+ }
+}

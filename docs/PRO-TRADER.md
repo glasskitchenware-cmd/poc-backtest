@@ -88,6 +88,25 @@ two extreme filters looked better on 2023-2026, but picking them now would be ch
 noted as candidates for a future test, not used. The app says this in one line on the main screen, and each card shows
 how the rule's past trades in the same mood and direction did (2020-2026, history).
 
+## A second rule that wins more often: mean reversion (tested, not used)
+
+`research/pro/meanrev.js` (GitHub Actions run 39922227435, `research/pro/meanrev_20261023.json`) tried buying dips above
+EMA200 and selling rallies below it: 20 candidates listed before the run (RSI(2) below 5 or 10, or a close outside the
+Bollinger band 20/2; exit at the 5-bar average, RSI 70 or the band middle; stop 2 or 3 ATR; 4h and 1d bars), the same
+12 coins, fees, slippage and funding as Trend 4H. Each year 2022..2026 traded the candidate with the best t-statistic on
+the years before it.
+
+| Test | Trades | Win rate | Average | 95% range |
+|---|---|---|---|---|
+| Walk-forward 2023-01..2026-09 | 826 | 55.7% | −0.088R | −0.147 .. −0.030R |
+| 2022 (first walk-forward year) | 969 | 61.9% | −0.025R | −0.052 .. +0.002R |
+| 25 coins never used to choose | 1,591 | 54.0% | −0.122R | −0.166 .. −0.078R |
+| Fees and slippage doubled | 827 | 54.3% | −0.143R | −0.201 .. −0.085R |
+
+It wins more often than Trend 4H but loses money in every test; even the best candidate on the training years averaged
+below zero in four of the five picks. Run beside Trend 4H at 0.5% risk each (2023-2026), the pair grew 11.2% a year
+against 23.3% for Trend 4H alone, with the same drawdown (monthly correlation −0.11). It is not added to the app.
+
 ## The professional's routine (main screen → "แผนเทรดและกิจวัตรแบบมืออาชีพ")
 
 - Written plan: one rule, the coins, risk per trade, exits, trade every signal, when to stop, what is forbidden.
