@@ -13,9 +13,10 @@ for attempt in 1 2 3; do
     git rm -rq --cached . 2>/dev/null || true
   fi
   mkdir -p results
-  cp "$file" "results/$name.json"
+  ext="${file##*.}"
+  cp "$file" "results/$name.$ext"
   echo "run ${GITHUB_RUN_ID} attempt ${GITHUB_RUN_ATTEMPT} on ${GITHUB_SHA} at $(date -u +%FT%TZ)" > "results/$name.run.txt"
-  git add "results/$name.json" "results/$name.run.txt"
+  git add "results/$name.$ext" "results/$name.run.txt"
   git commit -qm "research result: $name (run ${GITHUB_RUN_ID})"
   if git push origin research-results; then exit 0; fi
   sleep $((attempt * 5))
