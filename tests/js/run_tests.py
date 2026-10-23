@@ -249,6 +249,7 @@ def main():
           "can follow now: one order card per signal (BTC LONG, ETH SHORT), the full sheet folded inside")
     check("เหลือเวลาเข้า 13:" in follow and re.search(r"\(ถึง \d\d:15 น\.\)", follow) and re.search(r"ตอนนี้ [\d,.]+ \([+-]0\.00% · [+-]0\.00R จากจุดเข้า\)", follow),
           "live: entry countdown and the price against the entry, every second")
+    check(follow.count("ครบองค์ประกอบสูตร 9/9 (100%)") == 2 and "ไม่ใช่โอกาสชนะ" in follow, "each followable signal shows how completely the rule's conditions are met (9/9)")
     wins = re.findall(r"โอกาสกำไร (\d+)%", follow)
     check(len(wins) >= 2 and len(set(wins)) == 1, "every coin shows the system's win rate (" + ",".join(sorted(set(wins))) + "%): coin win rates did not carry over in the test")
     check(all(k in follow for k in ["ความเสี่ยงของไม้นี้", "% ของไม้แบบนี้ในผลทดสอบ", "ถ้าโดน SL", "ระบบเคยแพ้ติดกัน", "พอร์ตเคยลงลึกสุด", "Liquidation (ประมาณ)"]),
@@ -320,6 +321,7 @@ def main():
                                "justClosed": 14_400_000, "liveMove": {"BTCUSDT": 3}}, bg=False)
     check(r["holds"] == ["card hold l st-hold"] and "ราคาห่างจุดเข้า +0.80R (เกิน 0.5R)" in r["smMain"] and "ตอนนี้ไม่ต้องทำอะไร" in r["smMain"],
           "live: price 3% up = 0.8R from the entry -> too late to follow, nothing to follow now")
+    check("ครบองค์ประกอบสูตร 8/9 (89%)" in r["smMain"], "a position 0.8R from its entry misses one condition (within 0.5R): 8/9")
     r = run(page, "live_late", {"storage": h4, "capital": 1_000_000, "trendForce": {"ETHUSDT": "SHORT"}, "clickTf": "4h", "waitMs": 15000,
                                 "justClosed": 14_400_000, "afterCloseMs": 20 * 60000}, bg=False)
     check(r["acts"] == ["card act s st-follow"] and "ตามได้ (เข้าช้า)" in r["smMain"] and "เลยเวลาเข้ามา 5 นาที" in r["smMain"] and "ผลทดสอบเข้าช้า 1 แท่ง: 1874 ไม้" in r["smMain"],

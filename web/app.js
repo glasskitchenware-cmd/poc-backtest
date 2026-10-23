@@ -1344,7 +1344,7 @@
     // The status line and the live price line every live card carries.
     function liveHead(sym, p0) {
       return '<div class="live-row"><span class="chip" data-st>…</span><span class="live-px">ตอนนี้ <b data-now="' + sym + '">' + price(p0) + '</b> <small data-off></small></span></div>' +
-        '<p class="fine live-why" data-why></p>';
+        '<p class="fine live-why" data-why></p><details class="fit"><summary data-fit>…</summary><ul class="fit-list" data-fitlist></ul></details>';
     }
     // One position the system holds: live move and R, its levels and exit, and whether to join it now. Chart on request.
     function holdCard(it, r, i) {
@@ -1906,6 +1906,23 @@
           nojoin: "ถ้าเข้าไปแล้ว ถือต่อ ห้ามเลื่อน SL",
           sl: "ราคาแตะ SL " + price(c.sl) + " ในแท่ง 4 ชม. นี้ (ไปถึง " + price(st.x) + ") · ระบบออกที่ราว −1R · ถ้ายังถือ เช็กใน Binance ว่าโดน SL แล้ว"
         }[st.why], "fine live-why" + (st.g === "ended" ? " down" : ""));
+        // How completely the rule's conditions for entering now are met: a checklist, not a win chance.
+        var plan = Portfolio.plan(), zz = c.order ? liveSize(c.order, p) : null, inTime = c.kind === "entry" ? now < c.until || c.joinOk : c.joinOk;
+        var items = [
+          ["แท่ง 4 ชม. ปิดทะลุกรอบ 20 แท่ง (สัญญาณของสูตร)", true],
+          ["อยู่ฝั่งเดียวกับ EMA200", true],
+          ["Leverage ≥ 5x และ Liquidation ไกลกว่า SL", true],
+          [c.kind === "entry" ? "ยังอยู่ในเวลาเข้า 15 นาที (หรือผลทดสอบเข้าช้ายังกำไร)" : "ผลทดสอบเข้าช้าเท่านี้ยังกำไร", !!inTime],
+          ["ราคาห่างจุดเข้าไม่เกิน 0.5R", Math.abs(st.off) <= 0.5],
+          ["ราคายังไม่แตะ SL", st.g !== "ended"],
+          ["ยังไม่ถึง TP1", !(st.why === "tp")],
+          ["Margin ไม่เกินทุนที่ใส่ไว้", !zz || zz.marginB <= money()],
+          ["พอร์ตไม่ได้หยุดเข้าไม้ใหม่ (ไม่ลงลึกเกินผลทดสอบ)", plan.state === "ok" || plan.state === "half"]
+        ], met = items.filter(function (x) { return x[1]; }).length;
+        set("[data-fit]", "ครบองค์ประกอบสูตร " + met + "/" + items.length + " (" + Math.round(100 * met / items.length) + "%)", met === items.length ? "fit-all" : "fit-part");
+        var fl = q("[data-fitlist]");
+        if (fl) fl.innerHTML = items.map(function (x) { return '<li class="' + (x[1] ? "ok" : "no") + '">' + ic(x[1] ? "check" : "x") + esc(x[0]) + "</li>"; }).join("") +
+          '<li class="note">นี่คือความครบของเงื่อนไขสูตร ไม่ใช่โอกาสชนะ · ไม้ที่ครบ 100% ในอดีตชนะราว 1 ใน 3 กำไรมาจากไม้ใหญ่</li>';
         set("[data-dsl]", "ห่าง " + pc(c.sl));
         if (c.tp) set("[data-dtp]", "อีก " + pc(c.tp));
         if (st.g === "follow" && c.order) {
