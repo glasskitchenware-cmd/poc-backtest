@@ -83,13 +83,15 @@ jobs:
         run: python fetch.py BTCUSDT,ETHUSDT,BNBUSDT,SOLUSDT,XRPUSDT,DOGEUSDT,ADAUSDT,AVAXUSDT,LINKUSDT,DOTUSDT,TRXUSDT,LTCUSDT 4h,1d 2020-01
       - working-directory: research/pro
         run: node --max-old-space-size=6000 pro.js BTCUSDT,ETHUSDT,BNBUSDT,SOLUSDT,XRPUSDT,DOGEUSDT,ADAUSDT,AVAXUSDT,LINKUSDT,DOTUSDT,TRXUSDT,LTCUSDT
-      - name: Publish the evidence JSON (release research-pro) for web/evidence_trend.js
+      - name: Publish the evidence JSON (branch research-results, and release research-pro) for web/evidence_trend.js
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          cp research/pro/evidence_trend.json /tmp/evidence_trend.json
+          bash .github/publish_result.sh pro /tmp/evidence_trend.json
           gh release delete research-pro --yes --cleanup-tag || true
           gh release create research-pro research/pro/evidence_trend.json --target "$GITHUB_SHA" --prerelease \
-            --title "research/pro evidence" --notes "Run ${{ github.run_id }} on $GITHUB_SHA"
+            --title "research/pro evidence" --notes "Run ${{ github.run_id }} on $GITHUB_SHA" || echo "release not created (result is on branch research-results)"
 
   robust:
     if: ${{ inputs.job == 'robust' }}
@@ -114,13 +116,10 @@ jobs:
           python fetch.py BTCUSDT,ETHUSDT,BNBUSDT,LTCUSDT,XRPUSDT,ADAUSDT,TRXUSDT,LINKUSDT,DOGEUSDT,EOSUSDT,ETCUSDT,XLMUSDT,NEOUSDT,IOTAUSDT,ONTUSDT 4h 2017-08 2019-12 spot
       - working-directory: research/pro
         run: node --max-old-space-size=6000 robust.js BTCUSDT,ETHUSDT,BNBUSDT,SOLUSDT,XRPUSDT,DOGEUSDT,ADAUSDT,AVAXUSDT,LINKUSDT,DOTUSDT,TRXUSDT,LTCUSDT ETCUSDT,BCHUSDT,XLMUSDT,EOSUSDT,ATOMUSDT,NEARUSDT,FILUSDT,AAVEUSDT,UNIUSDT,ALGOUSDT,MATICUSDT,FTMUSDT,SANDUSDT,MANAUSDT,AXSUSDT,ICPUSDT,APTUSDT,OPUSDT,ARBUSDT,INJUSDT,SUIUSDT,XTZUSDT,THETAUSDT,VETUSDT,ZECUSDT BTCUSDT,ETHUSDT,BNBUSDT,LTCUSDT,XRPUSDT,ADAUSDT,TRXUSDT,LINKUSDT,DOGEUSDT,EOSUSDT,ETCUSDT,XLMUSDT,NEOUSDT,IOTAUSDT,ONTUSDT
-      - name: Publish robust.json (release research-robust)
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Publish robust.json (branch research-results)
         run: |
-          gh release delete research-robust --yes --cleanup-tag || true
-          gh release create research-robust research/pro/robust.json --target "$GITHUB_SHA" --prerelease \
-            --title "research/pro robustness" --notes "Run ${{ github.run_id }} on $GITHUB_SHA"
+          cp research/pro/robust.json /tmp/robust.json
+          bash .github/publish_result.sh robust /tmp/robust.json
 
   newsprobe:
     # Which free news sources answer a plain app request (no browser, no key), and what they return.
