@@ -950,6 +950,228 @@
    }
   }
  },
+ "late": {
+  "1": {
+   "late": {
+    "n": 1874,
+    "win": 33.1,
+    "winCI": [
+     31,
+     35.2
+    ],
+    "big3": 4.8,
+    "big3CI": [
+     3.9,
+     5.9
+    ],
+    "avgR": 0.103,
+    "avgRCI": [
+     0.037,
+     0.169
+    ],
+    "pf": 1.24,
+    "t": 3.07,
+    "holdDays": 4.5
+   },
+   "original": {
+    "n": 1874,
+    "win": 33.7,
+    "winCI": [
+     31.6,
+     35.8
+    ],
+    "big3": 4.2,
+    "big3CI": [
+     3.3,
+     5.2
+    ],
+    "avgR": 0.102,
+    "avgRCI": [
+     0.036,
+     0.167
+    ],
+    "pf": 1.24,
+    "t": 3.04,
+    "holdDays": 4.5
+   }
+  },
+  "2": {
+   "late": {
+    "n": 1739,
+    "win": 31.9,
+    "winCI": [
+     29.8,
+     34.1
+    ],
+    "big3": 4.7,
+    "big3CI": [
+     3.8,
+     5.8
+    ],
+    "avgR": 0.073,
+    "avgRCI": [
+     0.005,
+     0.141
+    ],
+    "pf": 1.17,
+    "t": 2.09,
+    "holdDays": 4.4
+   },
+   "original": {
+    "n": 1739,
+    "win": 31.6,
+    "winCI": [
+     29.5,
+     33.9
+    ],
+    "big3": 3.9,
+    "big3CI": [
+     3,
+     4.9
+    ],
+    "avgR": 0.061,
+    "avgRCI": [
+     -0.006,
+     0.128
+    ],
+    "pf": 1.14,
+    "t": 1.78,
+    "holdDays": 4.4
+   }
+  },
+  "3": {
+   "late": {
+    "n": 1657,
+    "win": 31.5,
+    "winCI": [
+     29.3,
+     33.8
+    ],
+    "big3": 3.7,
+    "big3CI": [
+     2.9,
+     4.7
+    ],
+    "avgR": 0.047,
+    "avgRCI": [
+     -0.021,
+     0.116
+    ],
+    "pf": 1.11,
+    "t": 1.36,
+    "holdDays": 4.4
+   },
+   "original": {
+    "n": 1657,
+    "win": 31.2,
+    "winCI": [
+     29,
+     33.5
+    ],
+    "big3": 3.5,
+    "big3CI": [
+     2.7,
+     4.5
+    ],
+    "avgR": 0.045,
+    "avgRCI": [
+     -0.022,
+     0.111
+    ],
+    "pf": 1.11,
+    "t": 1.32,
+    "holdDays": 4.4
+   }
+  },
+  "6": {
+   "late": {
+    "n": 1303,
+    "win": 29.3,
+    "winCI": [
+     26.9,
+     31.8
+    ],
+    "big3": 4.1,
+    "big3CI": [
+     3.1,
+     5.3
+    ],
+    "avgR": 0.027,
+    "avgRCI": [
+     -0.041,
+     0.095
+    ],
+    "pf": 1.07,
+    "t": 0.78,
+    "holdDays": 4.6
+   },
+   "original": {
+    "n": 1303,
+    "win": 29.6,
+    "winCI": [
+     27.2,
+     32.2
+    ],
+    "big3": 3.1,
+    "big3CI": [
+     2.3,
+     4.2
+    ],
+    "avgR": 0.01,
+    "avgRCI": [
+     -0.058,
+     0.078
+    ],
+    "pf": 1.02,
+    "t": 0.28,
+    "holdDays": 4.6
+   }
+  },
+  "12": {
+   "late": {
+    "n": 903,
+    "win": 27.7,
+    "winCI": [
+     24.9,
+     30.7
+    ],
+    "big3": 3.5,
+    "big3CI": [
+     2.5,
+     5
+    ],
+    "avgR": 0.045,
+    "avgRCI": [
+     -0.033,
+     0.123
+    ],
+    "pf": 1.13,
+    "t": 1.12,
+    "holdDays": 5.4
+   },
+   "original": {
+    "n": 903,
+    "win": 29.8,
+    "winCI": [
+     26.9,
+     32.9
+    ],
+    "big3": 3,
+    "big3CI": [
+     2.1,
+     4.3
+    ],
+    "avgR": 0.055,
+    "avgRCI": [
+     -0.022,
+     0.132
+    ],
+    "pf": 1.16,
+    "t": 1.41,
+    "holdDays": 5.4
+   }
+  }
+ },
  "ladders": [
   {
    "id": "half2",
@@ -1042,6 +1264,6 @@
    }
   }
  ],
- "run": "https://github.com/glasskitchenware-cmd/poc-backtest/actions/runs/39818552055",
+ "run": "https://github.com/glasskitchenware-cmd/poc-backtest/actions/runs/39887743350",
  "source": "Binance USD-M futures 4h klines 2020-01..2026-09 (data.binance.vision), research/pro/pro.js"
 }

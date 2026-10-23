@@ -20,7 +20,8 @@
     return real(id, bars, ind, i, opt);
   };
   // LONG/SHORT: enter at the next open. EXIT_LONG/EXIT_SHORT: the rule closes a position opened 20 bars ago (+1R now).
-  // HOLD_LONG/HOLD_SHORT: the rule holds that position. Unlisted coins: nothing.
+  // HOLD_LONG/HOLD_SHORT: the rule holds that position; NEAR_LONG/NEAR_SHORT: one opened 2 bars ago, price near the entry.
+  // Unlisted coins: nothing.
   if (cfg.trendForce) {
     var realTrend = Trend.run;
     Trend.run = function (bars, opt) {
@@ -31,8 +32,9 @@
       if (cfg.stopFrac && res.last) res.last.stopDist = c * cfg.stopFrac;
       if (f === "LONG" || f === "SHORT") res.pend = { dir: f === "LONG" ? 1 : -1 };
       else if (f) {
-        var d = /LONG$/.test(f) ? 1 : -1, risk = c * 0.05;
-        res.pos = { dir: d, entry: c - d * risk, risk: risk, stop: c - 2 * d * risk, entry_time: bars[n - 21].time, entry_index: n - 21, best: c, left: 1, fills: [] };
+        // NEAR_*: the rule entered 2 bars ago and price is still 0.2R from the entry (a late entry may apply).
+        var d = /LONG$/.test(f) ? 1 : -1, risk = c * 0.05, near = /^NEAR/.test(f), entry = near ? c - d * 0.2 * risk : c - d * risk, ago = near ? 2 : 20;
+        res.pos = { dir: d, entry: entry, risk: risk, stop: entry - d * risk, entry_time: bars[n - ago].time, entry_index: n - ago, best: c, left: 1, fills: [] };
         if (/^EXIT/.test(f)) res.pend = { exit: true };
       }
       return res;

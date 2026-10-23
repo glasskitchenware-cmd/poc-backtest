@@ -71,6 +71,22 @@ Every scale-out plan earned less than holding the whole position; earlier take p
 the average. The chosen plan at 0.5% risk: CAGR 30.5% (vs 38.9%), max drawdown 31.5% (vs 30.4%), positive months 58%
 (vs 49%). The app offers both (Settings → Take Profit); scale-out is the default because the user asked for it.
 
+## Joining an open position late (run 39887743350)
+
+A trader who sees the rule's open position d bars after it entered, while no take profit has filled and the price is
+within 0.5R of the entry, enters at that close with the same SL, take profits and exit (R in units of their own risk):
+
+| Bars late | Trades | Win | Avg R (95% range) | Same trades on time |
+|---|---|---|---|---|
+| 1 | 1,874 | 33.1% | +0.103 (+0.037…+0.169) | +0.102 |
+| 2 | 1,739 | 31.9% | +0.073 (+0.005…+0.141) | +0.061 |
+| 3 | 1,657 | 31.5% | +0.047 (−0.021…+0.116) | +0.045 |
+| 6 | 1,303 | 29.3% | +0.027 (−0.041…+0.095) | +0.010 |
+| 12 | 903 | 27.7% | +0.045 (−0.033…+0.123) | +0.055 |
+
+Joining within 0.5R kept the edge of those trades; the app shows "เข้าตามได้" on open positions under these
+conditions, with the bucket's numbers, and marks 3+ bars late as weak.
+
 ## In the app
 
 - Default timeframe is H4 Trend (every install moved once; M5/M15/H1 stay selectable and are labelled as losing in

@@ -207,7 +207,7 @@ def main():
     shown = r["smMain"] + r["coach"]
     check("สัญญาณน่าเข้า 2 ตัว" in r["smMain"] and "BTCUSDT Perp" in r["smMain"] and "ETHUSDT Perp" in r["smMain"], "every signal worth entering is shown (BTC and ETH)")
     check(r["charts"] >= 3, "a 4h chart per signal plus one for the held position (" + str(r["charts"]) + ")")
-    check("สูตรถืออยู่ 1 ไม้" in r["smMain"] and "SOL" in r["smMain"], "held SOL listed")
+    check("ไม้ที่เปิดอยู่ตอนนี้ 1 ไม้" in r["smMain"] and "SOL" in r["smMain"], "open SOL position listed")
     for must in ["LONG (Buy)", "SHORT (Sell)", "แท่งสัญญาณปิด", "เข้าภายใน", "ราคาเข้าอ้างอิง", "Stop Loss", "TP1 · ขาย", "ส่วนที่เหลือ", "Liquidation (ประมาณ)",
                  "Isolated", "Leverage", "ขนาด (Size)", "มูลค่าสัญญา", "Margin ที่ใช้", "ค่าธรรมเนียม+slippage", "ราคาขยับ 1%", "ผิดทาง: โดน SL ทั้งไม้",
                  "ถึง TP1 แล้วกลับมาโดน SL", "ถึงทุก TP แล้วส่วนที่เหลือวิ่งถึง +5R", "ปิดกำไร", "ราคาไปถึง +1R", "ไม่ถึง +1R เลย", "กำไรเฉลี่ยต่อไม้",
@@ -218,17 +218,24 @@ def main():
 
     r = run(page, "h4_small", {"storage": h4, "capital": 37, "trendForce": {"ETHUSDT": "SHORT", "SOLUSDT": "HOLD_SHORT"}, "clickTf": "4h", "waitMs": 15000,
                                "justClosed": 14_400_000}, bg=False)
-    check("ทุน 37 ฿ ยังเทรดตามสูตรไม่ได้" in r["smMain"] and "ทุนขั้นต่ำที่เสี่ยง 0.25%/ไม้" in r["smMain"], "37 THB: says the capital is too small and how much each coin needs")
-    check("ETH SHORT" in r["smMain"] and "ไม่แนะนำให้เข้า" in r["smMain"] and "ต้องมีทุนอย่างน้อย" in r["smMain"], "37 THB: the refused ETH signal is shown with the reason")
-    bl = r["packet"]["signals"]
-    check(len(bl) == 1 and bl[0]["kind"] == "BLOCKED" and bl[0]["symbol"] == "ETHUSDT" and "ต้องมีทุนอย่างน้อย" in bl[0]["reason"] and "% ของทุน" in bl[0]["reason"],
-          "37 THB: no entry call, but an information notice says a signal happened and what the smallest order would risk")
-    check(any("ต้องมีทุนอย่างน้อย" in x for x in r["packet"]["rejected"]), "37 THB: rejection names the capital needed")
-    check("สแกนล่าสุด" in r["smMain"] and "สัญญาณ 7 วันล่าสุด" in r["smMain"] and "SOL" in r["smMain"], "status line and the last 7 days of signals are shown")
-    check(r["chart"] and "NaN" not in r["smMain"] and "undefined" not in r["smMain"], "37 THB: chart drawn, no NaN/undefined")
-    (OUT / "h4_blocked.json").write_text(json.dumps(r["packet"], ensure_ascii=False), encoding="utf-8")
-    r = run(page, "h4_small_quiet", {"storage": dict(h4, notifyBlocked="0"), "capital": 37, "trendForce": {"ETHUSDT": "SHORT"}})
-    check(r["packet"]["signals"] == [], "setting off: capital-blocked signals are not notified")
+    sg = r["packet"]["signals"]
+    check(len(sg) == 1 and sg[0]["kind"] == "ENTRY" and sg[0]["symbol"] == "ETHUSDT" and float(sg[0]["qty"]) >= 0.001,
+          "37 THB: the signal is still sent, sized at Binance's smallest order")
+    check("ETHUSDT Perp" in r["smMain"] and "(ขั้นต่ำที่ Binance ยอม)" in r["smMain"] and "ทุนไม่พอ" not in r["smMain"] and "ยังเทรดตามสูตรไม่ได้" not in r["smMain"],
+          "37 THB: full trade sheet at the smallest order, no capital lecture")
+    check("ไม้ที่เปิดอยู่ตอนนี้ 1 ไม้" in r["smMain"] and "สัญญาณ 7 วันล่าสุด" in r["smMain"] and "สแกนล่าสุด" in r["smMain"],
+          "open positions, the last 7 days and the status line are shown")
+    check(r["chart"] or r["charts"] >= 2, "charts drawn for the signal and the open position")
+    check("NaN" not in r["smMain"] and "undefined" not in r["smMain"], "37 THB: no NaN/undefined")
+    (OUT / "h4_minsize.json").write_text(json.dumps(r["packet"], ensure_ascii=False), encoding="utf-8")
+
+    r = run(page, "h4_open", {"storage": h4, "capital": 1_000_000, "trendForce": {"BTCUSDT": "NEAR_LONG", "ETHUSDT": "HOLD_SHORT"}, "clickTf": "4h", "waitMs": 15000,
+                              "justClosed": 14_400_000}, bg=False)
+    s = r["smMain"]
+    check("สัญญาณเข้าใหม่: ไม่มี" in s and "ไม้ที่เปิดอยู่ตอนนี้ 2 ไม้" in s, "no new entry, but the 2 open positions are listed right after")
+    check("ถ้ายังไม่ได้เข้า" in s and "ราคาห่างจุดเข้าเกิน 0.5R" in s, "a position already +1R away: do not join late")
+    check(("เข้าตามได้" in s) or ("ไม่แนะนำให้เข้าตาม" in s) or ("ยังไม่มีผลทดสอบการเข้าตาม" in s), "a position 0.2R from its entry: the late-entry test decides")
+    check(r["charts"] >= 2 and "Stop Loss" in s and "TP1" in s, "each open position has its SL/TP and its chart")
 
     # A native reply that never comes back must not hang the scan: it fails with a timeout and is reported.
     # (two futures hosts are tried in turn, 50 s each)
