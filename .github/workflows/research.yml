@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       job:
-        description: "mtf10000, skills, evidence, tune, pro or robust"
+        description: "mtf10000, skills, evidence, tune, pro, robust or newsprobe"
         default: "skills"
 
 jobs:
@@ -121,6 +121,40 @@ jobs:
           gh release delete research-robust --yes --cleanup-tag || true
           gh release create research-robust research/pro/robust.json --target "$GITHUB_SHA" --prerelease \
             --title "research/pro robustness" --notes "Run ${{ github.run_id }} on $GITHUB_SHA"
+
+  newsprobe:
+    # Which free news sources answer a plain app request (no browser, no key), and what they return.
+    if: ${{ inputs.job == 'newsprobe' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Fetch each source once
+        run: |
+          mkdir out
+          UA="Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Mobile Safari/537.36 POCSignal"
+          i=0
+          for u in https://www.coindesk.com/arc/outboundfeeds/rss/ https://cointelegraph.com/rss https://decrypt.co/feed https://bitcoinmagazine.com/feed \
+                   https://www.theblock.co/rss.xml https://siamblockchain.com/feed/ https://bitcoinaddict.org/feed/ https://cryptoslate.com/feed/ \
+                   https://nfs.faireconomy.media/ff_calendar_thisweek.json \
+                   "https://www.binance.com/bapi/composite/v1/public/cms/article/list/query?type=1&pageNo=1&pageSize=5" \
+                   "https://www.binance.com/bapi/composite/v1/public/cms/article/catalog/list/query?catalogId=161&pageNo=1&pageSize=5" \
+                   https://www.federalreserve.gov/feeds/press_all.xml https://www.sec.gov/news/pressreleases.rss; do
+            i=$((i+1))
+            code=$(curl -sL -m 25 -A "$UA" -o "out/$i.body" -w "%{http_code} %{content_type} %{size_download} %{url_effective}" "$u" || echo "fail")
+            echo "$i $u -> $code" | tee -a out/summary.txt
+            head -c 3000 "out/$i.body" > "out/$i.head.txt" 2>/dev/null || true
+            rm -f "out/$i.body"
+          done
+      - name: Publish (release news-probe)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          find out -type f -size 0 -delete
+          gh release delete news-probe --yes --cleanup-tag || true
+          gh release create news-probe out/* --target "$GITHUB_SHA" --prerelease --title "news sources probe" --notes "Run ${{ github.run_id }}"
 
   mtf10000:
     if: ${{ inputs.job == 'mtf10000' }}
