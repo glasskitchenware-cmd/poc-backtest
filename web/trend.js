@@ -45,7 +45,7 @@
         r = gross - (2 * (o.fee + o.slippage) * pos.entry + o.funding * pos.entry * fundH / 8) / risk;
       }
       trades.push({ dir: pos.dir, entry: pos.entry, stop: pos.stop, risk: risk, entry_time: pos.entry_time, entry_index: pos.entry_index,
-        exit: px, exit_time: b[i].time, exit_index: i, reason: reason, r: r, mfeR: pos.dir * (pos.best - pos.entry) / risk, tpHit: pos.fills.length });
+        exit: px, exit_time: b[i].time, exit_index: i, reason: reason, r: r, mfeR: pos.dir * (pos.best - pos.entry) / risk, tpHit: pos.fills.length, fills: pos.fills });
       pos = null;
     }
     for (var i = warm; i < n; i++) {

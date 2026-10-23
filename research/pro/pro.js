@@ -283,6 +283,33 @@ console.log("\nper coin (walk-forward OOS):", COINS.map(c => { const s = stats(o
   for (const c of Object.keys(full)) lrows[c] = summary(ladderEv.filter(t => t.coin === c));
   console.log("chosen on 2020-2022:", best.L.name, "· evidence years", JSON.stringify(best.test), "· portfolio", JSON.stringify(lport));
 
+  // Late entry: a trader who sees the rule's open position d bars after it entered, while no take profit has filled and
+  // the price is still within 0.5R of the entry, enters at that close with the same SL, take profits and exit. R is in
+  // units of the late trader's own risk (distance to the same SL); costs as above.
+  const lateRows = {};
+  for (const d of [1, 2, 3, 6, 12]) {
+    let late = [], orig = [];
+    for (const c of Object.keys(full)) {
+      const bars = app(c);
+      for (const t of best.tr.filter(x => x.coin === c && inYears(x, evYears))) {
+        const k = t.entry_index + d - 1;
+        if (k >= t.exit_index) continue;                                  // already closed by then
+        const fillsBefore = (t.fills || []).filter(f => f.time <= bars[k].time).length;
+        if (fillsBefore) continue;                                         // a take profit already filled
+        const px = bars[k].close, lateEntry = px * (1 + t.dir * SLIP), lateRisk = Math.abs(lateEntry - t.stop);
+        if (Math.abs(px - t.entry) > 0.5 * t.risk || !(lateRisk > 0) || t.dir * (t.stop - lateEntry) >= 0) continue;
+        const hours = (bars[t.exit_index].t === undefined ? bars[t.exit_index].time : bars[t.exit_index].t) - bars[k].close_time;
+        let gross = 0, left = 1;
+        for (const f of t.fills || []) { gross += f.frac * t.dir * (f.px - lateEntry) / lateRisk; left -= f.frac; }
+        gross += left * t.dir * (t.exit - lateEntry) / lateRisk;
+        late.push({ r: gross - (2 * (FEE + SLIP) * lateEntry + FUNDING * lateEntry * Math.max(0, hours) / H / 8) / lateRisk, entry_time: t.entry_time, exit_time: t.exit_time });
+        orig.push(t);
+      }
+    }
+    lateRows[d] = { late: summary(late), original: summary(orig) };
+    console.log(`late entry ${d} bar(s) after the rule (within 0.5R, no TP yet):`, JSON.stringify(lateRows[d].late), "· same trades entered on time:", JSON.stringify(lateRows[d].original));
+  }
+
   const out = { strategy: "donchian4h", name: "Trend 4H · Donchian 20/10 · SL 3 ATR · EMA200 · Long/Short",
     period: contiguous ? `${evYears[0]}-01-01..2026-09-30` : evYears.join(", "), years_chosen: evYears,
     selection: "walk-forward: each year the rule was picked using only earlier years (24 candidates)",
@@ -291,6 +318,7 @@ console.log("\nper coin (walk-forward OOS):", COINS.map(c => { const s = stats(o
     parity: bad ? "FAIL" : "OK", replay: miss ? "FAIL" : "OK", replay_checked: checked,
     reach: reach(evApp), reachRows, base_train: baseTrain,
     ladder: { id: best.L.id, name: best.L.name, tps: best.L.tps, chosen_on: TRAIN, train: best.train, test: best.test, portfolio: lport, rows: lrows },
+    late: lateRows,
     ladders: ladderRuns.map(x => ({ id: x.L.id, name: x.L.name, train: { n: x.train.n, win: x.train.win, avgR: x.train.avgR }, test: { n: x.test.n, win: x.test.win, avgR: x.test.avgR, pf: x.test.pf } })) };
   console.log("EVIDENCE_TREND=" + JSON.stringify(out));
   fs.writeFileSync("evidence_trend.json", JSON.stringify(out, null, 1) + "\n");
