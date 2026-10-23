@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       job:
-        description: "mtf10000, skills, evidence, tune, pro, robust, sentiment, meanrev, improve, tf, winrate or newsprobe"
+        description: "mtf10000, skills, evidence, tune, pro, robust, sentiment, meanrev, improve, tf, winrate, signalscore or newsprobe"
         default: "skills"
 
 jobs:
@@ -271,6 +271,39 @@ jobs:
         run: |
           cp research/pro/winrate.json /tmp/winrate.json
           bash .github/publish_result.sh winrate /tmp/winrate.json
+
+  signalscore:
+    # A confidence tier per signal from what is known at the signal, fitted on 2020-2022 (research/pro/signalscore.js).
+    if: ${{ inputs.job == 'signalscore' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: python -m pip install requests
+      - name: 4h bars (12 coins, 25 unseen coins, spot 2017-2019) and the Fear & Greed history, 3 downloads at once
+        working-directory: research/evidence
+        run: |
+          python fetch.py BTCUSDT,ETHUSDT,BNBUSDT,SOLUSDT,XRPUSDT,DOGEUSDT,ADAUSDT,AVAXUSDT,LINKUSDT,DOTUSDT,TRXUSDT,LTCUSDT,ETCUSDT,BCHUSDT,XLMUSDT,EOSUSDT,ATOMUSDT,NEARUSDT 4h 2020-01 > f1.log 2>&1 &
+          python fetch.py FILUSDT,AAVEUSDT,UNIUSDT,ALGOUSDT,MATICUSDT,FTMUSDT,SANDUSDT,MANAUSDT,AXSUSDT,ICPUSDT,APTUSDT,OPUSDT,ARBUSDT,INJUSDT,SUIUSDT,XTZUSDT,THETAUSDT,VETUSDT,ZECUSDT 4h 2020-01 > f2.log 2>&1 &
+          python fetch.py BTCUSDT,ETHUSDT,BNBUSDT,LTCUSDT,XRPUSDT,ADAUSDT,TRXUSDT,LINKUSDT,DOGEUSDT,EOSUSDT,ETCUSDT,XLMUSDT,NEOUSDT,IOTAUSDT,ONTUSDT 4h 2017-08 2019-12 spot > f3.log 2>&1 &
+          fail=0; for j in $(jobs -p); do wait $j || fail=1; done
+          cat f1.log f2.log f3.log
+          curl -sfL --retry 3 "https://api.alternative.me/fng/?limit=0&format=json" -o fng.json
+          exit $fail
+      - working-directory: research/pro
+        run: node signalscore.js BTCUSDT,ETHUSDT,BNBUSDT,SOLUSDT,XRPUSDT,DOGEUSDT,ADAUSDT,AVAXUSDT,LINKUSDT,DOTUSDT,TRXUSDT,LTCUSDT ETCUSDT,BCHUSDT,XLMUSDT,EOSUSDT,ATOMUSDT,NEARUSDT,FILUSDT,AAVEUSDT,UNIUSDT,ALGOUSDT,MATICUSDT,FTMUSDT,SANDUSDT,MANAUSDT,AXSUSDT,ICPUSDT,APTUSDT,OPUSDT,ARBUSDT,INJUSDT,SUIUSDT,XTZUSDT,THETAUSDT,VETUSDT,ZECUSDT BTCUSDT,ETHUSDT,BNBUSDT,LTCUSDT,XRPUSDT,ADAUSDT,TRXUSDT,LINKUSDT,DOGEUSDT,EOSUSDT,ETCUSDT,XLMUSDT,NEOUSDT,IOTAUSDT,ONTUSDT
+      - name: Publish signalscore.json (branch research-results)
+        run: |
+          cp research/pro/signalscore.json /tmp/signalscore.json
+          bash .github/publish_result.sh signalscore /tmp/signalscore.json
 
   newsprobe:
     # Which free news sources answer a plain app request (no browser, no key), and what they return.
