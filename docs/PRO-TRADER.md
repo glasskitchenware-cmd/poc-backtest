@@ -195,6 +195,14 @@ is the size of the wins: tier A and tight stops earned more per trade on 2023-20
 three). That was not the rule fixed before this run, so it is not used; it is the candidate to test again, stated in
 advance, when 2027 data exists.
 
+## How sure is an open trade? (v6.11, tested)
+
+`research/pro/liveodds.js` (run 39970652200, `research/pro/liveodds_20261023.json`): of the system's trades that stood at a
+given R at a 4-hour close, how many ended in profit (from the system's entry). Rates from 2020-2022 held within 10 points
+on 2023-2026 and the 25 unseen coins, so each card shows its line, live: below −0.75R 4%, −0.75..−0.25R 16%, ±0.25R 35%,
++0.25..+0.75R 54%, +0.75..+1.5R 79%, +1.5..+3R 95%, TP1 sold 100% (2020-2026, 12 coins). It is measured from the system's
+entry, so it describes the trade for someone who followed it, not a fresh entry at today's price.
+
 ## The professional's routine (main screen → "แผนเทรดและกิจวัตรแบบมืออาชีพ")
 
 - Written plan: one rule, the coins, risk per trade, exits, trade every signal, when to stop, what is forbidden.

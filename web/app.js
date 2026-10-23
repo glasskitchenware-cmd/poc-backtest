@@ -199,7 +199,7 @@
   }
   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return "&#" + c.charCodeAt(0) + ";"; }); }
   // The app version (android/app/build.gradle versionName; tests/js/run_tests.py checks they match).
-  var APP_VERSION = "6.10";
+  var APP_VERSION = "6.11";
   // One line-icon family for the screen (24px grid, 1.8 stroke, round ends), drawn in the text colour.
   var ICONS = { check: '<path d="M5 12.5l4.2 4.2L19 7"/>', alert: '<path d="M12 4 2.8 19.5h18.4z"/><path d="M12 10v4.5M12 17.3v.2"/>',
     news: '<rect x="3.5" y="5" width="13" height="14" rx="2"/><path d="M16.5 9h3v7.5a2.5 2.5 0 0 1-5 0"/><path d="M7 9h6M7 12.5h6M7 16h3.5"/>',
@@ -1344,10 +1344,18 @@
       if (q < minQ) q = st ? Math.ceil(minQ / st - 1e-9) * st : minQ;
       return { qty: q, marginB: q * p / g.lev * fx, lossB: q * (dist + cost) * fx };
     }
+    // Of the system's trades that stood at this R at a 4-hour close (TP1 sold or not), how many ended in profit, measured
+    // from the system's entry (research/pro/liveodds.js; held within 10 points on 2023-2026 and unseen coins).
+    function oddsAt(r, tp1) {
+      var L = window.EVIDENCE_TREND && window.EVIDENCE_TREND.liveodds;
+      if (!L) return null;
+      var row = L.rows.filter(function (x) { return x.tp1 === !!tp1 && (x.band[0] === null || r >= x.band[0]) && (x.band[1] === null || r < x.band[1]); })[0];
+      return row && row.n >= 30 ? row : null;
+    }
     // The status line and the live price line every live card carries.
     function liveHead(sym, p0) {
       return '<div class="live-row"><span class="chip" data-st>…</span><span class="live-px">ตอนนี้ <b data-now="' + sym + '">' + price(p0) + '</b> <small data-off></small></span></div>' +
-        '<p class="fine live-why" data-why></p><details class="fit"><summary data-fit>…</summary><ul class="fit-list" data-fitlist></ul></details>';
+        '<p class="fine live-why" data-why></p><p class="odds" data-odds></p><details class="fit"><summary data-fit>…</summary><ul class="fit-list" data-fitlist></ul></details>';
     }
     // One position the system holds: live move and R, its levels and exit, and whether to join it now. Chart on request.
     function holdCard(it, r, i) {
@@ -1927,6 +1935,9 @@
         var fl = q("[data-fitlist]");
         if (fl) fl.innerHTML = items.map(function (x) { return '<li class="' + (x[1] ? "ok" : "no") + '">' + ic(x[1] ? "check" : "x") + esc(x[0]) + "</li>"; }).join("") +
           '<li class="note">นี่คือความครบของเงื่อนไขสูตร ไม่ใช่โอกาสชนะ · ไม้ที่ครบ 100% ในอดีตชนะราว 1 ใน 3 กำไรมาจากไม้ใหญ่</li>';
+        var od = st.g === "ended" ? null : oddsAt(st.off, st.why === "tp" || c.tpDone);
+        set("[data-odds]", od ? "ไม้ของระบบที่อยู่ " + fmt(st.off, 2, true) + "R แบบนี้ จบกำไร " + fmt(od.win, 0) + "% · เฉลี่ยจบ " + fmt(od.avgR, 2, true) +
+          "R (" + od.n + " ครั้ง 2020–2026 · นับจากจุดเข้าของระบบ)" : "", "odds " + (od ? od.win >= 55 ? "up" : od.win <= 45 ? "down" : "neu" : ""));
         set("[data-dsl]", "ห่าง " + pc(c.sl));
         if (c.tp) set("[data-dtp]", "อีก " + pc(c.tp));
         if (st.g !== "ended" && c.order) {
