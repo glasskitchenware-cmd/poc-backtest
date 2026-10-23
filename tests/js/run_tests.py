@@ -182,6 +182,7 @@ def main():
     check(x["tf"] == "H4" and x["candle_close"] == pk["candle"] and x["opened"] < pk["candle"] and x["r_now"] == "+1.00" and x["exit_ref"] and x["exit_level"],
           "EXIT carries entry, open time, reference close, channel level and R now")
     check("ปิดไม้ BTC LONG" in r["scanCards"] and "ไม้ที่สูตรถืออยู่" in r["scanCards"] and "ETH" in r["scanCards"], "signal tab shows the exit and the held ETH SHORT")
+    check(not r["floatShown"], "the background scan's hidden page never pops (or uses up) the in-app floating bar")
     (OUT / "h4_exit.json").write_text(json.dumps(pk, ensure_ascii=False), encoding="utf-8")
 
     now = int(time.time() * 1000)
@@ -214,6 +215,11 @@ def main():
                  "ถึง TP1 แล้วกลับมาโดน SL", "ถึงทุก TP แล้วส่วนที่เหลือวิ่งถึง +5R", "ปิดกำไร", "ราคาไปถึง +1R", "ไม่ถึง +1R เลย", "กำไรเฉลี่ยต่อไม้",
                  "เข้าแล้ว · บันทึกลงพอร์ต"]:
         check(must in r["smMain"], "trade sheet shows: " + must)
+    fa = r["floatAlert"]
+    check(r["floatShown"] and "🟢 LONG BTC x" in fa and "🔴 SHORT ETH x" in fa and fa.count("เสี่ยง ") == 2 and "SL " in fa and "แตะดู" in fa,
+          "new signals pop a floating bar: side, coin, leverage, risk, entry/SL")
+    check(sorted(r["floatCls"]) == ["fa l", "fa s"], "floating bars coloured by side (green LONG, red SHORT)")
+    check(sorted(r["sheets"]) == ["sm-sum sm-sheet l", "sm-sum sm-sheet l", "sm-sum sm-sheet s"], "trade sheets and the open SOL LONG card are framed in their side's colour")
     check("ขั้นที่" not in shown and "ภาพจำลองหน้า Binance" not in shown and "ทำตามภาพ" not in shown, "no coaching steps or Binance look-alike")
     check("NaN" not in shown and "undefined" not in shown, "main screen has no NaN/undefined for a signal without TP")
 
@@ -229,6 +235,12 @@ def main():
     check(r["chart"] or r["charts"] >= 2, "charts drawn for the signal and the open position")
     check("NaN" not in r["smMain"] and "undefined" not in r["smMain"], "37 THB: no NaN/undefined")
     (OUT / "h4_minsize.json").write_text(json.dumps(r["packet"], ensure_ascii=False), encoding="utf-8")
+
+    r = run(page, "h4_float_exit", {"storage": h4, "capital": 1_000_000, "trendForce": {"BTCUSDT": "EXIT_LONG"}, "clickTf": "4h", "waitMs": 15000,
+                                    "justClosed": 14_400_000}, bg=False)
+    check(r["floatShown"] and r["floatCls"] == ["fa x"] and "🟠 ปิดไม้ LONG BTC ตอนนี้" in r["floatAlert"] and "+1.00R" in r["floatAlert"],
+          "an exit pops an orange floating bar: close BTC LONG now, R now")
+    check("🟠 ปิดไม้ BTC LONG" in r["smMain"], "the exit is the orange bar on the main screen")
 
     r = run(page, "h4_open", {"storage": h4, "capital": 1_000_000, "trendForce": {"BTCUSDT": "NEAR_LONG", "ETHUSDT": "HOLD_SHORT"}, "clickTf": "4h", "waitMs": 15000,
                               "justClosed": 14_400_000}, bg=False)

@@ -93,6 +93,10 @@ conditions, with the bucket's numbers, and marks 3+ bars late as weak.
   the research).
 - Notifications: ENTRY (no TP; SL and the exit rule) within 15 minutes of the 4h close, and EXIT for positions the rule
   holds, even while new entries are paused by the drawdown stop.
+- Since v5.2 they post on the channel `signals_popup` (high importance, vibration, shown on the lock screen) so Android
+  floats them as heads-up banners; the notification is a coloured bar (green LONG / red SHORT / orange close) with the
+  order below it. Settings has a button to that channel's page, where phones from Xiaomi/OPPO/vivo hide the "floating"
+  switch. Inside the app a new entry or exit also pops a coloured bar at the top once (tap to jump to the trade).
 - Main screen: exits first, then positions the rule holds (stop and exit level), then the evidence for the selected
   coins and the coaching steps (TP left empty).
 - Paper: the rule on the selected coins since the start date (1,500 bars of warm-up so its state matches the alerts).

@@ -1212,7 +1212,7 @@
           qtyTxt(z.qty) + " " + r.symbol.replace("USDT", "") + (lg.minSize ? " (ขั้นต่ำ Binance)" : "") + "<br><small>" + levWhy(lg) + "</small>" +
           "<br><small>ทดสอบเข้าช้า " + v.bars + " แท่ง: " + v.n + " ไม้ · ชนะ " + v.win + "% · เฉลี่ย " + fmt(v.avgR, 2, true) + "R</small>";
       }
-      return '<div class="sm-sum sm-sheet"><div class="sm-sheet-hd"><b>' + r.symbol.replace("USDT", "") + ' <small>เปิดอยู่ · เข้า ' + thai(it.entryTime) + '</small></b><span class="pill ' + (long ? "go" : "short") + '">' +
+      return '<div class="sm-sum sm-sheet ' + (long ? "l" : "s") + '"><div class="sm-sheet-hd"><b>' + r.symbol.replace("USDT", "") + ' <small>เปิดอยู่ · เข้า ' + thai(it.entryTime) + '</small></b><span class="pill ' + (long ? "go" : "short") + '">' +
           (long ? "LONG" : "SHORT") + " " + fmt(it.r, 2, true) + "R</span></div><div class=\"sm-order\">" +
         row("จุดเข้า", price(it.entry)) + row("ราคาตอนนี้", '<span data-now="' + r.symbol + '">' + price(it.now) + "</span>") +
         row("Stop Loss", '<span class="down">' + price(it.stop) + "</span> (" + dist(it.stop) + ")") + tps +
@@ -1228,7 +1228,7 @@
       var coin = function (r) { return r.symbol.replace("USDT", ""); };
       top += results.filter(function (r) { return r.exit; }).map(function (r) {
         var x = r.exit;
-        return '<div class="banner stop" data-plan="' + r.symbol + '" style="margin:8px 0 0">ปิดไม้ ' + coin(r) + " " + (x.dir > 0 ? "LONG" : "SHORT") + " ตอนนี้ด้วย Market (ถ้าถืออยู่)" +
+        return '<div class="banner exit" id="smExit' + r.symbol + '" data-plan="' + r.symbol + '" style="margin:8px 0 0">🟠 ปิดไม้ ' + coin(r) + " " + (x.dir > 0 ? "LONG" : "SHORT") + " ตอนนี้ด้วย Market (ถ้าถืออยู่)" +
           '<br><small style="font-weight:400">แท่ง 4 ชม. ปิด ' + price(x.close) + (x.dir > 0 ? " ต่ำกว่า " : " สูงกว่า ") + price(x.level) + " · สูตรเข้าเมื่อ " + thai(x.entry_time) +
           " ที่ " + price(x.entry) + " · ตอนนี้ " + fmt(x.r, 2, true) + "R · ถ้าไม่ได้ถือ ไม่ต้องทำอะไร</small></div>";
       }).join("") + results.filter(function (r) { return r.signal && r.signal.below_minimum; }).map(function (r) {
@@ -1317,7 +1317,7 @@
             row("กำไรเฉลี่ยต่อไม้", fmt(st.avgR, 2, true) + "R ≈ " + baht(st.avgR * oneR).replace(/ \(.*\)$/, "") + " (ช่วง 95%: " + fmt(st.avgRCI[0], 2, true) + " ถึง " + fmt(st.avgRCI[1], 2, true) + "R)") +
             row("ไม้ที่ใช้คำนวณ", st.n + " ไม้ (" + coin + " · " + (trendLadder() ? "แบ่งขาย" : "ไม่ตั้ง TP") + ")")
           : row("ความมั่นใจ", "ยังไม่มีข้อมูลยืนยัน (ไม้ทดสอบน้อยกว่า 30)");
-      return '<div class="sm-sum sm-sheet"><div class="sm-sheet-hd"><b>' + (i + 1) + ". " + r.symbol + ' <small>Perp</small></b><span class="pill ' + (long ? "go" : "short") + '">' +
+      return '<div class="sm-sum sm-sheet ' + (long ? "l" : "s") + '" id="smSheet' + i + '"><div class="sm-sheet-hd"><b>' + (i + 1) + ". " + r.symbol + ' <small>Perp</small></b><span class="pill ' + (long ? "go" : "short") + '">' +
           (long ? "LONG" : "SHORT") + "</span></div>" + headline(g.dir, g.lev, verdictOf(r.symbol, tf, z.lossB / cap * 100)) + keyBox(g, z, cap) + "<div class=\"sm-order\">" +
         sec("สัญญาณ") +
         row("ฝั่ง", '<span class="' + (long ? "up" : "down") + '">' + (long ? "LONG (Buy)" : "SHORT (Sell)") + "</span>") +
@@ -1390,6 +1390,7 @@
       });
       try { drawPlan($("smChart"), plan); } catch (e) { /* as above */ }
       parts.held.forEach(function (it, i) { try { drawPlan($("smHold" + i), it); } catch (e) { /* as above */ } });
+      floatAlerts(list, tf, cap);
       Array.prototype.forEach.call(document.querySelectorAll("#smMain [data-save]"), function (b) {
         b.onclick = function () {
           var x = list[+b.getAttribute("data-save")], z = sized(x.signal);
@@ -1408,6 +1409,42 @@
         };
       });
       watch();
+    }
+    // New entries and exits pop a coloured bar over the screen (green LONG / red SHORT / orange close), once per signal
+    // even across restarts; tap scrolls to the trade, it hides by itself after 25 s.
+    var floatSeen = {}, floatTimer = null;
+    try { floatSeen = JSON.parse(localStorage.getItem("floatSeen") || "{}") || {}; } catch (e) { floatSeen = {}; }
+    function floatAlerts(list, tf, cap) {
+      var now = Date.now(), fresh = [], coin = function (s) { return s.replace("USDT", ""); };
+      results.filter(function (r) { return r.exit; }).forEach(function (r) {
+        var x = r.exit, key = "X:" + tf + ":" + r.symbol + ":" + x.dir + ":" + x.candle;
+        if (!floatSeen[key]) fresh.push({ key: key, cls: "x", go: "smExit" + r.symbol,
+          head: "🟠 ปิดไม้ " + (x.dir > 0 ? "LONG " : "SHORT ") + coin(r.symbol) + " ตอนนี้ (ถ้าถืออยู่)", body: "ปิดด้วย Market · ตอนนี้ " + fmt(x.r, 2, true) + "R · " + TF[tf].name });
+      });
+      list.forEach(function (r, i) {
+        var g = r.signal, key = "E:" + tf + ":" + r.symbol + ":" + g.dir + ":" + g.candle, long = g.dir > 0;
+        if (floatSeen[key]) return;
+        var v = verdictOf(r.symbol, tf, sized(g).lossB / cap * 100), tp1 = g.ladder && g.ladder[0] ? g.ladder[0].price : hasTp(g) ? g.tps[0] : null;
+        fresh.push({ key: key, cls: long ? "l" : "s", go: "smSheet" + i,
+          head: (long ? "🟢 LONG " : "🔴 SHORT ") + coin(r.symbol) + " x" + g.lev + (v.win !== null ? " · โอกาสกำไร " + fmt(v.win, 0) + "%" : "") + " · เสี่ยง " + fmt(v.risk, 2) + "%",
+          body: "เข้า " + price(g.entry) + " · SL " + price(g.stop) + (tp1 ? " · TP1 " + price(tp1) : " · ไม่มี TP") + " · " + TF[tf].name });
+      });
+      // The background scan's hidden page shares storage with the app and must not use up the in-app alert.
+      if (!fresh.length || location.hash === "#bg") return;
+      fresh.forEach(function (f) { floatSeen[f.key] = now; });
+      Object.keys(floatSeen).forEach(function (k) { if (now - floatSeen[k] > 3 * 86400000) delete floatSeen[k]; });
+      try { localStorage.setItem("floatSeen", JSON.stringify(floatSeen)); } catch (e) { /* shown again next time */ }
+      var el = $("floatAlert"), hide = function () { el.classList.add("hidden"); };
+      el.innerHTML = fresh.slice(0, 3).map(function (f) {
+        return '<div class="fa ' + f.cls + '" data-go="' + f.go + '"><b>' + esc(f.head) + "</b><small>" + esc(f.body) + " · แตะดู</small></div>";
+      }).join("") + (fresh.length > 3 ? '<div class="fa more">+ อีก ' + (fresh.length - 3) + " สัญญาณด้านล่าง</div>" : "") +
+        '<button type="button" class="fa-x" aria-label="ปิด">✕</button>';
+      el.classList.remove("hidden");
+      el.querySelector(".fa-x").onclick = hide;
+      Array.prototype.forEach.call(el.querySelectorAll("[data-go]"), function (d) {
+        d.onclick = function () { hide(); var t = $(d.getAttribute("data-go")); if (t) t.scrollIntoView({ behavior: "smooth", block: "start" }); };
+      });
+      clearTimeout(floatTimer); floatTimer = setTimeout(hide, 25000);
     }
     // Live prices for every coin on the sheets (one request for all symbols) while the screen is open.
     function watch() {
@@ -1953,12 +1990,14 @@
     try { blocked = nativeAlerts && window.NativeHttp.notificationsAllowed && !window.NativeHttp.notificationsAllowed(); } catch (e) { /* ignore */ }
     $("notifBox").classList.toggle("hidden", !blocked);
     $("notifTest").classList.toggle("hidden", !(nativeAlerts && window.NativeHttp.testNotification));
+    $("popupBox").classList.toggle("hidden", !(nativeAlerts && window.NativeHttp.openSignalChannelSettings));
     var show = false;
     try { show = nativeAlerts && $("autoScan").checked && window.NativeHttp.batteryUnrestricted && !window.NativeHttp.batteryUnrestricted(); } catch (e) { /* ignore */ }
     $("batteryBox").classList.toggle("hidden", !show);
   }
   $("notifBtn").onclick = function () { try { window.NativeHttp.openNotificationSettings(); } catch (e) { /* ignore */ } };
   $("notifTest").onclick = function () { try { window.NativeHttp.testNotification(); } catch (e) { /* ignore */ } setTimeout(batteryCheck, 800); };
+  $("popupBtn").onclick = function () { try { window.NativeHttp.openSignalChannelSettings(); } catch (e) { /* ignore */ } };
   $("batteryBtn").onclick = function () { try { window.NativeHttp.openBatterySettings(); } catch (e) { /* ignore */ } };
   document.addEventListener("visibilitychange", function () { if (!document.hidden) batteryCheck(); });
   setTimeout(batteryCheck, 500);

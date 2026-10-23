@@ -91,6 +91,8 @@ mode normal
 scan
 T=$(titles); log "titles:"; echo "$T" | tee -a "$LOG"
 check "$(echo "$T" | grep -c 'เข้า LONG .* · M15' | awk '{print ($1==3)}')" "3 coins signal on the same candle -> 3 separate LONG notifications"
+CH=$(adb shell dumpsys notification | grep -m1 "mId='signals_popup'" | tr -d '\r'); log "channel: ${CH:0:240}"
+check "$(echo "$CH" | grep -q 'mImportance=4' && echo 1 || echo 0)" "signals post on channel signals_popup at high importance (heads-up / floating)"
 adb shell cmd statusbar expand-notifications; sleep 3
 adb exec-out screencap -p > "$OUT/02_notifications_long.png"
 adb shell cmd statusbar collapse

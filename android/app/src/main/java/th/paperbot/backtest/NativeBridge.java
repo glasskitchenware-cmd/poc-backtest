@@ -182,8 +182,28 @@ final class NativeBridge {
 
     @JavascriptInterface
     public void testNotification() {
-        main.post(() -> Alerts.show(context, "ทดสอบแจ้งเตือน ✓",
-                "นี่เป็นการทดสอบเสียง/แบนเนอร์ของมือถือ · สัญญาณจริงจะแจ้งแยกเหรียญ พร้อม Entry, SL, TP 5R และ Backtest ที่มีหลักฐาน"));
+        main.post(() -> Alerts.showSample(context));
+    }
+
+    /** The signal channel's own settings page, where floating (heads-up / pop on screen) is switched on. */
+    @JavascriptInterface
+    public void openSignalChannelSettings() {
+        main.post(() -> {
+            Intent intent;
+            if (android.os.Build.VERSION.SDK_INT >= 26) {
+                intent = new Intent(android.provider.Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS)
+                        .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, context.getPackageName())
+                        .putExtra(android.provider.Settings.EXTRA_CHANNEL_ID, Alerts.CHANNEL);
+            } else {
+                intent = new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                        android.net.Uri.parse("package:" + context.getPackageName()));
+            }
+            try {
+                context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            } catch (Exception ignored) {
+                openNotificationSettings();
+            }
+        });
     }
 
     @JavascriptInterface

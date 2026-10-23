@@ -52,6 +52,9 @@
       spot: __T.requests.filter(function (r) { return r.indexOf("SPOT") === 0; }), status: (document.getElementById("scanStatus") || {}).textContent || "",
       scanCards: text("scanCards"), smMain: text("smMain"), coach: text("coach"), paper: text("ppSimple") + " | " + text("ppHero") + " | " + text("ppTrades"),
       paperStatus: text("ppStatus"), paperTitle: text("ppTitle"), help: text("sgHelp"), chartPlan: text("cvAnalysis"), aiKeys: text("aiKeyList"), aiStatus: text("aiStatus"), chart: !!document.querySelector("#smChart canvas"),
-      charts: Array.prototype.filter.call(document.querySelectorAll("#smMain .sm-chart"), function (el) { return !!el.querySelector("canvas"); }).length });
+      charts: Array.prototype.filter.call(document.querySelectorAll("#smMain .sm-chart"), function (el) { return !!el.querySelector("canvas"); }).length,
+      floatAlert: text("floatAlert"), floatShown: !document.getElementById("floatAlert").classList.contains("hidden"),
+      floatCls: Array.prototype.map.call(document.querySelectorAll("#floatAlert .fa"), function (el) { return el.className; }),
+      sheets: Array.prototype.map.call(document.querySelectorAll("#smMain .sm-sheet"), function (el) { return el.className; }) });
   }, cfg.waitMs || 12000);
 })();

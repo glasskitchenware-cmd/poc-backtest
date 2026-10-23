@@ -12,6 +12,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Build;
+import android.widget.RemoteViews;
 
 import org.json.JSONObject;
 
@@ -22,7 +23,11 @@ import org.json.JSONObject;
  */
 final class Alerts {
     private static final int JOB_ID = 15;
-    private static final String CHANNEL = "signals";
+    // A new channel id: Android keeps a channel's importance once created, so floating (heads-up) starts fresh here.
+    static final String CHANNEL = "signals_popup";
+    private static final String OLD_CHANNEL = "signals";
+    private static final long[] VIBRATE = {0, 300, 150, 300};
+    private static final int YELLOW = 0xFFF0B90B;
     private static final String PREFS = "alerts";
     private static final String GROUP = "poc_crypto_signals";
     private static final int SUMMARY_ID = 7_000_001;
@@ -175,21 +180,45 @@ final class Alerts {
                     PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
             Notification.Builder b = Build.VERSION.SDK_INT >= 26
                 ? new Notification.Builder(context, CHANNEL) : new Notification.Builder(context);
+            int accent = color != 0 ? color : YELLOW;
             b.setSmallIcon(R.drawable.ic_notify)
                 .setContentTitle(title).setContentText(text)
-                .setStyle(new Notification.BigTextStyle().bigText(text))
                 .setContentIntent(tap).setAutoCancel(true)
                 .setWhen(when > 0 ? when : System.currentTimeMillis()).setShowWhen(true)
                 .setDefaults(Notification.DEFAULT_ALL)
+                .setVibrate(VIBRATE)
                 .setPriority(Notification.PRIORITY_HIGH)
+                .setVisibility(Notification.VISIBILITY_PUBLIC)
+                .setColor(accent)
                 .setGroup(GROUP);
-            if (color != 0) b.setColor(color);
+            // Coloured title bar, the whole order on the line below; the expanded view has every line.
+            String first = text.indexOf('\n') >= 0 ? text.substring(0, text.indexOf('\n')) : text;
+            b.setStyle(new Notification.DecoratedCustomViewStyle())
+                .setCustomContentView(colored(context, R.layout.notif_signal, title, first, accent))
+                .setCustomHeadsUpContentView(colored(context, R.layout.notif_signal, title, first, accent))
+                .setCustomBigContentView(colored(context, R.layout.notif_signal_big, title, text, accent));
             manager.notify(id, b.build());
         } catch (Exception ignored) {}
     }
 
+    private static RemoteViews colored(Context context, int layout, String title, String body, int accent) {
+        RemoteViews v = new RemoteViews(context.getPackageName(), layout);
+        v.setTextViewText(R.id.n_title, title);
+        v.setTextViewText(R.id.n_body, body);
+        v.setInt(R.id.n_title, "setBackgroundColor", accent);
+        v.setTextColor(R.id.n_title, accent == YELLOW ? 0xFF181A20 : 0xFFFFFFFF);
+        return v;
+    }
+
     static void show(Context context, String title, String text) {
         showSignal(context, title, text, (int)(System.currentTimeMillis() / 1000L), 0, 0);
+    }
+
+    /** What a real entry looks like (green bar, floating), so the user can check the phone shows it. */
+    static void showSample(Context context) {
+        showSignal(context, "🟢 ทดสอบ · เข้า LONG BTCUSDT · H4 · x10 · โอกาสกำไร 33%",
+                "เข้า 81,400.0 · SL 78,000.0 · TP1 91,600.0 · x10 · เสี่ยง 0.50% (≈ 250 ฿)\nนี่คือการทดสอบ ถ้าเห็นแถบนี้ลอยขึ้นบนจอ = ตั้งค่าแจ้งเตือนแบบลอยถูกแล้ว",
+                (int) (System.currentTimeMillis() / 1000L), 0, 0xFF0ECB81);
     }
 
     private static void showSummary(Context context, String title, String text) {
@@ -204,14 +233,22 @@ final class Alerts {
                 ? new Notification.Builder(context, CHANNEL) : new Notification.Builder(context);
             b.setSmallIcon(R.drawable.ic_notify).setContentTitle(title).setContentText(text)
                 .setContentIntent(tap).setAutoCancel(true).setGroup(GROUP).setGroupSummary(true);
+            // Only the coin notifications ring and float; the summary stays quiet.
+            if (Build.VERSION.SDK_INT >= 26) b.setGroupAlertBehavior(Notification.GROUP_ALERT_CHILDREN);
             manager.notify(SUMMARY_ID, b.build());
         } catch (Exception ignored) {}
     }
 
     private static void ensureChannel(NotificationManager m) {
         if (Build.VERSION.SDK_INT >= 26) {
-            m.createNotificationChannel(new NotificationChannel(CHANNEL,
-                    "Crypto Signal · หลายเหรียญ", NotificationManager.IMPORTANCE_HIGH));
+            NotificationChannel c = new NotificationChannel(CHANNEL, "สัญญาณเทรด (แจ้งเตือนแบบลอย)", NotificationManager.IMPORTANCE_HIGH);
+            c.enableVibration(true);
+            c.setVibrationPattern(VIBRATE);
+            c.enableLights(true);
+            c.setLightColor(YELLOW);
+            c.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
+            m.createNotificationChannel(c);
+            m.deleteNotificationChannel(OLD_CHANNEL);
         }
     }
 }
