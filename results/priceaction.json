@@ -1,0 +1,337 @@
+{
+ "generated": "2026-10-27T20:25:51.278Z",
+ "now": "2026-10-27T00:00:00.000Z",
+ "status": "RESEARCH ONLY",
+ "variants": {
+  "1h pin": {
+   "selection": {
+    "n": 5132,
+    "win": 33,
+    "avgR": -0.1959,
+    "sumR": -1005.2,
+    "pf": 0.742,
+    "cagrPct": -47.31,
+    "maxDDPct": 92.6,
+    "mar": -0.511,
+    "months": 48,
+    "posMonthsPct": 20.8
+   },
+   "holdout": {
+    "n": 3391,
+    "win": 32.4,
+    "avgR": -0.2265,
+    "sumR": -768.2,
+    "pf": 0.711,
+    "cagrPct": -49.99,
+    "maxDDPct": 86.38,
+    "mar": -0.579,
+    "months": 34,
+    "posMonthsPct": 11.8
+   }
+  },
+  "1h engulf": {
+   "selection": {
+    "n": 6791,
+    "win": 35.6,
+    "avgR": -0.1232,
+    "sumR": -836.4,
+    "pf": 0.821,
+    "cagrPct": -41.74,
+    "maxDDPct": 89.47,
+    "mar": -0.467,
+    "months": 49,
+    "posMonthsPct": 24.5
+   },
+   "holdout": {
+    "n": 5315,
+    "win": 35.9,
+    "avgR": -0.1293,
+    "sumR": -687.2,
+    "pf": 0.815,
+    "cagrPct": -46.73,
+    "maxDDPct": 84.48,
+    "mar": -0.553,
+    "months": 34,
+    "posMonthsPct": 11.8
+   }
+  },
+  "1h sold": {
+   "selection": {
+    "n": 312,
+    "win": 42.9,
+    "avgR": -0.0074,
+    "sumR": -2.3,
+    "pf": 0.985,
+    "cagrPct": -0.19,
+    "maxDDPct": 6.92,
+    "mar": -0.027,
+    "months": 46,
+    "posMonthsPct": 52.2
+   },
+   "holdout": {
+    "n": 275,
+    "win": 37.5,
+    "avgR": -0.1761,
+    "sumR": -48.4,
+    "pf": 0.679,
+    "cagrPct": -4.24,
+    "maxDDPct": 13.45,
+    "mar": -0.315,
+    "months": 34,
+    "posMonthsPct": 35.3
+   }
+  },
+  "1h any": {
+   "selection": {
+    "n": 9803,
+    "win": 34.8,
+    "avgR": -0.1475,
+    "sumR": -1445.6,
+    "pf": 0.791,
+    "cagrPct": -60.56,
+    "maxDDPct": 97.78,
+    "mar": -0.619,
+    "months": 49,
+    "posMonthsPct": 16.3
+   },
+   "holdout": {
+    "n": 7264,
+    "win": 34.8,
+    "avgR": -0.1614,
+    "sumR": -1172.1,
+    "pf": 0.776,
+    "cagrPct": -65.61,
+    "maxDDPct": 95.41,
+    "mar": -0.688,
+    "months": 34,
+    "posMonthsPct": 11.8
+   }
+  },
+  "4h pin": {
+   "selection": {
+    "n": 1166,
+    "win": 34.2,
+    "avgR": -0.0754,
+    "sumR": -87.9,
+    "pf": 0.89,
+    "cagrPct": -5.58,
+    "maxDDPct": 24.13,
+    "mar": -0.231,
+    "months": 47,
+    "posMonthsPct": 34
+   },
+   "holdout": {
+    "n": 812,
+    "win": 33.5,
+    "avgR": -0.1284,
+    "sumR": -104.3,
+    "pf": 0.822,
+    "cagrPct": -9.07,
+    "maxDDPct": 25.36,
+    "mar": -0.358,
+    "months": 34,
+    "posMonthsPct": 35.3
+   }
+  },
+  "4h engulf": {
+   "selection": {
+    "n": 1639,
+    "win": 39.5,
+    "avgR": 0.0131,
+    "sumR": 21.5,
+    "pf": 1.022,
+    "cagrPct": 0.95,
+    "maxDDPct": 27.22,
+    "mar": 0.035,
+    "months": 48,
+    "posMonthsPct": 56.3
+   },
+   "holdout": {
+    "n": 1323,
+    "win": 37.8,
+    "avgR": -0.0425,
+    "sumR": -56.2,
+    "pf": 0.934,
+    "cagrPct": -5.32,
+    "maxDDPct": 19.65,
+    "mar": -0.271,
+    "months": 34,
+    "posMonthsPct": 38.2
+   }
+  },
+  "4h sold": {
+   "selection": {
+    "n": 54,
+    "win": 55.6,
+    "avgR": 0.2058,
+    "sumR": 11.1,
+    "pf": 1.599,
+    "cagrPct": 0.69,
+    "maxDDPct": 1.14,
+    "mar": 0.607,
+    "months": 25,
+    "posMonthsPct": 52
+   },
+   "holdout": {
+    "n": 62,
+    "win": 46.8,
+    "avgR": 0.0401,
+    "sumR": 2.5,
+    "pf": 1.087,
+    "cagrPct": 0.21,
+    "maxDDPct": 1.94,
+    "mar": 0.108,
+    "months": 27,
+    "posMonthsPct": 48.1
+   }
+  },
+  "4h any": {
+   "selection": {
+    "n": 2365,
+    "win": 38.1,
+    "avgR": -0.0101,
+    "sumR": -23.9,
+    "pf": 0.984,
+    "cagrPct": -2.1,
+    "maxDDPct": 33.44,
+    "mar": -0.063,
+    "months": 48,
+    "posMonthsPct": 45.8
+   },
+   "holdout": {
+    "n": 1766,
+    "win": 36.9,
+    "avgR": -0.0625,
+    "sumR": -110.4,
+    "pf": 0.905,
+    "cagrPct": -9.91,
+    "maxDDPct": 29.54,
+    "mar": -0.336,
+    "months": 34,
+    "posMonthsPct": 38.2
+   }
+  },
+  "1d pin": {
+   "selection": {
+    "n": 137,
+    "win": 47.4,
+    "avgR": 0.3175,
+    "sumR": 43.5,
+    "pf": 1.589,
+    "cagrPct": 2.72,
+    "maxDDPct": 3.49,
+    "mar": 0.78,
+    "months": 41,
+    "posMonthsPct": 58.5
+   },
+   "holdout": {
+    "n": 131,
+    "win": 23.7,
+    "avgR": -0.3725,
+    "sumR": -48.8,
+    "pf": 0.536,
+    "cagrPct": -4.27,
+    "maxDDPct": 11.58,
+    "mar": -0.369,
+    "months": 31,
+    "posMonthsPct": 29
+   }
+  },
+  "1d engulf": {
+   "selection": {
+    "n": 199,
+    "win": 45.2,
+    "avgR": 0.1949,
+    "sumR": 38.8,
+    "pf": 1.362,
+    "cagrPct": 2.4,
+    "maxDDPct": 2.95,
+    "mar": 0.812,
+    "months": 37,
+    "posMonthsPct": 62.2
+   },
+   "holdout": {
+    "n": 200,
+    "win": 36,
+    "avgR": -0.0368,
+    "sumR": -7.4,
+    "pf": 0.943,
+    "cagrPct": -0.73,
+    "maxDDPct": 5.58,
+    "mar": -0.13,
+    "months": 33,
+    "posMonthsPct": 42.4
+   }
+  },
+  "1d sold": {
+   "selection": {
+    "n": 10,
+    "win": 70,
+    "avgR": 0.3079,
+    "sumR": 3.1,
+    "pf": 3.185,
+    "cagrPct": 0.19,
+    "maxDDPct": 0.25,
+    "mar": 0.756,
+    "months": 9,
+    "posMonthsPct": 66.7
+   },
+   "holdout": {
+    "n": 14,
+    "win": 50,
+    "avgR": 0.1102,
+    "sumR": 1.5,
+    "pf": 1.214,
+    "cagrPct": 0.13,
+    "maxDDPct": 1.19,
+    "mar": 0.112,
+    "months": 11,
+    "posMonthsPct": 63.6
+   }
+  },
+  "1d any": {
+   "selection": {
+    "n": 278,
+    "win": 46,
+    "avgR": 0.2112,
+    "sumR": 58.7,
+    "pf": 1.397,
+    "cagrPct": 3.65,
+    "maxDDPct": 4.57,
+    "mar": 0.8,
+    "months": 41,
+    "posMonthsPct": 63.4
+   },
+   "holdout": {
+    "n": 274,
+    "win": 33.6,
+    "avgR": -0.1193,
+    "sumR": -32.7,
+    "pf": 0.825,
+    "cagrPct": -2.96,
+    "maxDDPct": 11.96,
+    "mar": -0.247,
+    "months": 34,
+    "posMonthsPct": 38.2
+   }
+  }
+ },
+ "chosen": "1d any",
+ "unseen": {
+  "n": 962,
+  "win": 41.9,
+  "avgR": 0.1302,
+  "sumR": 125.3,
+  "pf": 1.229
+ },
+ "gate": {
+  ">= 200 trades": "PASS 274",
+  "PF >= 1.15": "FAIL 0.825",
+  "both halves profitable": "FAIL -9.5R / -23.2R",
+  ">= 60% positive months": "FAIL 38.2%",
+  "max DD <= 8% at 0.25%": "FAIL 11.96%",
+  "positive at 2x costs": "FAIL -0.1469R/trade",
+  "forward paper": "UNKNOWN"
+ },
+ "passed": false
+}
