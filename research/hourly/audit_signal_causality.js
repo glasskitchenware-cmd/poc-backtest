@@ -2,7 +2,7 @@
 'use strict';
 // Research-only causal signal regeneration. No orders/network/deploy. Inputs are saved archive.
 const fs=require('fs'),path=require('path'),crypto=require('crypto'),assert=require('assert');
-const root=path.join(__dirname,'poc-backtest/research');
+const root=path.resolve(__dirname,'..');
 const E=require(path.join(root,'flow_breakout/engine.js'));
 const saved=JSON.parse(fs.readFileSync(path.join(root,'flow_breakout/trades.json'),'utf8')).B_baseline;
 const Y=y=>Date.UTC(y,0,1),periods={reference:[Y(2023),Y(2024)],validation:[Y(2024),Y(2025)],test:[Y(2025),Date.UTC(2026,9,1)]};
