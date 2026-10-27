@@ -1446,6 +1446,8 @@
           'R/ไม้ · ต.ค. 2026: ' + L.oct.n + ' ไม้ <span class="down">' + fmt(L.oct.sumR, 1, true) + "R</span></p>" : "") +
         rows.map(function (r) { return '<div class="risk-row"><span>' + esc(r[0]) + "</span>" + tag(r[1]) + "</div>"; }).join("") +
         '<div class="risk-row"><span>Squeeze v2 (M5–H1)</span><b class="down">NOT VALIDATED · ม.ค.–ก.ย. 2026 ขาดทุนทุกกราฟ</b></div>' +
+        '<div class="risk-row"><span>Trend 4H เฉพาะ LONG</span><b class="down">ไม่ผ่าน · SHORT ทำกำไรใน 2020–22, 25 เหรียญใหม่ และ Spot 2017–19</b></div>' +
+        '<div class="risk-row"><span>โมเมนตัม 3 แบบ (ทดสอบ 28 ต.ค.)</span><b class="down">ไม่ผ่าน · ม.ค. 2025–ต.ค. 2026 ดีสุด +3.3%/ปี เดือนบวก 55%</b></div>' +
         '<p class="fine">ผ่าน = ทุกข้อผ่าน · UNKNOWN ไม่นับเป็นผ่าน · สัญญาณยังแจ้งตามสูตรเพื่อให้ตัดสินใจเอง ไม่ใช่คำแนะนำให้ลงเงิน</p></div>';
     }
     function periodsHtml() {

@@ -256,3 +256,34 @@ or a typed one. The rule's open positions show their live move and R next to the
 - The edge is thin and weaker in 2025-2026; execution (on time, at the price, every signal) decides much of it.
 - Results are for 12 coins at once; fewer coins swing more. Live results are usually worse than tests.
 - The app does not place orders and holds no exchange keys.
+
+## Looking for a system to trade for a living (28 Oct 2026, nothing passed)
+
+Both studies had their candidates and pass rules written into the script before the run; neither was re-run with other
+settings after the result.
+
+**LONG only** (`research/pro/longonly.js`, `research/pro/longonly_20261027.json`). In 2023-2026 the SHORT half had no
+edge (957 trades, −0.003R), so taking LONG signals only was tested on data that played no part in that finding. Rejected:
+SHORT made money in every deciding set — 2020-2022 +0.114R (551 trades), 25 unseen coins +0.096R (2,745), spot 2017-2019
++0.313R (461) — and both sides together had the better MAR in all three (2.03 / 0.87 / 3.85 against 1.49 / 0.49 / 1.06).
+The weak SHORT side is a 2023-2026 feature, not a rule. The app keeps both sides.
+
+**Three portfolio candidates** (`research/career/career.js`, `research/career/career_20261027.json`), each scaled to an 8%
+drawdown on 2020-2024, the one with the best 2020-2024 MAR among those positive on spot 2017-2019 tested once on
+2025-01..2026-10:
+
+| | 2020-24 CAGR / DD / positive months | spot 2017-19 CAGR (unscaled) | 2025-01..2026-10 CAGR / DD / positive months | 2x costs |
+|---|---|---|---|---|
+| C1 cross-sectional momentum (top 5 of 37, weekly, BTC above its 100-day average) | 13.1% / 8% / 50% | −9.6% (not eligible) | +2.5% / 4.1% / 36% | +2.3% |
+| C2 time-series momentum (20/60/120 days, volatility-sized) — **chosen** | 7.9% / 8% / 45% | +6.3% | **−1.0%** / 6.2% / **36%** | −1.2% |
+| C3 Trend 4H + C1 at equal volatility | 23.3% / 8% / 60% | −9.6% (its C1 part) | +3.3% / 8.0% / 55% | +0.7% |
+
+Gate on C2's holdout: 543 trades PASS; 2025 −2.9% FAIL; positive months 36% FAIL; drawdown 6.2% PASS; 2x costs −1.2%/yr
+FAIL; forward paper UNKNOWN. **Not passed.** C3, the smoothest in 2020-2024 (60% positive months), fell to 55% and +3.3% a
+year in the holdout. Known defect: the per-trade profit factor in this script is not reliable (C2 shows PF 1.88 while its
+returns are negative: the per-holding bookkeeping does not match the daily returns); the gate failures above do not use
+it.
+
+What this means: none of the systems tested here (Trend 4H and its filters, faster timeframes, mean reversion, LONG only,
+three momentum portfolios; and the other researcher's 40 policies) gives returns steady enough to live on. At the risk
+that kept Trend 4H's 2023-2026 drawdown near 17%, it earned about 13-16% a year (cost model dependent) at 0.25% risk per trade, with 2025-2026 far weaker.
