@@ -55,4 +55,4 @@ const out={
   synthetic_execution_cost_test:execution,
   validated_for_real_money:false
 };
-process.stdout.write(JSON.stringify(out,null,2)+"\\n");
+process.stdout.write(JSON.stringify(out,null,2)); process.stdout.write(String.fromCharCode(10));
