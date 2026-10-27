@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       job:
-        description: "mtf10000, skills, evidence, tune, pro, robust, sentiment, meanrev, improve, tf, winrate, signalscore, liveodds, pyramid, recent or newsprobe"
+        description: "mtf10000, skills, evidence, tune, pro, robust, sentiment, meanrev, improve, tf, winrate, signalscore, liveodds, pyramid, recent, ledger or newsprobe"
         default: "skills"
 
 jobs:
@@ -454,3 +454,35 @@ jobs:
           name: mtf10000-results
           path: research/mtf10000/CRYPTO_MTF_10000_RESULTS
           if-no-files-found: warn
+
+  ledger:
+    # Independent fill ledger for Trend 4H: reconciliation, signed funding, cost models, portfolio DD, locked gate.
+    if: ${{ inputs.job == 'ledger' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: python -m pip install requests
+      - working-directory: research/evidence
+        run: |
+          C=BTCUSDT,ETHUSDT,BNBUSDT,SOLUSDT,XRPUSDT,DOGEUSDT,ADAUSDT,AVAXUSDT,LINKUSDT,DOTUSDT,TRXUSDT,LTCUSDT
+          python fetch.py $C 4h 2020-01 2026-09
+          python fetch_daily.py $C 4h 2026-10-01 $(date -u -d yesterday +%F)
+          python fetch_funding.py $C 2020-01 2026-10
+      - run: node tests/js/trend_accounting_test.js
+      - working-directory: research/ledger
+        run: node ledger.js BTCUSDT,ETHUSDT,BNBUSDT,SOLUSDT,XRPUSDT,DOGEUSDT,ADAUSDT,AVAXUSDT,LINKUSDT,DOTUSDT,TRXUSDT,LTCUSDT $(( $(date -u -d 'today 00:00' +%s) * 1000 ))
+      - name: Publish ledger.json and fills.csv (branch research-results)
+        run: |
+          cp research/ledger/ledger.json /tmp/ledger.json; gzip -c research/ledger/fills.csv > /tmp/ledger_fills.csv.gz
+          cp .github/publish_result.sh /tmp/publish_result.sh
+          bash /tmp/publish_result.sh ledger /tmp/ledger.json
+          bash /tmp/publish_result.sh ledger_fills /tmp/ledger_fills.csv.gz
