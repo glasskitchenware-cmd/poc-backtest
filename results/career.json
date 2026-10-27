@@ -1,0 +1,277 @@
+{
+ "generated": "2026-10-27T19:50:09.910Z",
+ "now": "2026-10-27T00:00:00.000Z",
+ "status": "RESEARCH ONLY",
+ "sources": {
+  "BTCUSDT_1d.json": "10ab7af8e65d62a9",
+  "ETHUSDT_1d.json": "905b9d1aea4dc3a1",
+  "BNBUSDT_1d.json": "e3d783385ac39bb6",
+  "SOLUSDT_1d.json": "85a173109b0c079e",
+  "XRPUSDT_1d.json": "40db62e266960f65",
+  "DOGEUSDT_1d.json": "63873f71a65c3c54",
+  "ADAUSDT_1d.json": "be54dee74baab38a",
+  "AVAXUSDT_1d.json": "5550472931c40849",
+  "LINKUSDT_1d.json": "ef0adc337cf5ba88",
+  "DOTUSDT_1d.json": "32860a2ef1b707c1",
+  "TRXUSDT_1d.json": "32d07a0744c4930a",
+  "LTCUSDT_1d.json": "3c9df1ad97db5806",
+  "ETCUSDT_1d.json": "278c064c63c6ae62",
+  "BCHUSDT_1d.json": "355731042b9b2e52",
+  "XLMUSDT_1d.json": "f36a4e37d7b985f5",
+  "EOSUSDT_1d.json": "07b579bb1b753f5c",
+  "ATOMUSDT_1d.json": "1e807e26f19db7f0",
+  "NEARUSDT_1d.json": "6b0108209f16d73c",
+  "FILUSDT_1d.json": "86a62ecd87f97c1e",
+  "AAVEUSDT_1d.json": "38a62b90c4aeb41e",
+  "UNIUSDT_1d.json": "7e0c050e10c1f285",
+  "ALGOUSDT_1d.json": "97d202d60d9fca66",
+  "MATICUSDT_1d.json": "095ae271e0aa0420",
+  "FTMUSDT_1d.json": "9e0281f16282869e",
+  "SANDUSDT_1d.json": "66866ad608cee240",
+  "MANAUSDT_1d.json": "3979f667d25094f8",
+  "AXSUSDT_1d.json": "931ade0b76ca8a38",
+  "ICPUSDT_1d.json": "93c1f9977d4db593",
+  "APTUSDT_1d.json": "849e8cba65d7d1ea",
+  "OPUSDT_1d.json": "37fd151931741a0d",
+  "ARBUSDT_1d.json": "5505523377b56082",
+  "INJUSDT_1d.json": "7b36112d1c02b333",
+  "SUIUSDT_1d.json": "8eb51dea44a23ce6",
+  "XTZUSDT_1d.json": "dd32573cbdd536c3",
+  "THETAUSDT_1d.json": "c38399db402e2738",
+  "VETUSDT_1d.json": "99c7d4c427a6d089",
+  "ZECUSDT_1d.json": "5273155215acc41b",
+  "spot_BTCUSDT_1d.json": "48305e8bd08f28b1",
+  "spot_ETHUSDT_1d.json": "0f08c11c60eba4b4",
+  "spot_BNBUSDT_1d.json": "e2882914c68e9d95",
+  "spot_LTCUSDT_1d.json": "b5a8f251ecb41d48",
+  "spot_XRPUSDT_1d.json": "8aa9c78c4cb1e022",
+  "spot_ADAUSDT_1d.json": "8367e51a09d3b973",
+  "spot_TRXUSDT_1d.json": "0c7ea3c9f1c30dbd",
+  "spot_LINKUSDT_1d.json": "a3f6db7397b52cf0",
+  "spot_DOGEUSDT_1d.json": "965c4d5fb5b254b4",
+  "spot_EOSUSDT_1d.json": "516c40c9ad6bfb23",
+  "spot_ETCUSDT_1d.json": "ba5dec3f900be09b",
+  "spot_XLMUSDT_1d.json": "98fe3e50dd4dac3e",
+  "spot_NEOUSDT_1d.json": "998322cc641ae792",
+  "spot_IOTAUSDT_1d.json": "6e8f72529577e5c7",
+  "spot_ONTUSDT_1d.json": "a568484298735543",
+  "BTCUSDT_4h.json": "14222eb78adff81b",
+  "ETHUSDT_4h.json": "7099e575b54680cb",
+  "BNBUSDT_4h.json": "d39776a407bd974a",
+  "SOLUSDT_4h.json": "e5493f7050cdd3a3",
+  "XRPUSDT_4h.json": "67e6bd8134f78b8f",
+  "DOGEUSDT_4h.json": "5ccc8d5337e1ad64",
+  "ADAUSDT_4h.json": "48ce1d97c89a6799",
+  "AVAXUSDT_4h.json": "452375b6d3091851",
+  "LINKUSDT_4h.json": "1722b396a84d9a7c",
+  "DOTUSDT_4h.json": "83470dd8d343a064",
+  "TRXUSDT_4h.json": "a340214abc583b9f",
+  "LTCUSDT_4h.json": "6c4523a6290ec6c3"
+ },
+ "candidates": {
+  "C1": {
+   "scale": 0.0955,
+   "selection": {
+    "days": 1826,
+    "cagrPct": 13.11,
+    "maxDDPct": 8,
+    "mar": 1.638,
+    "months": 60,
+    "positiveMonthsPct": 50,
+    "trades": 284,
+    "pf": 3.112,
+    "yearsPct": {
+     "2020": 16.68,
+     "2021": 48.82,
+     "2022": -3.2,
+     "2023": 8.6,
+     "2024": 1.45
+    }
+   },
+   "spot": {
+    "days": 852,
+    "cagrPct": 0.21,
+    "maxDDPct": 8,
+    "mar": 0.026,
+    "months": 28,
+    "positiveMonthsPct": 21.4,
+    "trades": 48,
+    "pf": 1.072,
+    "yearsPct": {
+     "2017": -1.7,
+     "2018": -1.17,
+     "2019": 3.44
+    }
+   },
+   "spotUnscaledCagrPct": -9.57,
+   "holdout": {
+    "days": 664,
+    "cagrPct": 2.46,
+    "maxDDPct": 4.14,
+    "mar": 0.594,
+    "months": 22,
+    "positiveMonthsPct": 36.4,
+    "trades": 108,
+    "pf": 1.337,
+    "yearsPct": {
+     "2025": 1.97,
+     "2026": 2.5
+    }
+   },
+   "holdoutX2": {
+    "days": 664,
+    "cagrPct": 2.27,
+    "maxDDPct": 4.19,
+    "mar": 0.542,
+    "months": 22,
+    "positiveMonthsPct": 36.4,
+    "trades": 108,
+    "pf": 1.302,
+    "yearsPct": {
+     "2025": 1.73,
+     "2026": 2.39
+    }
+   }
+  },
+  "C2": {
+   "scale": 0.3108,
+   "selection": {
+    "days": 1826,
+    "cagrPct": 7.87,
+    "maxDDPct": 8,
+    "mar": 0.983,
+    "months": 60,
+    "positiveMonthsPct": 45,
+    "trades": 1200,
+    "pf": 2.374,
+    "yearsPct": {
+     "2020": 5.89,
+     "2021": 17,
+     "2022": -4.29,
+     "2023": 9.72,
+     "2024": 12.27
+    }
+   },
+   "spot": {
+    "days": 852,
+    "cagrPct": 2.7,
+    "maxDDPct": 8,
+    "mar": 0.338,
+    "months": 28,
+    "positiveMonthsPct": 35.7,
+    "trades": 128,
+    "pf": 1.99,
+    "yearsPct": {
+     "2017": -0.12,
+     "2018": -2.04,
+     "2019": 8.77
+    }
+   },
+   "spotUnscaledCagrPct": 6.31,
+   "holdout": {
+    "days": 664,
+    "cagrPct": -0.96,
+    "maxDDPct": 6.18,
+    "mar": -0.155,
+    "months": 22,
+    "positiveMonthsPct": 36.4,
+    "trades": 543,
+    "pf": 1.877,
+    "yearsPct": {
+     "2025": -2.92,
+     "2026": 1.22
+    }
+   },
+   "holdoutX2": {
+    "days": 664,
+    "cagrPct": -1.17,
+    "maxDDPct": 6.49,
+    "mar": -0.181,
+    "months": 22,
+    "positiveMonthsPct": 31.8,
+    "trades": 543,
+    "pf": 1.807,
+    "yearsPct": {
+     "2025": -3.13,
+     "2026": 1.04
+    }
+   }
+  },
+  "C3": {
+   "scale": 0.0036,
+   "selection": {
+    "days": 1826,
+    "cagrPct": 23.29,
+    "maxDDPct": 8,
+    "mar": 2.909,
+    "months": 60,
+    "positiveMonthsPct": 60,
+    "trades": 2443,
+    "pf": 1.861,
+    "yearsPct": {
+     "2020": 27.04,
+     "2021": 68.05,
+     "2022": 2.09,
+     "2023": 19.91,
+     "2024": 9.03
+    }
+   },
+   "spot": {
+    "days": 852,
+    "cagrPct": 0.21,
+    "maxDDPct": 8,
+    "mar": 0.026,
+    "months": 28,
+    "positiveMonthsPct": 21.4,
+    "trades": 48,
+    "pf": 1.072,
+    "yearsPct": {
+     "2017": -1.7,
+     "2018": -1.17,
+     "2019": 3.44
+    }
+   },
+   "spotUnscaledCagrPct": -9.57,
+   "holdout": {
+    "days": 664,
+    "cagrPct": 3.26,
+    "maxDDPct": 8,
+    "mar": 0.407,
+    "months": 22,
+    "positiveMonthsPct": 54.5,
+    "trades": 1135,
+    "pf": 1.103,
+    "yearsPct": {
+     "2025": 5.33,
+     "2026": 0.63
+    }
+   },
+   "holdoutX2": {
+    "days": 664,
+    "cagrPct": 0.73,
+    "maxDDPct": 8.53,
+    "mar": 0.086,
+    "months": 22,
+    "positiveMonthsPct": 54.5,
+    "trades": 1136,
+    "pf": 1.026,
+    "yearsPct": {
+     "2025": 3.2,
+     "2026": -1.81
+    }
+   }
+  }
+ },
+ "chosen": "C2",
+ "gate": {
+  ">= 200 trades": "PASS 543",
+  "PF >= 1.15": "PASS 1.877",
+  "2025 and 2026 profitable": "FAIL -2.92% / 1.22%",
+  ">= 60% positive months": "FAIL 36.4%",
+  "max DD <= 8%": "PASS 6.18%",
+  "positive at 2x costs": "FAIL -1.17%/yr",
+  "walk-forward": "N/A (nothing fitted; 1 of 3 chosen on 2020-2024)",
+  "forward paper": "UNKNOWN"
+ },
+ "passed": false
+}
