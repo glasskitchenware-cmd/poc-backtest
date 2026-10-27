@@ -203,7 +203,7 @@
   }
   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return "&#" + c.charCodeAt(0) + ";"; }); }
   // The app version (android/app/build.gradle versionName; tests/js/run_tests.py checks they match).
-  var APP_VERSION = "8.0";
+  var APP_VERSION = "8.1";
   // One line-icon family for the screen (24px grid, 1.8 stroke, round ends), drawn in the text colour.
   var ICONS = { check: '<path d="M5 12.5l4.2 4.2L19 7"/>', alert: '<path d="M12 4 2.8 19.5h18.4z"/><path d="M12 10v4.5M12 17.3v.2"/>',
     news: '<rect x="3.5" y="5" width="13" height="14" rx="2"/><path d="M16.5 9h3v7.5a2.5 2.5 0 0 1-5 0"/><path d="M7 9h6M7 12.5h6M7 16h3.5"/>',
@@ -1124,9 +1124,12 @@
     results.forEach(function (r) { (r.recent || []).forEach(function (t) { all.push(Object.assign({ symbol: r.symbol }, t)); }); });
     var closed = all.filter(function (t) { return !t.open; }).sort(function (a, b) { return b.exit_time - a.exit_time; });
     var nm = trendNormal(), w = nm && nm.normal.windows, N = w ? [100, 50, 30, 20, 10].filter(function (k) { return closed.length >= k && w[k]; })[0] : null;
-    if (!N) return { closed: closed, N: 0 };
-    var last = closed.slice(0, N).reduce(function (a, t) { return a + t.r; }, 0), b = w[N];
-    return { closed: closed, N: N, last: last, band: b, lvl: last < b.min ? "bad" : last < b.p5 ? "warn" : "ok" };
+    var C = window.EVIDENCE_LEDGER && window.EVIDENCE_LEDGER.calendar30, cal = closed.reduce(function (a, t) { return a + t.r; }, 0);
+    var calLvl = C && closed.length ? (cal < C.min ? "bad" : cal < C.p5 ? "warn" : "ok") : null, rank = { ok: 0, warn: 1, bad: 2 };
+    if (!N) return { closed: closed, N: 0, cal: cal, calBand: C, calLvl: calLvl, lvlShow: calLvl };
+    var last = closed.slice(0, N).reduce(function (a, t) { return a + t.r; }, 0), b = w[N], lvl = last < b.min ? "bad" : last < b.p5 ? "warn" : "ok";
+    // lvl (last N trades) drives the NO TRADE pause as tested; lvlShow (the worse of both) is what the screen says.
+    return { closed: closed, N: N, last: last, band: b, lvl: lvl, cal: cal, calBand: C, calLvl: calLvl, lvlShow: calLvl && rank[calLvl] > rank[lvl] ? calLvl : lvl };
   }
   // The dates the last N closed trades span (entry of the oldest to exit of the newest), for labels: N trades, not 30 days.
   function recentSpan() {
@@ -1156,8 +1159,10 @@
     // Live results come first: a recent run worse than 95% of the test's runs of the same length puts the system on watch.
     if (RECENT && RECENT.N) add(RECENT.lvl === "ok" ? "pass" : "fail", "ผลจริงของระบบ " + RECENT.N + " ไม้ล่าสุดที่ปิด (" + recentSpan() + "): " + fmt(RECENT.last, 1, true) + "R · ผลทดสอบช่วงเท่ากัน แย่ 5% ล่างสุด " +
       fmt(RECENT.band.p5, 1, true) + "R · แย่สุดที่เคยเจอ " + fmt(RECENT.band.min, 1, true) + "R");
+    if (RECENT && RECENT.calLvl) add(RECENT.calLvl === "ok" ? "pass" : "fail", "ผลจริง 30 วันตามปฏิทิน: " + fmt(RECENT.cal, 1, true) + "R · ช่วง 30 วันของผลทดสอบ แย่ 5% ล่างสุด " +
+      fmt(RECENT.calBand.p5, 1, true) + "R · แย่สุดที่เคยเจอ " + fmt(RECENT.calBand.min, 1, true) + "R");
     var fails = rows.filter(function (r) { return r.ok === "fail"; }).length, warns = rows.filter(function (r) { return r.ok === "warn"; }).length;
-    var watch = RECENT && RECENT.N && RECENT.lvl !== "ok";
+    var watch = !!(RECENT && RECENT.lvlShow && RECENT.lvlShow !== "ok");
     // The share of profitable years (block bootstrap of 2023-2026 months) is not shown: it was never checked on later data.
     return { level: watch ? "เฝ้าระวัง" : fails ? "ต่ำ" : warns ? "ปานกลาง" : "สูง", cls: watch || fails ? "bad" : warns ? "weak" : "good", rows: rows, watch: watch,
       passed: rows.length - fails - warns, total: rows.length, year: null };
@@ -1457,8 +1462,8 @@
         '<div class="tbl"><table><tr><th>ช่วง</th><th>ไม้</th><th>ชนะ</th><th>เฉลี่ย (ช่วง 95%)</th><th>PF</th><th>ลงลึกสุด</th></tr>' +
         [2023, 2024, 2025, 2026].filter(function (y) { return R.years && R.years[y]; }).map(function (y) { return row(String(y) + (y === 2026 ? " (ถึง ก.ย.)" : ""), R.years[y]); }).join("") +
         row("รวม 2023–2026", all, port ? "−" + fmt(port.maxDD, 1) + "% ที่ " + trendRiskPct() + "%" : "") +
-        (rec ? row("30 วันล่าสุด (สดของระบบ)", rec, RECENT && RECENT.N ? { ok: "ปกติ", warn: "ต่ำกว่าปกติ", bad: "แย่กว่าที่เคยเจอ" }[RECENT.lvl] : "") : "") + "</table></div>" +
-        costRow(cl) + '<p class="fine">ปี 2023–2026 = ผล walk-forward (กฎถูกเลือกจากปีก่อนหน้าเท่านั้น) · 30 วัน = ไม้ของระบบบนข้อมูลจริงล่าสุด ข้อมูลน้อย ผันผวนสูง · ผลของคุณเอง (บันทึกเอง): เมนู → พอร์ต → Paper</p></div>';
+        (rec ? row("30 วันล่าสุด (สดของระบบ)", rec, RECENT && RECENT.lvlShow ? { ok: "ปกติ", warn: "ต่ำกว่าปกติ", bad: "แย่กว่าที่เคยเจอ" }[RECENT.lvlShow] : "") : "") + "</table></div>" +
+        costRow(cl) + '<p class="fine">ปี 2023–2026 = ผล walk-forward (กฎถูกเลือกจากปีก่อนหน้าเท่านั้น) · 30 วัน = ไม้ของระบบที่ปิดใน 30 วันล่าสุด บนข้อมูลจริง ข้อมูลน้อย ผันผวนสูง · ผลของคุณเอง (บันทึกเอง): เพิ่มเติม → เมนูเต็ม → พอร์ต → Paper</p></div>';
     }
     // Gross R and where it went, for the system's closed trades of the last 30 days (web/trend.js cost fields).
     function costRow(cl) {
@@ -1553,16 +1558,18 @@
       var risk = trendRiskPct(), closed = (RECENT && RECENT.closed) || [];
       var sumR = closed.reduce(function (a, t) { return a + t.r; }, 0), wins = closed.filter(function (t) { return t.r > 0; }).length;
       var why = { exit: "ออกตามสูตร", stop: "SL", stop_gap: "SL", end: "" };
-      var nm = trendNormal(), w = nm && nm.normal.windows, N = w ? [100, 50, 30, 20, 10].filter(function (k) { return closed.length >= k && w[k]; })[0] : null, verdict = "";
-      if (N) {
-        var b = w[N], last = closed.slice(0, N).reduce(function (a, t) { return a + t.r; }, 0);
-        var lvl = last < b.min ? "bad" : last < b.p5 ? "warn" : "ok";
-        verdict = '<div class="callout ' + lvl + '">' + ic(lvl === "ok" ? "check" : "alert") + "<div><b>" + { ok: "อยู่ในช่วงปกติของผลทดสอบ", warn: "ต่ำกว่าปกติ: แย่กว่า 95% ของช่วงในผลทดสอบ แต่ยังไม่แย่เท่าที่เคยเจอ",
-          bad: "แย่กว่าที่ผลทดสอบเคยเจอ: สูตรอาจเสื่อม หยุดเข้าไม้ใหม่และทบทวน" }[lvl] + "</b><small>" + N + " ไม้ล่าสุดรวม " + fmt(last, 1, true) + "R · ผลทดสอบ " + N +
-          " ไม้ติดกัน: ปกติ " + fmt(b.p50, 1, true) + "R · แย่ 5% ล่างสุด " + fmt(b.p5, 1, true) + "R · แย่สุดที่เคยเจอ " + fmt(b.min, 1, true) + "R" +
-          (lvl === "ok" ? "" : " · ช่วงแบบนี้ควรเสี่ยงต่ำสุด (0.25%) หรือรอให้กลับเข้ากรอบปกติก่อนใช้เงินเพิ่ม") + "</small></div></div>";
-      }
-      return '<div class="sec-hd">ผลงานระบบ 30 วัน <small>ไม้ที่เข้าใน 30 วันล่าสุด · ระบบจำลอง</small></div><div class="card perf">' +
+      // Two measures against the test: the last N trades (as the pause rule) and the calendar 30 days (as the 30-day
+      // windows of 2023-2026). The verdict is the worse one, so a bad month is never shown as normal.
+      var R = RECENT || {}, verdict = "", lines = [];
+      if (R.N) lines.push(R.N + " ไม้ล่าสุดรวม " + fmt(R.last, 1, true) + "R · ผลทดสอบ " + R.N + " ไม้ติดกัน: ปกติ " + fmt(R.band.p50, 1, true) + "R · แย่ 5% ล่างสุด " +
+        fmt(R.band.p5, 1, true) + "R · แย่สุดที่เคยเจอ " + fmt(R.band.min, 1, true) + "R");
+      if (R.calLvl) lines.push("30 วันตามปฏิทิน (" + closed.length + " ไม้ที่ปิด) รวม " + fmt(R.cal, 1, true) + "R · ช่วง 30 วันในผลทดสอบ 2023–ก.ย. 2026 (" + fmt(R.calBand.n, 0) + " ช่วง): ปกติ " +
+        fmt(R.calBand.p50, 1, true) + "R · แย่ 5% ล่างสุด " + fmt(R.calBand.p5, 1, true) + "R · แย่สุดที่เคยเจอ " + fmt(R.calBand.min, 1, true) + "R");
+      var lvl = R.lvlShow;
+      if (lvl) verdict = '<div class="callout ' + lvl + '">' + ic(lvl === "ok" ? "check" : "alert") + "<div><b>" + { ok: "อยู่ในช่วงปกติของผลทดสอบ (ทั้ง 2 แบบวัด)", warn: "ต่ำกว่าปกติ: แย่กว่า 95% ของช่วงในผลทดสอบ แต่ยังไม่แย่เท่าที่เคยเจอ",
+          bad: "แย่กว่าที่ผลทดสอบเคยเจอ: สูตรอาจเสื่อม หยุดเข้าไม้ใหม่และทบทวน" }[lvl] + "</b><small>" + lines.join("<br>") +
+          (lvl === "ok" ? "" : "<br>ช่วงแบบนี้ควรเสี่ยงต่ำสุด (0.25%) หรือรอให้กลับเข้ากรอบปกติก่อนใช้เงินเพิ่ม") + "</small></div></div>";
+      return '<div class="sec-hd">ผลงานระบบ 30 วัน <small>ไม้ที่ปิดใน 30 วันล่าสุด · ระบบจำลอง</small></div><div class="card perf">' +
         (closed.length ? '<div class="card-hd"><b>' + closed.length + ' ไม้ที่ปิด</b><small>ชนะ ' + wins + " · แพ้ " + (closed.length - wins) + '</small><b class="big ' + tone(sumR) + '">' + fmt(sumR, 1, true) + "R</b></div>" +
             '<p class="fine">≈ <b class="' + tone(sumR) + '">' + fmt(sumR * risk, 1, true) + "% ของทุน</b> ที่เสี่ยง " + risk + "%/ไม้</p>" + verdict +
             closed.slice(0, 8).map(function (t) {
@@ -1648,7 +1655,7 @@
           '<span class="chip hidden" data-mex></span></span><span class="mr-px" data-now="' + x.sym + '">' + price(x.p0) + "</span></div>";
       }).join("");
       var cl = (RECENT && RECENT.closed) || [], sum30 = cl.reduce(function (a, t) { return a + t.r; }, 0);
-      var lvl30 = RECENT && RECENT.N ? RECENT.lvl : null, word30 = { ok: "ปกติ", warn: "ต่ำกว่าปกติ", bad: "แย่กว่าที่เคยเจอ" }[lvl30] || "";
+      var lvl30 = RECENT ? RECENT.lvlShow : null, word30 = { ok: "ปกติ", warn: "ต่ำกว่าปกติ", bad: "แย่กว่าที่เคยเจอ" }[lvl30] || "";
       var home = '<div id="smLive">' + liveHtml() + "</div>" + h + noTrade +
         '<div class="card"><div class="card-hd"><b>สัญญาณใหม่</b><span class="cnt" id="homeCnt"></span></div>' + minis +
           '<div class="idle-line" id="homeIdle">' + (busyNow ? "กำลังเช็ก " + selectedCoins().length + " เหรียญ…" : "<b>NO SIGNAL</b> · ตอนนี้ไม่มีสัญญาณที่เข้าได้ · แอปเด้งแจ้งเตือนเมื่อมี") + "</div></div>" +
@@ -2393,8 +2400,9 @@
       // The levels the 4-hour bar now forming must close beyond for an entry (channel of the 20 bars before it).
       watch: { upper: L.next.upper, lower: L.next.lower, ema: L.ema, closeAt: last.close_time + 1 + tfMs },
       bars: bars.slice(-90),
-      // The rule's entries in the last 30 days, closed or still open: the system's own record on the main screen.
-      recent: res.trades.filter(function (t) { return t.entry_time >= week; }).map(function (t) {
+      // The rule's trades that closed in the last 30 days (a calendar window, as the test's 30-day band) and a position
+      // still open from them: the system's own record on the main screen.
+      recent: res.trades.filter(function (t) { return t.exit_time >= week; }).map(function (t) {
         return { dir: t.dir, entry: t.entry, entry_time: t.entry_time, exit_time: t.exit_time, r: t.r, open: false, reason: t.reason, cost: t.cost };
       }).concat(res.pos && res.pos.entry_time >= week ? [{ dir: res.pos.dir, entry: res.pos.entry, entry_time: res.pos.entry_time, open: true,
         r: res.pos.dir * (last.close - res.pos.entry) / res.pos.risk }] : []) };

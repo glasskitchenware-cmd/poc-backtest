@@ -10,6 +10,10 @@
   if (!cfg.realRecent && !cfg.trendEvidence && window.EVIDENCE_TREND && window.EVIDENCE_TREND.normal) Object.values(window.EVIDENCE_TREND.normal).forEach(function (n) {
     Object.values(n.windows || {}).forEach(function (w) { w.p5 = -999; w.min = -9999; });
   });
+  // The same for the calendar 30-day band; cfg.calendar sets it instead (a case that checks it).
+  var C = window.EVIDENCE_LEDGER && window.EVIDENCE_LEDGER.calendar30;
+  if (C && cfg.calendar) Object.assign(C, cfg.calendar);
+  else if (C && !cfg.realRecent) { C.p5 = -999; C.min = -9999; }
   function coinOf(c) {
     var best = null, d = Infinity;
     Object.keys(window.__SPEC).forEach(function (s) { var x = Math.abs(Math.log(c / window.__SPEC[s][0])); if (x < d) { d = x; best = s; } });

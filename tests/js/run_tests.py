@@ -464,6 +464,10 @@ def main():
     r = run(page, "main_normal", {"storage": h4, "capital": 1_000_000, "trendForce": {}, "clickTf": "4h", "waitMs": 15000, "trendEvidence": evidence_with(NORMAL)}, bg=False)
     check("เฝ้าระวัง" not in r["smMain"].split("มุมมองของระบบ")[0], "a recent record within the test's range does not put the system on watch")
     check("ปกติของสูตรนี้" in r["smMain"] and "แพ้ติดกันได้ถึง 17 ไม้" in r["smMain"] and "ไม่ใช่สูตรพัง" in r["smMain"], "main screen: what is normal for the rule")
+    r = run(page, "main_calendar", {"storage": h4, "capital": 1_000_000, "trendForce": {"BTCUSDT": "LONG"}, "clickTf": "4h", "waitMs": 15000, "calendar": {"p5": 0, "min": -9999}}, bg=False)
+    check("ต่ำกว่าปกติ" in r["res"] and "30 วันตามปฏิทิน" in r["res"] and "อยู่ในช่วงปกติของผลทดสอบ" not in r["res"],
+          "a calendar month below the test's 5% worst 30-day windows is shown as below normal, even when the last trades are within range")
+    check([x["kind"] for x in r["packet"]["signals"]] == ["ENTRY"], "the calendar check changes what the screen says, not the pause rule: the entry still goes out")
     print(f"PASSED {passed} checks; packets in {OUT}")
 
 
