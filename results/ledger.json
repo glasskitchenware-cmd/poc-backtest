@@ -1,0 +1,337 @@
+{
+ "generated": "2026-10-27T14:23:11.630Z",
+ "now": "2026-10-27T00:00:00Z",
+ "status": "RESEARCH ONLY - historical replay, not untouched OOS",
+ "sources": {
+  "trendJs": "6502962e24dffa5b1baa1a1b3c9674ea0295ba871aad72b58113473ee1cbf1ce",
+  "ledgerJs": "35fb900915502ca9880bccef77aa6210bcb27e23f5d3397540548291b253ffe1",
+  "coins": {
+   "BTCUSDT": {
+    "bars": 14946,
+    "first": "2020-01-01T00:00:00Z",
+    "last": "2026-10-26T20:00:00Z",
+    "funding": 7395,
+    "shaBars": "14222eb78adff81b03dc55fdb6b6957e4232668722add9a7ad90b48912671880",
+    "shaFunding": "a03be6ae0911b180429752ad021ff24c268fd9fbb31c90dc5798a2ff9d5d4c21"
+   },
+   "ETHUSDT": {
+    "bars": 14946,
+    "first": "2020-01-01T00:00:00Z",
+    "last": "2026-10-26T20:00:00Z",
+    "funding": 7395,
+    "shaBars": "7099e575b54680cb9db44b1efba0dd55b09cbc0a5c446af592d9aa276d2937d0",
+    "shaFunding": "2fe3afd5175f440cbe8d0243ca6cbebef51c2bf9d8e90bd5c36509c36c3771b1"
+   },
+   "BNBUSDT": {
+    "bars": 14704,
+    "first": "2020-02-10T08:00:00Z",
+    "last": "2026-10-26T20:00:00Z",
+    "funding": 7274,
+    "shaBars": "d39776a407bd974a26d2dfe7230b243ffb789f4649027ed180678d3ea9482ec9",
+    "shaFunding": "17ba80f99648b7e552f9fbf77d69670d7cbb6f3f159914b426dc5da5f9a2a5fe"
+   },
+   "SOLUSDT": {
+    "bars": 13373,
+    "first": "2020-09-14T04:00:00Z",
+    "last": "2026-10-26T20:00:00Z",
+    "funding": 6700,
+    "shaBars": "e5493f7050cdd3a3b1c8864a2a12373723147fcfee8df958f701bd7c683eeef5",
+    "shaFunding": "5b4d15153084bceb7704f56288d383242433ebda0a3d720eae2d00908af90534"
+   },
+   "XRPUSDT": {
+    "bars": 14884,
+    "first": "2020-01-06T08:00:00Z",
+    "last": "2026-10-26T20:00:00Z",
+    "funding": 7379,
+    "shaBars": "67e6bd8134f78b8fa16f55b33e6e3c6386cdf509b1c64be0d19b763b5ab8a015",
+    "shaFunding": "21aa8444833817b225ad7a98bb1c2a0b8abad33690df7eabdd5635d9287b5c56"
+   },
+   "DOGEUSDT": {
+    "bars": 13798,
+    "first": "2020-07-10T08:00:00Z",
+    "last": "2026-10-26T20:00:00Z",
+    "funding": 6821,
+    "shaBars": "5ccc8d5337e1ad6469c3a85ab4e377b8cf9808c41f23f15ec85ad2e659217381",
+    "shaFunding": "c4287b432d74ac370b5d6b81bb98bd43b0aa007071b033514dd4b3d8e54bfcda"
+   },
+   "ADAUSDT": {
+    "bars": 14764,
+    "first": "2020-01-31T08:00:00Z",
+    "last": "2026-10-26T20:00:00Z",
+    "funding": 7339,
+    "shaBars": "48ce1d97c89a679982a6c6076409e10e46fd4f553886595d7d4a53e61e27b0d2",
+    "shaFunding": "b86a9d354347f9ae7dc2a8661a1a55a538017b96eff35332bf7a713caddb6e2d"
+   },
+   "AVAXUSDT": {
+    "bars": 13349,
+    "first": "2020-09-23T04:00:00Z",
+    "last": "2026-10-26T20:00:00Z",
+    "funding": 6598,
+    "shaBars": "452375b6d30918512b3548a7a0669d4fce5a135323a67932843e08c3da6615e9",
+    "shaFunding": "10d2ed0b730875ed8613fedb48dd333f5e518ab2c9f469c2ddb93d10915fa886"
+   },
+   "LINKUSDT": {
+    "bars": 14848,
+    "first": "2020-01-17T08:00:00Z",
+    "last": "2026-10-26T20:00:00Z",
+    "funding": 7346,
+    "shaBars": "1722b396a84d9a7ca526d3711af120cf49bf081bef7588b466af71a07bf3f7ed",
+    "shaFunding": "91f08b2f17ed1a9c23a759484cb8b0613758d020c5c36e690ec1a6aff2a0cce0"
+   },
+   "DOTUSDT": {
+    "bars": 13541,
+    "first": "2020-08-22T04:00:00Z",
+    "last": "2026-10-26T20:00:00Z",
+    "funding": 6698,
+    "shaBars": "83470dd8d343a0642fa1891079e3eb8e007aee6fd365237e8bcb4958bbecfd56",
+    "shaFunding": "3d0b37008d69efb1b4ddf4710959d20c289023491080c84424d5d47577f083b9"
+   },
+   "TRXUSDT": {
+    "bars": 14830,
+    "first": "2020-01-15T08:00:00Z",
+    "last": "2026-10-26T20:00:00Z",
+    "funding": 7352,
+    "shaBars": "a340214abc583b9f6a0c9a0bbaa8c05731206a36ad8e2d998a4990e92c9f0d73",
+    "shaFunding": "af164a4d46b7dc18b4f93bcdc44f12eed3bf6f3d22e36d0e75e55d8822418fdb"
+   },
+   "LTCUSDT": {
+    "bars": 14866,
+    "first": "2020-01-09T08:00:00Z",
+    "last": "2026-10-26T20:00:00Z",
+    "funding": 7370,
+    "shaBars": "6c4523a6290ec6c3153e9c616f61c68b30e2f3df3fad48323ac671fb0e399b28",
+    "shaFunding": "c12c11c28e451a0ea357e3e42983a57aaa53112413576911f037ed127a3f4161"
+   }
+  }
+ },
+ "counts": {
+  "coins": 12,
+  "randomDraws": 0,
+  "seed": null,
+  "note": "deterministic; no bootstrap, Monte Carlo or permutation"
+ },
+ "reconciliation": {
+  "legacy": {
+   "trades": 3186,
+   "maxAbsDiff": 3.552713678800501e-15,
+   "scope": "prices, fees and funding"
+  },
+  "fills": {
+   "trades": 3186,
+   "maxAbsDiff": 0,
+   "scope": "prices, fees and funding"
+  },
+  "fills+signed": {
+   "trades": 3186,
+   "maxAbsDiff": 1.7763568394002505e-15,
+   "scope": "prices and fees (funding comes from the ledger only)"
+  },
+  "fills+signed x2": {
+   "trades": 3188,
+   "maxAbsDiff": 1.7763568394002505e-15,
+   "scope": "prices and fees (funding comes from the ledger only)"
+  }
+ },
+ "periods": {
+  "legacy": {
+   "2020-2022": {
+    "n": 1145,
+    "win": 39,
+    "avgR": 0.2115,
+    "sumR": 242.19,
+    "pf": 1.54
+   },
+   "2023-2024": {
+    "n": 1019,
+    "win": 33.5,
+    "avgR": 0.1597,
+    "sumR": 162.74,
+    "pf": 1.374
+   },
+   "2025-01..2026-09": {
+    "n": 980,
+    "win": 34.7,
+    "avgR": 0.0464,
+    "sumR": 45.42,
+    "pf": 1.11
+   },
+   "2026-10 on": {
+    "n": 42,
+    "win": 19,
+    "avgR": -0.5402,
+    "sumR": -22.69,
+    "pf": 0.119
+   },
+   "2023-01..2026-09": {
+    "n": 1999,
+    "win": 34.1,
+    "avgR": 0.1041,
+    "sumR": 208.17,
+    "pf": 1.246
+   }
+  },
+  "fills": {
+   "2020-2022": {
+    "n": 1145,
+    "win": 39.1,
+    "avgR": 0.2166,
+    "sumR": 248.04,
+    "pf": 1.557
+   },
+   "2023-2024": {
+    "n": 1019,
+    "win": 33.7,
+    "avgR": 0.1666,
+    "sumR": 169.8,
+    "pf": 1.395
+   },
+   "2025-01..2026-09": {
+    "n": 980,
+    "win": 34.9,
+    "avgR": 0.0539,
+    "sumR": 52.83,
+    "pf": 1.129
+   },
+   "2026-10 on": {
+    "n": 42,
+    "win": 19,
+    "avgR": -0.5311,
+    "sumR": -22.3,
+    "pf": 0.123
+   },
+   "2023-01..2026-09": {
+    "n": 1999,
+    "win": 34.3,
+    "avgR": 0.1114,
+    "sumR": 222.63,
+    "pf": 1.265
+   }
+  },
+  "fills+signed": {
+   "2020-2022": {
+    "n": 1145,
+    "win": 39,
+    "avgR": 0.2035,
+    "sumR": 233.01,
+    "pf": 1.521
+   },
+   "2023-2024": {
+    "n": 1019,
+    "win": 34.5,
+    "avgR": 0.1781,
+    "sumR": 181.46,
+    "pf": 1.427
+   },
+   "2025-01..2026-09": {
+    "n": 980,
+    "win": 35.3,
+    "avgR": 0.0689,
+    "sumR": 67.5,
+    "pf": 1.168
+   },
+   "2026-10 on": {
+    "n": 42,
+    "win": 21.4,
+    "avgR": -0.5073,
+    "sumR": -21.31,
+    "pf": 0.143
+   },
+   "2023-01..2026-09": {
+    "n": 1999,
+    "win": 34.9,
+    "avgR": 0.1245,
+    "sumR": 248.96,
+    "pf": 1.301
+   }
+  },
+  "fills+signed x2": {
+   "2020-2022": {
+    "n": 1145,
+    "win": 37.8,
+    "avgR": 0.1843,
+    "sumR": 211,
+    "pf": 1.458
+   },
+   "2023-2024": {
+    "n": 1020,
+    "win": 33.5,
+    "avgR": 0.1496,
+    "sumR": 152.62,
+    "pf": 1.343
+   },
+   "2025-01..2026-09": {
+    "n": 981,
+    "win": 34.4,
+    "avgR": 0.039,
+    "sumR": 38.23,
+    "pf": 1.091
+   },
+   "2026-10 on": {
+    "n": 42,
+    "win": 19,
+    "avgR": -0.5424,
+    "sumR": -22.78,
+    "pf": 0.123
+   },
+   "2023-01..2026-09": {
+    "n": 2001,
+    "win": 33.9,
+    "avgR": 0.0954,
+    "sumR": 190.85,
+    "pf": 1.221
+   }
+  }
+ },
+ "portfolio": {
+  "legacy": {
+   "trades": 1999,
+   "endEquity": 1.5694,
+   "closeDDPct": 18.08,
+   "intrabarDDBoundPct": 18.4,
+   "months": 46,
+   "positiveMonthsPct": 56.5,
+   "peakHeatPct": 3.02,
+   "peakOpen": 12
+  },
+  "fills": {
+   "trades": 1999,
+   "endEquity": 1.6263,
+   "closeDDPct": 17.54,
+   "intrabarDDBoundPct": 17.84,
+   "months": 46,
+   "positiveMonthsPct": 56.5,
+   "peakHeatPct": 3.02,
+   "peakOpen": 12
+  },
+  "fills+signed": {
+   "trades": 1999,
+   "endEquity": 1.7365,
+   "closeDDPct": 16.51,
+   "intrabarDDBoundPct": 17.02,
+   "months": 46,
+   "positiveMonthsPct": 56.5,
+   "peakHeatPct": 3.02,
+   "peakOpen": 12
+  },
+  "fills+signed x2": {
+   "trades": 2001,
+   "endEquity": 1.5048,
+   "closeDDPct": 18.8,
+   "intrabarDDBoundPct": 19.12,
+   "months": 46,
+   "positiveMonthsPct": 52.2,
+   "peakHeatPct": 3.02,
+   "peakOpen": 12
+  }
+ },
+ "gate": {
+  "untouched OOS >= 200 trades": "UNKNOWN (none exists: all of 2020-2026 has been looked at)",
+  "net PF >= 1.15": "PASS 1.301",
+  "two non-overlapping periods profitable": "PASS 181.46R / 67.5R",
+  ">= 60% positive months": "FAIL 56.5%",
+  "close DD <= 8% (0.25% risk)": "FAIL 16.51% (intrabar bound 17.02%)",
+  "positive at 2x execution costs": "PASS 0.0954R/trade",
+  "purged walk-forward": "UNKNOWN (not run here)",
+  "forward paper": "UNKNOWN (no forward record)"
+ }
+}
