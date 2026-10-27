@@ -8,8 +8,14 @@
  * Optional scale-out (opt.tps = [{r, frac}], fractions summing to less than 1): part of the position is sold at
  * entry + r x risk; the rest still leaves by the stop or the channel, so entries are the same as without it. When a bar
  * touches both the stop and a take profit, the stop is assumed to come first.
+ * Take profits must be strictly ascending in r (> 0), each fraction in (0, 1], fractions summing to at most 1; anything
+ * else throws. When they sum to 1 the trade closes at the last take profit (reason "tp").
  * Optional opt.beAfterTp (research only, off by default): once the first take profit fills, the stop of the rest moves to
  * entry + beAfterTp x risk from the next bar on.
+ * opt.costModel: "legacy" (default, kept for parity with research/pro): slippage inside the entry and channel-exit prices
+ * and charged again as 2 x slippage x entry, fees on the entry notional for both sides. "fills" (research): every market
+ * fill (entry, channel exit, stop, gap) carries slippage once in its price, take profits fill at their level (limit),
+ * fees are paid on each fill's own notional (opt.tpFee for take profits, default opt.fee); funding as in legacy.
  */
 (function (root, factory) {
   if (typeof module === "object" && module.exports) module.exports = factory();
@@ -18,7 +24,19 @@
   "use strict";
 
   var DEFAULTS = { n: 20, m: 10, k: 3, atrN: 20, emaN: 200, trend: true, fee: 0.0005, slippage: 0.0002, funding: 0.0001, minStopFrac: 0.002 };
-  var H = 3600000;
+  var H = 3600000, EPS = 1e-12;
+
+  function checkTps(tps) {
+    if (!Array.isArray(tps)) throw new Error("tps must be an array");
+    var sum = 0;
+    tps.forEach(function (t, k) {
+      if (!t || !isFinite(t.r) || !(t.r > 0)) throw new Error("tps[" + k + "].r must be a finite number above 0");
+      if (!isFinite(t.frac) || !(t.frac > 0) || t.frac > 1) throw new Error("tps[" + k + "].frac must be in (0, 1]");
+      if (k && !(t.r > tps[k - 1].r)) throw new Error("tps must be strictly ascending in r (tps[" + k + "])");
+      sum += t.frac;
+    });
+    if (sum > 1 + EPS) throw new Error("tps fractions sum to " + sum + ", more than 1");
+  }
 
   function ema(xs, n) { var a = 2 / (n + 1), y = NaN; return xs.map(function (x, i) { return (y = i ? y + a * (x - y) : x); }); }
   function atr(b, n) {
@@ -38,7 +56,25 @@
     var A = atr(b, o.atrN), C = b.map(function (x) { return x.close; }), Hh = b.map(function (x) { return x.high; }), Ll = b.map(function (x) { return x.low; });
     var e200 = ema(C, o.emaN), warm = Math.max(210, o.n + 2, o.m + 2), trades = [], pos = null, pend = null;
     var tps = o.tps || [];
+    checkTps(tps);
+    if (o.costModel == null) o.costModel = "legacy";
+    if (o.costModel !== "legacy" && o.costModel !== "fills") throw new Error("unknown costModel " + o.costModel);
+    var fills = o.costModel === "fills", tpFee = o.tpFee != null ? o.tpFee : o.fee;
+    // A market exit's fill: in "fills" every market exit carries slippage; in legacy only the channel exit does.
+    function marketExit(px, dir, reason) { return fills || reason === "exit" ? px * (1 - dir * o.slippage) : px; }
+    function closeFills(i, px, reason) {
+      var risk = pos.risk, hours = (b[i].time - pos.entry_time) / H, d = pos.dir, s = o.slippage;
+      var rawEntry = pos.entry / (1 + d * s), rawPx = reason === "tp" ? px : px / (1 - d * s);
+      var move = pos.left * d * (px - pos.entry), raw = pos.left * d * (rawPx - rawEntry), fee = o.fee * pos.entry + o.fee * pos.left * px, fH = pos.left * hours;
+      pos.fills.forEach(function (f) { move += f.frac * d * (f.px - pos.entry); raw += f.frac * d * (f.px - rawEntry); fee += tpFee * f.frac * f.px; fH += f.frac * f.hours; });
+      var fund = o.funding * pos.entry * fH / 8, r = (move - fee - fund) / risk;
+      trades.push({ dir: d, entry: pos.entry, stop: pos.stop, risk: risk, entry_time: pos.entry_time, entry_index: pos.entry_index,
+        exit: px, exit_time: b[i].time, exit_index: i, reason: reason, r: r, mfeR: d * (pos.best - pos.entry) / risk, tpHit: pos.fills.length, fills: pos.fills,
+        cost: { model: "fills", grossR: raw / risk, slipInPriceR: 0, feeR: fee / risk, slipR: (raw - move) / risk, fundR: fund / risk } });
+      pos = null;
+    }
     function close(i, px, reason) {
+      if (fills) return closeFills(i, px, reason);
       var risk = pos.risk, hours = (b[i].time - pos.entry_time) / H, r;
       if (!pos.fills.length) r = pos.dir * (px - pos.entry) / risk - (2 * (o.fee + o.slippage) * pos.entry + o.funding * pos.entry * hours / 8) / risk;
       else {
@@ -59,7 +95,7 @@
     for (var i = warm; i < n; i++) {
       var x = b[i];
       if (pend) {
-        if (pend.exit && pos) { pos.best = pos.dir > 0 ? Math.max(pos.best, x.open) : Math.min(pos.best, x.open); close(i, x.open * (1 - pos.dir * o.slippage), "exit"); }
+        if (pend.exit && pos) { pos.best = pos.dir > 0 ? Math.max(pos.best, x.open) : Math.min(pos.best, x.open); close(i, marketExit(x.open, pos.dir, "exit"), "exit"); }
         if (pend.dir && !pos) {
           var entry = x.open * (1 + pend.dir * o.slippage), risk = o.k * A[i - 1];
           if (risk > 0 && risk / entry >= o.minStopFrac) {
@@ -69,8 +105,8 @@
         pend = null;
       }
       if (pos) {
-        if (pos.dir > 0 ? x.open <= pos.stop : x.open >= pos.stop) { close(i, x.open, "stop_gap"); continue; }
-        if (pos.dir > 0 ? x.low <= pos.stop : x.high >= pos.stop) { close(i, pos.stop, "stop"); continue; }
+        if (pos.dir > 0 ? x.open <= pos.stop : x.open >= pos.stop) { close(i, marketExit(x.open, pos.dir, "stop_gap"), "stop_gap"); continue; }
+        if (pos.dir > 0 ? x.low <= pos.stop : x.high >= pos.stop) { close(i, marketExit(pos.stop, pos.dir, "stop"), "stop"); continue; }
         // Not stopped in this bar: its best price counts (MFE), and take profits it reached are filled (a gap at the open).
         pos.best = pos.dir > 0 ? Math.max(pos.best, x.high) : Math.min(pos.best, x.low);
         while (pos.fills.length < tps.length) {
@@ -80,6 +116,8 @@
           pos.fills.push({ px: fill, frac: t.frac, hours: (x.time - pos.entry_time) / H, time: x.time });
           pos.left -= t.frac;
         }
+        // Fully scaled out: the trade ends at the last take profit, not at a later stop or channel exit.
+        if (pos.fills.length && pos.left <= EPS) { pos.left = 0; close(i, pos.fills[pos.fills.length - 1].px, "tp"); continue; }
         if (o.beAfterTp != null && pos.fills.length) {
           var moved = pos.entry + pos.dir * o.beAfterTp * pos.risk;
           if (pos.dir > 0 ? moved > pos.stop : moved < pos.stop) pos.stop = moved;
