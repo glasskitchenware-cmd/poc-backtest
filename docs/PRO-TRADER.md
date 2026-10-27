@@ -287,3 +287,22 @@ it.
 What this means: none of the systems tested here (Trend 4H and its filters, faster timeframes, mean reversion, LONG only,
 three momentum portfolios; and the other researcher's 40 policies) gives returns steady enough to live on. At the risk
 that kept Trend 4H's 2023-2026 drawdown near 17%, it earned about 13-16% a year (cost model dependent) at 0.25% risk per trade, with 2025-2026 far weaker.
+
+## Price action from the course book (28 Oct 2026, not passed)
+
+`research/pa/priceaction.js`, `research/pa/priceaction_20261028.json`: pin bar, engulfing bar, three soldiers (or any)
+at support (EMA50 zone) in the trend's direction (EMA200), stop beyond the pattern, target 2R, out after 20 bars; 1h,
+4h and daily; 12 coins; chosen on 2020-2023, tested once on 2024-01..2026-10.
+
+| | 2020-2023 trades / win / avg R / PF | 2024-2026 trades / win / avg R / PF |
+|---|---|---|
+| 1h pin bar | 5,132 / 33.0% / −0.196 / 0.74 | 3,391 / 32.4% / −0.227 / 0.71 |
+| 1h engulfing | 6,791 / 35.6% / −0.123 / 0.82 | 5,315 / 35.9% / −0.129 / 0.82 |
+| 4h pin bar | 1,166 / 34.2% / −0.075 / 0.89 | 812 / 33.5% / −0.128 / 0.82 |
+| 4h engulfing | 1,639 / 39.5% / +0.013 / 1.02 | 1,323 / 37.8% / −0.043 / 0.93 |
+| daily, any of the three — **chosen** | 278 / 46.0% / +0.211 / 1.40 | 274 / 33.6% / **−0.119** / **0.83** |
+| three soldiers (4h / daily) | 54 / 10 trades: too few to judge | 62 / 14 |
+
+The daily version looked good in 2020-2023 and lost in 2024-2026 (both halves negative, 38% positive months, 12%
+drawdown at 0.25% risk, negative at 2x costs). On 1h and 4h the patterns lost in both periods over thousands of trades.
+None of the patterns raised the win rate above about 46%. Not added to the app.
