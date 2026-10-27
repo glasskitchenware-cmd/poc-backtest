@@ -1,0 +1,312 @@
+{
+ "generated": "2026-10-27T19:25:30.273Z",
+ "now": "2026-10-27T00:00:00.000Z",
+ "risk": 0.25,
+ "sets": {
+  "2020-2022 (decides)": {
+   "coins": 12,
+   "decides": true,
+   "both": {
+    "n": 1145,
+    "win": 39,
+    "avgR": 0.2115,
+    "avgRCI": [
+     0.112,
+     0.311
+    ],
+    "sumR": 242.2,
+    "pf": 1.54,
+    "port": {
+     "cagr": 21.04,
+     "maxDD": 10.36,
+     "mar": 2.03,
+     "posMonths": 66.7,
+     "months": 36
+    }
+   },
+   "long": {
+    "n": 594,
+    "win": 36.7,
+    "avgR": 0.3025,
+    "avgRCI": [
+     0.133,
+     0.472
+    ],
+    "sumR": 179.7,
+    "pf": 1.722,
+    "port": {
+     "cagr": 15.26,
+     "maxDD": 10.24,
+     "mar": 1.491,
+     "posMonths": 44.4,
+     "months": 36
+    }
+   },
+   "short": {
+    "n": 551,
+    "win": 41.4,
+    "avgR": 0.1135,
+    "avgRCI": [
+     0.018,
+     0.209
+    ],
+    "sumR": 62.5,
+    "pf": 1.313,
+    "port": {
+     "cagr": 4.93,
+     "maxDD": 10.16,
+     "mar": 0.485,
+     "posMonths": 44.1,
+     "months": 34
+    }
+   }
+  },
+  "unseen 25 coins 2020-01..2026-09 (decides)": {
+   "coins": 25,
+   "decides": true,
+   "both": {
+    "n": 5166,
+    "win": 36.6,
+    "avgR": 0.1155,
+    "avgRCI": [
+     0.073,
+     0.158
+    ],
+    "sumR": 596.5,
+    "pf": 1.289,
+    "port": {
+     "cagr": 20.24,
+     "maxDD": 23.26,
+     "mar": 0.87,
+     "posMonths": 61.3,
+     "months": 80
+    }
+   },
+   "long": {
+    "n": 2421,
+    "win": 32.5,
+    "avgR": 0.1371,
+    "avgRCI": [
+     0.06,
+     0.215
+    ],
+    "sumR": 332,
+    "pf": 1.295,
+    "port": {
+     "cagr": 10.4,
+     "maxDD": 21.11,
+     "mar": 0.492,
+     "posMonths": 44.9,
+     "months": 78
+    }
+   },
+   "short": {
+    "n": 2745,
+    "win": 40.3,
+    "avgR": 0.0964,
+    "avgRCI": [
+     0.057,
+     0.136
+    ],
+    "sumR": 264.5,
+    "pf": 1.281,
+    "port": {
+     "cagr": 8.7,
+     "maxDD": 18.76,
+     "mar": 0.464,
+     "posMonths": 46.2,
+     "months": 78
+    }
+   }
+  },
+  "spot 2017-09..2019 (decides)": {
+   "coins": 15,
+   "decides": true,
+   "both": {
+    "n": 807,
+    "win": 38.2,
+    "avgR": 0.2849,
+    "avgRCI": [
+     0.181,
+     0.389
+    ],
+    "sumR": 229.9,
+    "pf": 1.735,
+    "port": {
+     "cagr": 26.04,
+     "maxDD": 6.76,
+     "mar": 3.85,
+     "posMonths": 63,
+     "months": 27
+    }
+   },
+   "long": {
+    "n": 346,
+    "win": 36.1,
+    "avgR": 0.2478,
+    "avgRCI": [
+     0.085,
+     0.41
+    ],
+    "sumR": 85.7,
+    "pf": 1.569,
+    "port": {
+     "cagr": 9.07,
+     "maxDD": 8.57,
+     "mar": 1.058,
+     "posMonths": 48.1,
+     "months": 27
+    }
+   },
+   "short": {
+    "n": 461,
+    "win": 39.7,
+    "avgR": 0.3128,
+    "avgRCI": [
+     0.178,
+     0.447
+    ],
+    "sumR": 144.2,
+    "pf": 1.89,
+    "port": {
+     "cagr": 15.39,
+     "maxDD": 9.49,
+     "mar": 1.621,
+     "posMonths": 40,
+     "months": 25
+    }
+   }
+  },
+  "2023-01..2026-09 (where it was found; not deciding)": {
+   "coins": 12,
+   "decides": false,
+   "both": {
+    "n": 1999,
+    "win": 34.1,
+    "avgR": 0.1041,
+    "avgRCI": [
+     0.041,
+     0.167
+    ],
+    "sumR": 208.2,
+    "pf": 1.246,
+    "port": {
+     "cagr": 12.78,
+     "maxDD": 17.53,
+     "mar": 0.729,
+     "posMonths": 56.5,
+     "months": 46
+    }
+   },
+   "long": {
+    "n": 1042,
+    "win": 34.6,
+    "avgR": 0.2023,
+    "avgRCI": [
+     0.099,
+     0.305
+    ],
+    "sumR": 210.8,
+    "pf": 1.457,
+    "port": {
+     "cagr": 13.5,
+     "maxDD": 10.75,
+     "mar": 1.256,
+     "posMonths": 47.8,
+     "months": 46
+    }
+   },
+   "short": {
+    "n": 957,
+    "win": 33.4,
+    "avgR": -0.0027,
+    "avgRCI": [
+     -0.073,
+     0.067
+    ],
+    "sumR": -2.6,
+    "pf": 0.993,
+    "port": {
+     "cagr": -0.76,
+     "maxDD": 11.48,
+     "mar": -0.066,
+     "posMonths": 31.1,
+     "months": 45
+    }
+   }
+  },
+  "2026-10 on (live; not deciding)": {
+   "coins": 12,
+   "decides": false,
+   "both": {
+    "n": 42,
+    "win": 19,
+    "avgR": -0.5402,
+    "avgRCI": [
+     -0.701,
+     -0.379
+    ],
+    "sumR": -22.7,
+    "pf": 0.119,
+    "port": {
+     "cagr": -55.06,
+     "maxDD": 5.53,
+     "mar": -9.949,
+     "posMonths": 0,
+     "months": 1
+    }
+   },
+   "long": {
+    "n": 13,
+    "win": 0,
+    "avgR": -0.6741,
+    "avgRCI": [
+     -0.818,
+     -0.53
+    ],
+    "sumR": -8.8,
+    "pf": 0,
+    "port": {
+     "cagr": -26.57,
+     "maxDD": 2.17,
+     "mar": -12.219,
+     "posMonths": 0,
+     "months": 1
+    }
+   },
+   "short": {
+    "n": 29,
+    "win": 27.6,
+    "avgR": -0.4802,
+    "avgRCI": [
+     -0.702,
+     -0.258
+    ],
+    "sumR": -13.9,
+    "pf": 0.18,
+    "port": {
+     "cagr": -38.77,
+     "maxDD": 3.43,
+     "mar": -11.298,
+     "posMonths": 0,
+     "months": 1
+    }
+   }
+  }
+ },
+ "checks": {
+  "2020-2022 (decides)": {
+   "avgR": true,
+   "mar": false
+  },
+  "unseen 25 coins 2020-01..2026-09 (decides)": {
+   "avgR": true,
+   "mar": false
+  },
+  "spot 2017-09..2019 (decides)": {
+   "avgR": false,
+   "mar": false
+  }
+ },
+ "adopt": false
+}
