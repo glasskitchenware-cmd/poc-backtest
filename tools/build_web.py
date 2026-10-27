@@ -8,7 +8,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 WEB = ROOT / "web"
-NAMES = ("lightweight-charts.standalone.production.js", "engine.js", "swing.js", "evidence.js", "trend.js", "evidence_trend.js", "app.js")
+NAMES = ("lightweight-charts.standalone.production.js", "engine.js", "swing.js", "evidence.js", "trend.js", "evidence_trend.js", "evidence_ledger.js", "app.js")
 
 
 def build() -> str:

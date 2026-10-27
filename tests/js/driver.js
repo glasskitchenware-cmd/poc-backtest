@@ -51,7 +51,9 @@
   if (cfg.clickTab) setTimeout(function () { var b = document.querySelector('[data-tab="' + cfg.clickTab + '"]'); if (b) b.click(); }, 300);
   var text = function (id) { return (document.getElementById(id) || {}).textContent || ""; };
   // Open every folded chart section, as a user tapping "กราฟ" would (charts draw when opened).
+  // The cards live in the Signals pane (v8 bottom bar): go there first, as a user would.
   if (cfg.openDetails) setTimeout(function () {
+    var nav = document.querySelector('#smNav [data-pane="sig"]'); if (nav) nav.click();
     Array.prototype.forEach.call(document.querySelectorAll("#smMain details[data-draw]"), function (d) { d.open = true; });
   }, cfg.openDetails);
   // Routine: tick the first daily item, back up through the share sheet, then try to restore from a wrong text.
@@ -77,6 +79,10 @@
       floatCls: Array.prototype.map.call(document.querySelectorAll("#floatAlert .fa"), function (el) { return el.className; }),
       badge: text("liveBadge"), badgeCls: (document.getElementById("liveBadge") || {}).className || "",
       acts: Array.prototype.map.call(document.querySelectorAll("#smMain .act"), function (el) { return el.className; }),
-      sheets: Array.prototype.map.call(document.querySelectorAll("#smMain .sm-sheet"), function (el) { return el.className; }) });
+      sheets: Array.prototype.map.call(document.querySelectorAll("#smMain .sm-sheet"), function (el) { return el.className; }),
+      home: (document.querySelector('#smMain [data-pane="home"]') || {}).textContent || "", res: (document.querySelector('#smMain [data-pane="res"]') || {}).textContent || "",
+      homeRows: Array.prototype.filter.call(document.querySelectorAll("#smMain [data-mini]"), function (el) { return !el.classList.contains("hidden"); }).map(function (el) { return el.textContent; }),
+      navPanes: Array.prototype.map.call(document.querySelectorAll("#smNav [data-pane]"), function (b) { return b.getAttribute("data-pane"); }),
+      paneOn: document.getElementById("simpleView").getAttribute("data-on"), more: text("smMoreDyn") });
   }, cfg.waitMs || 12000);
 })();

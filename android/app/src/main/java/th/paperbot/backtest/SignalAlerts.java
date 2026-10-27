@@ -282,4 +282,64 @@ final class SignalAlerts {
     private static String cut(String text, int max) {
         return text.length() <= max ? text : text.substring(0, max - 1) + "…";
     }
+
+    /**
+     * The home-screen widget's lines for one scan packet: entries, exits and valid-but-blocked signals (at most three,
+     * then "+N"), NO SIGNAL when there is none, or the error. Pure, like plan(): the widget shows what this returns.
+     */
+    static List<String> widgetLines(String json) {
+        List<String> lines = new ArrayList<>(), entries = new ArrayList<>(), exits = new ArrayList<>(), blocked = new ArrayList<>();
+        JSONObject packet;
+        try {
+            packet = new JSONObject(json);
+        } catch (JSONException e) {
+            lines.add("อ่านผลเช็กไม่ได้");
+            return lines;
+        }
+        String error = packet.optString("error", "");
+        if (!error.isEmpty()) {
+            lines.add("เช็กไม่สำเร็จ: " + cut(error, 60));
+            return lines;
+        }
+        JSONArray items = packet.optJSONArray("signals");
+        for (int i = 0; items != null && i < items.length(); i++) {
+            JSONObject x = items.optJSONObject(i);
+            if (x == null) continue;
+            String symbol = x.optString("symbol", ""), side = x.optString("side", "").toUpperCase(Locale.US), kind = x.optString("kind", "ENTRY").toUpperCase(Locale.US);
+            if (!symbol.matches(SYMBOL) || !(side.equals("LONG") || side.equals("SHORT"))) continue;
+            String coin = symbol.replace("USDT", "");
+            if (kind.equals("ENTRY")) {
+                entries.add((side.equals("LONG") ? "🟢 " : "🔴 ") + "เข้า " + side + " " + coin + " · " + x.optString("entry", "?") + " · SL " + x.optString("sl", "?"));
+            } else if (kind.equals("EXIT")) {
+                String r = x.optString("r_now", "");
+                exits.add("🟠 ปิด " + side + " " + coin + (r.isEmpty() ? "" : " · " + r + "R"));
+            } else if (kind.equals("BLOCKED")) {
+                String head = x.optString("head", "ทุนไม่พอ");
+                blocked.add("⚪ " + side + " " + coin + " · NO TRADE · " + (head.contains("ทุนไม่พอ") ? "ทุนไม่พอ" : "ระบบเฝ้าระวัง"));
+            }
+        }
+        List<String> all = new ArrayList<>(entries);
+        all.addAll(exits);
+        all.addAll(blocked);
+        if (all.isEmpty()) {
+            lines.add("NO SIGNAL · ไม่มีสัญญาณใหม่");
+            return lines;
+        }
+        for (int i = 0; i < all.size() && i < 3; i++) lines.add(all.get(i));
+        if (all.size() > 3) lines.add("+" + (all.size() - 3) + " รายการ · แตะเพื่อดู");
+        return lines;
+    }
+
+    /** The widget's last line: when this check ran and when the next candle closes (Bangkok time). */
+    static String widgetFooter(String json, long scannedAt) {
+        long next = 0;
+        try {
+            JSONObject packet = new JSONObject(json);
+            long candle = packet.optLong("candle", 0), every = packet.optLong("interval_minutes", 0) * 60_000L;
+            if (candle > 0 && every > 0) next = candle + every;
+        } catch (JSONException ignored) {
+            // footer without the next close
+        }
+        return "เช็กล่าสุด " + bangkok(scannedAt, "HH:mm") + (next > 0 ? " · แท่งถัดไปปิด " + bangkok(next, "HH:mm") : "") + " น.";
+    }
 }

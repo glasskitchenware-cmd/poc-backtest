@@ -203,7 +203,7 @@
   }
   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return "&#" + c.charCodeAt(0) + ";"; }); }
   // The app version (android/app/build.gradle versionName; tests/js/run_tests.py checks they match).
-  var APP_VERSION = "7.1";
+  var APP_VERSION = "8.0";
   // One line-icon family for the screen (24px grid, 1.8 stroke, round ends), drawn in the text colour.
   var ICONS = { check: '<path d="M5 12.5l4.2 4.2L19 7"/>', alert: '<path d="M12 4 2.8 19.5h18.4z"/><path d="M12 10v4.5M12 17.3v.2"/>',
     news: '<rect x="3.5" y="5" width="13" height="14" rx="2"/><path d="M16.5 9h3v7.5a2.5 2.5 0 0 1-5 0"/><path d="M7 9h6M7 12.5h6M7 16h3.5"/>',
@@ -1426,6 +1426,23 @@
     }
     // The same rule, period by period: the walk-forward test years (scale-out plan, 12 coins) and the system's own last 30
     // days on the selected coins, so a bad stretch is not hidden behind the long average.
+    // What is validated for real money and what is not: the locked approval gate (research/hourly, 27 Oct 2026) and, when
+    // the independent ledger has run (window.EVIDENCE_LEDGER, research/ledger), its result for each item.
+    function validationHtml() {
+      var L = window.EVIDENCE_LEDGER, rows = L && L.gate ? Object.keys(L.gate).map(function (k) { return [k, L.gate[k]]; }) : [
+        ["OOS ใหม่ที่ไม่เคยแตะ ≥ 200 ไม้", "UNKNOWN · ยังไม่มี (ข้อมูล 2020–2026 ถูกดูแล้วทั้งหมด)"],
+        ["ผลปี 2025 และ 2026", "UNKNOWN · กำไรเฉลี่ยแยกจากศูนย์ไม่ได้ (ดูตารางผลแยกช่วง)"],
+        ["Paper ล่วงหน้า (forward)", "UNKNOWN · ยังไม่มีบันทึก"]];
+      var tag = function (v) { var t = String(v); return '<b class="' + (t.indexOf("PASS") === 0 ? "up" : t.indexOf("FAIL") === 0 ? "down" : "yel") + '">' + esc(t) + "</b>"; };
+      return '<div class="card valid-card"><div class="card-hd"><b>สถานะก่อนใช้เงินจริง</b><span class="chip bad">NOT VALIDATED</span></div>' +
+        '<p class="fine">Trend 4H (สูตรที่แอปใช้): ผ่าน walk-forward 2023–2026 แต่ยังไม่ผ่านเกณฑ์อนุมัติที่ล็อกไว้ก่อนใช้เงินจริง</p>' +
+        (L ? '<p class="fine">ตรวจบัญชีอิสระ (ข้อมูลถึง ' + esc(String(L.now || "").slice(0, 10)) + "): คิดใหม่ทุกไม้จากแท่งเทียน " + fmt(L.trades, 0) + " ไม้ ตรงกับแอปทุกไม้ · 2023–ก.ย. 2026 แบบที่แอปใช้ " +
+          fmt(L.avg.legacy, 3, true) + "R/ไม้ → คิด slippage ครั้งเดียว + funding จริงของ Binance " + fmt(L.avg.fillsSigned, 3, true) + "R/ไม้ · ต้นทุน 2 เท่า " + fmt(L.avg.x2, 3, true) +
+          'R/ไม้ · ต.ค. 2026: ' + L.oct.n + ' ไม้ <span class="down">' + fmt(L.oct.sumR, 1, true) + "R</span></p>" : "") +
+        rows.map(function (r) { return '<div class="risk-row"><span>' + esc(r[0]) + "</span>" + tag(r[1]) + "</div>"; }).join("") +
+        '<div class="risk-row"><span>Squeeze v2 (M5–H1)</span><b class="down">NOT VALIDATED · ม.ค.–ก.ย. 2026 ขาดทุนทุกกราฟ</b></div>' +
+        '<p class="fine">ผ่าน = ทุกข้อผ่าน · UNKNOWN ไม่นับเป็นผ่าน · สัญญาณยังแจ้งตามสูตรเพื่อให้ตัดสินใจเอง ไม่ใช่คำแนะนำให้ลงเงิน</p></div>';
+    }
     function periodsHtml() {
       var T = window.EVIDENCE_TREND, k = trendLadder() ? "ladder" : "rule", R = T && T.robust && T.robust.base && T.robust.base[k], all = T && (k === "ladder" ? T.ladder.test : T.all);
       if (!R || !all) return "";
@@ -1564,11 +1581,14 @@
       try { bg = window.NativeHttp && window.NativeHttp.lastScanStatus ? JSON.parse(window.NativeHttp.lastScanStatus() || "{}") : {}; } catch (e) { /* none */ }
       try { lc = JSON.parse(localStorage.getItem("liveCheck") || "null"); } catch (e) { /* none yet */ }
       var bad = bg.at && bg.ok === false, problem = bad || lastError;
-      var h = '<div class="card sys"><div class="card-hd"><b>ระบบเทรด Trend 4H</b><span class="status ' + (problem ? "bad" : "ok") + '"><i></i>' +
-          (problem ? "มีปัญหา" : busyNow ? "กำลังเช็ก…" : "ทำงานอยู่") + "</span></div>" +
-        '<div class="facts four">' + fact("เช็กครั้งถัดไป", thai(sch.next).slice(9, 14) + " น.") + fact("เหรียญ", selectedCoins().length) + fact("เสี่ยงต่อไม้", trendRiskPct() + "%") +
+      var paused = systemPaused(), btc = results.filter(function (r) { return r.symbol === "BTCUSDT"; })[0], mood = News.mood(null);
+      var st = problem ? ["bad", "มีปัญหา"] : paused ? ["bad", "NO TRADE · เฝ้าระวัง"] : busyNow ? ["neu", "กำลังเช็ก…"] : ["ok", "ทำงานอยู่"];
+      var h = '<div class="card sys"><div class="card-hd"><b>ระบบเทรด Trend 4H</b><span class="status ' + (st[0] === "ok" ? "ok" : "bad") + '"><i></i>' + st[1] + "</span></div>" +
+        '<div class="home-facts">' + fact("เช็กครั้งถัดไป", thai(sch.next).slice(9, 14) + " น.") + fact("ราคาสด", '<span id="homeFeed">กำลังต่อ…</span>') +
           fact("ความมั่นใจ", c ? '<span class="yel">' + c.level + "</span>" : "—") + "</div>" +
-        '<p class="fine">' + (lastScan ? "เช็กล่าสุด " + thai(lastScan).slice(9, 14) + " น. · " : "") + "แอป v" + APP_VERSION + "</p>" +
+        '<p class="fine">ตลาด: ' + (btc ? "BTC " + (btc.trend > 0 ? '<span class="up">เหนือ</span>' : btc.trend < 0 ? '<span class="down">ใต้</span>' : "ที่") + " EMA200 (4 ชม.)" : "—") +
+          (mood.fng ? ' · Fear &amp; Greed <span class="' + (mood.fng.v < 45 ? "down" : mood.fng.v > 55 ? "up" : "yel") + '">' + mood.fng.v + " " + esc(mood.fng.label) + "</span>" : "") + "</p>" +
+        '<p class="fine">' + (lastScan ? "เช็กล่าสุด " + thai(lastScan).slice(9, 14) + " น. · " : "") + selectedCoins().length + " เหรียญ · เสี่ยง " + trendRiskPct() + "%/ไม้ · แอป v" + APP_VERSION + "</p>" +
         (bad ? '<p class="fine down">แจ้งเตือนเบื้องหลัง: ' + esc(bg.text || "").slice(0, 140) + "</p>" : "") +
         (lastError ? '<p class="fine down">เช็กไม่สำเร็จ: ' + esc(lastError).slice(0, 120) + "</p>" : "") +
         (lc && (lc.level === "watch" || lc.level === "broken") ? '<div class="callout ' + (lc.level === "broken" ? "bad" : "warn") + ' sm">' + ic("alert") + "<span>" + esc(lc.text) + "</span></div>" : "") + "</div>";
@@ -1599,37 +1619,54 @@
         : ic("check") + "<div><b>ตอนนี้ไม่ต้องทำอะไร</b><p>ยังไม่มีไม้ที่ตามได้ · แอปจะเด้งแจ้งเตือนเองเมื่อมีไม้ใหม่หรือต้องปิดไม้" +
           (entries.length + held.length ? "" : " · ระบบยังไม่มีไม้เปิด") + "</p></div></div>");
       noteOf = { list: list, held: held };
-      h += '<div id="smNote">' + traderNote(list, held) + "</div>";
-      if (systemPaused()) h += '<div class="callout bad">' + ic("alert") + "<div><b>NO TRADE · ระบบหยุดเข้าไม้ใหม่</b><small>" + RECENT.N + " ไม้ล่าสุดของระบบรวม " +
-        fmt(RECENT.last, 1, true) + "R แย่กว่าที่ผลทดสอบเคยเจอในช่วงยาวเท่ากัน (" + fmt(RECENT.band.min, 1, true) + "R) · ผลทดสอบไม่ครอบคลุมสภาพนี้แล้ว · ไม้ที่ถืออยู่ยังแจ้งปิดตามปกติ · กลับมาแจ้งเข้าเมื่อกลับเข้ากรอบ</small></div></div>";
-      h += '<div class="sec-hd">สัญญาณใหม่ · ยังอยู่ในจุดเข้า <span class="cnt" id="cntFollow"></span><small id="feedSt">กำลังต่อราคาสด…</small></div><div id="smNewsTop">' + News.topHtml() + "</div>" +
+      var noTrade = paused ? '<div class="callout bad">' + ic("alert") + "<div><b>NO TRADE · ระบบหยุดเข้าไม้ใหม่</b><small>" + RECENT.N + " ไม้ล่าสุดของระบบรวม " +
+        fmt(RECENT.last, 1, true) + "R แย่กว่าที่ผลทดสอบเคยเจอในช่วงยาวเท่ากัน (" + fmt(RECENT.band.min, 1, true) + "R) · ผลทดสอบไม่ครอบคลุมสภาพนี้แล้ว · ไม้ที่ถืออยู่ยังแจ้งปิดตามปกติ · กลับมาแจ้งเข้าเมื่อกลับเข้ากรอบ</small></div></div>" : "";
+      var sig = '<div class="pane-hd">สัญญาณ</div><div id="smNote">' + traderNote(list, held) + "</div>" + noTrade;
+      sig += '<div class="sec-hd">สัญญาณใหม่ · ยังอยู่ในจุดเข้า <span class="cnt" id="cntFollow"></span><small id="feedSt">กำลังต่อราคาสด…</small></div><div id="smNewsTop">' + News.topHtml() + "</div>" +
         '<div id="grpFollow">' + cards + "</div>" + idle +
         results.filter(function (r) { return r.signal && r.signal.below_minimum && !r.signal.noCapital; }).map(function (r) {
           return '<p class="fine"><b class="down">INVALID SIGNAL</b> ' + coin(r) + " " + (r.signal.dir > 0 ? "LONG" : "SHORT") + ": " + esc(r.signal.reject) + "</p>";
         }).join("");
-      h += '<div id="secEnded"><div class="sec-hd">จบสัญญาณแล้ว <span class="cnt" id="cntEnded"></span><small>ถ้ายังถืออยู่ ปิดตามนี้</small></div>' + exits + '<div id="grpEnded"></div>' +
+      sig += '<div id="secEnded"><div class="sec-hd">จบสัญญาณแล้ว <span class="cnt" id="cntEnded"></span><small>ถ้ายังถืออยู่ ปิดตามนี้</small></div>' + exits + '<div id="grpEnded"></div>' +
         (endedRows ? '<div class="card ended-list"><div class="card-hd"><b>จบใน 24 ชม.</b></div>' + endedRows + "</div>" : "") + "</div>";
       // Coins with nothing open: how far the price is from the close that would start a trade, live. A bar that is past the
       // level now is not a signal until it closes there (the rule, tested; mid-bar entries on 15m-1h bars lost).
       var watch = results.filter(function (r) { return r.watch && !r.position && !r.exit && !r.signal; });
-      if (watch.length) h += '<div class="sec-hd">ใกล้จุดเข้า <span class="cnt">' + watch.length + '</span><small>เข้าเมื่อแท่ง 4 ชม. ปิด ' + thai(watch[0].watch.closeAt).slice(9, 14) +
-        ' น. เลยเส้น</small></div><div class="card watch" id="smWatch">' + watch.map(function (r) {
-          var w = r.watch, dir = r.close >= w.ema ? 1 : -1, lvl = dir > 0 ? w.upper : w.lower;
-          return '<div class="watch-row" data-watch="' + r.symbol + '" data-lvl="' + lvl + '" data-dir="' + dir + '">' + sidePill(dir) + " <b>" + coin(r) + "</b>" +
-            '<small>ถ้าปิด' + (dir > 0 ? "เหนือ " : "ใต้ ") + price(lvl) + '</small><span class="watch-now" data-now="' + r.symbol + '">' + price(r.close) + '</span><b class="watch-d" data-wd>—</b></div>';
-        }).join("") + '<p class="fine">ระหว่างแท่งราคาอาจทะลุแล้วกลับ สูตรนับเฉพาะราคาปิด · แอปเด้งแจ้งเตือนเองทันทีที่แท่งปิดเข้าเงื่อนไข</p></div>';
-      h += '<div id="secHold"><div class="sec-hd">ระบบจำลองกำลังถือสถานะ <span class="cnt" id="cntHold"></span><small>Paper ของระบบ ไม่ใช่ไม้ใน Binance ของคุณ · R นับจากจุดเข้าของระบบ</small></div><div id="grpHold"></div></div>';
+      var watchRows = watch.map(function (r) {
+        var w = r.watch, dir = r.close >= w.ema ? 1 : -1, lvl = dir > 0 ? w.upper : w.lower;
+        return '<div class="watch-row" data-watch="' + r.symbol + '" data-lvl="' + lvl + '" data-dir="' + dir + '">' + sidePill(dir) + " <b>" + coin(r) + "</b>" +
+          '<small>ถ้าปิด' + (dir > 0 ? "เหนือ " : "ใต้ ") + price(lvl) + '</small><span class="watch-now" data-now="' + r.symbol + '">' + price(r.close) + '</span><b class="watch-d" data-wd>—</b></div>';
+      }).join("");
+      if (watch.length) sig += '<div class="sec-hd" id="secWatch">ใกล้จุดเข้า <span class="cnt">' + watch.length + '</span><small>เข้าเมื่อแท่ง 4 ชม. ปิด ' + thai(watch[0].watch.closeAt).slice(9, 14) +
+        ' น. เลยเส้น</small></div><div class="card watch" id="smWatch">' + watchRows + '<p class="fine">ระหว่างแท่งราคาอาจทะลุแล้วกลับ สูตรนับเฉพาะราคาปิด · แอปเด้งแจ้งเตือนเองทันทีที่แท่งปิดเข้าเงื่อนไข</p></div>';
+      sig += '<div id="secHold"><div class="sec-hd">ระบบจำลองกำลังถือสถานะ <span class="cnt" id="cntHold"></span><small>Paper ของระบบ ไม่ใช่ไม้ใน Binance ของคุณ · R นับจากจุดเข้าของระบบ</small></div><div id="grpHold"></div></div>';
       var endedStatic = (exits ? results.filter(function (r) { return r.exit; }).length : 0) + ended.length;
-      h += periodsHtml() + perfHtml();
+      // Home: in five seconds, is there a signal, can it be opened, how the system did lately, and the coins close to one.
+      var minis = Object.keys(LC).map(function (id) {
+        var x = LC[id];
+        return '<div class="mini-row hidden" data-mini="' + id + '">' + sidePill(x.dir) + ' <b class="sym">' + x.sym.replace("USDT", "") + '</b><span class="mr-chips"><span class="chip" data-mst></span>' +
+          '<span class="chip hidden" data-mex></span></span><span class="mr-px" data-now="' + x.sym + '">' + price(x.p0) + "</span></div>";
+      }).join("");
+      var cl = (RECENT && RECENT.closed) || [], sum30 = cl.reduce(function (a, t) { return a + t.r; }, 0);
+      var lvl30 = RECENT && RECENT.N ? RECENT.lvl : null, word30 = { ok: "ปกติ", warn: "ต่ำกว่าปกติ", bad: "แย่กว่าที่เคยเจอ" }[lvl30] || "";
+      var home = '<div id="smLive">' + liveHtml() + "</div>" + h + noTrade +
+        '<div class="card"><div class="card-hd"><b>สัญญาณใหม่</b><span class="cnt" id="homeCnt"></span></div>' + minis +
+          '<div class="idle-line" id="homeIdle">' + (busyNow ? "กำลังเช็ก " + selectedCoins().length + " เหรียญ…" : "<b>NO SIGNAL</b> · ตอนนี้ไม่มีสัญญาณที่เข้าได้ · แอปเด้งแจ้งเตือนเมื่อมี") + "</div></div>" +
+        '<div class="card home-line" data-goto="res"><div><b>ผล 30 วันของระบบ</b><small class="fine" style="display:block">' + cl.length + " ไม้ที่ปิด" + (word30 ? " · " + word30 : "") + " · แตะดูรายละเอียด</small></div>" +
+          '<b class="big ' + tone(sum30) + '">' + fmt(sum30, 1, true) + "R</b></div>" +
+        (watch.length ? '<div class="card"><div class="card-hd"><b>ใกล้จุดเข้า</b><small>3 เหรียญที่ใกล้สุด · รอแท่ง 4 ชม. ปิด</small></div><div class="watch" id="homeWatch">' + watchRows +
+          '<p class="fine hidden"></p></div><button class="link-btn" type="button" data-goto="sig" data-scroll="secWatch">ดูทั้งหมด ' + watch.length + " เหรียญ ›</button></div>" : "");
+      // Results: how the rule did, by period, and what is and is not validated.
       var T = window.EVIDENCE_TREND, port = T && T.portfolio && T.portfolio[String(trendRiskPct())];
-      h += '<details class="sm-more" id="smMore"><summary>ข้อมูลเพิ่มเติม · ความมั่นใจ · ข่าว · แผนเทรด · ปกติของสูตร</summary>' + confidenceHtml() +
-        (normalText() ? '<div class="card"><p>' + esc(normalText()) + '</p><p class="fine">ผลจริงอยู่ในกรอบนี้ = สูตรทำงานปกติ ไม่ใช่สูตรพัง · เทียบผลจริงได้ที่ เมนู → พอร์ต → Paper' +
+      var res = '<div class="pane-hd">ผลทดสอบ</div>' + validationHtml() + periodsHtml() + perfHtml() + confidenceHtml() +
+        (normalText() ? '<div class="card"><p>' + esc(normalText()) + '</p><p class="fine">ผลจริงอยู่ในกรอบนี้ = สูตรทำงานปกติ ไม่ใช่สูตรพัง · เทียบผลจริงได้ที่ เพิ่มเติม → เมนูเต็ม → พอร์ต → Paper' +
           (lc ? " (ล่าสุด: " + esc(lc.text.split(":")[0]) + ", " + lc.n + " ไม้)" : "") + "</p></div>" : "") +
         (port ? '<div class="card"><p>ผลทดสอบ ' + trendPeriod() + " (12 เหรียญ, walk-forward): เสี่ยง " + trendRiskPct() + "%/ไม้ → พอร์ตโตเฉลี่ยปีละ " +
-          fmt(port.cagr, 1, true) + "% · ช่วงแย่สุด −" + fmt(port.maxDD, 1) + "% · ชนะ " + fmt(T.all.win, 0) + '% ของไม้</p><p class="fine">ผลจริงมักแย่กว่าทดสอบ · สัญญาณไม่ใช่คำสั่งซื้อขาย</p></div>' : "") +
-        Routine.html() + newsBox() + "</details>";
+          fmt(port.cagr, 1, true) + "% · ช่วงแย่สุด −" + fmt(port.maxDD, 1) + "% · ชนะ " + fmt(T.all.win, 0) + '% ของไม้</p><p class="fine">ผลจริงมักแย่กว่าทดสอบ · สัญญาณไม่ใช่คำสั่งซื้อขาย</p></div>' : "");
+      h = '<div class="sm-pane" data-pane="home">' + home + '</div><div class="sm-pane" data-pane="sig">' + sig + '</div><div class="sm-pane" data-pane="res">' + res + "</div>";
+      var more = Routine.html() + '<div class="sec-hd">ข่าว</div>' + newsBox();
       LCended = endedStatic;
-      return { html: h, held: held, entries: entries };
+      return { html: h, more: more, held: held, entries: entries };
     }
     // Everything about one trade: the signal, the price levels and take profits, the size in coins / USDT / baht at the
     // user's balance and risk, how often trades like it went right in the test (with its 95% range), and what the user
@@ -1757,12 +1794,13 @@
       var rtOpen = $("smRoutine") && $("smRoutine").open, moreOpen = $("smMore") && $("smMore").open;
       if (isTrend(tf)) {
         var view = followView(list, items);
-        head = '<div id="smLive">' + liveHtml() + "</div>" + view.html;
+        head = view.html;
         held = view.held; ents = view.entries;
+        $("smMoreDyn").innerHTML = view.more;
       } else {
         // Debug builds only (the app trades Trend 4H): the trial strategies' full sheets.
-        head = statusLine() + squeezeHead(tf) + (list.length ? list.map(function (x, i) { return tradeSheet(x, x.signal, sized(x.signal), tf, i); }).join("")
-          : '<div class="sm-bt" style="font-size:13px"><b>สัญญาณเข้าใหม่: ไม่มี</b> (แท่ง ' + TF[tf].name + " ที่ปิดล่าสุด)</div>") + newsBox();
+        head = '<div class="sm-pane" data-pane="home">' + statusLine() + squeezeHead(tf) + (list.length ? list.map(function (x, i) { return tradeSheet(x, x.signal, sized(x.signal), tf, i); }).join("")
+          : '<div class="sm-bt" style="font-size:13px"><b>สัญญาณเข้าใหม่: ไม่มี</b> (แท่ง ' + TF[tf].name + " ที่ปิดล่าสุด)</div>") + newsBox() + "</div>";
       }
       $("smMain").innerHTML = head;
       if (rtOpen && $("smRoutine")) $("smRoutine").open = true;
@@ -1948,7 +1986,8 @@
       });
       placeCards();
       // Distance from the live price to each watched level; closest first.
-      var wl = $("smWatch");
+      ["smWatch", "homeWatch"].forEach(function (wid) {
+      var wl = $(wid);
       if (wl) {
         var rows = Array.prototype.slice.call(wl.querySelectorAll("[data-watch]"));
         rows.forEach(function (el) {
@@ -1962,6 +2001,7 @@
         var gapOf = function (el) { var g = parseFloat(el.getAttribute("data-gap")); return isNaN(g) ? 99 : g; };
         rows.sort(function (a, b) { return gapOf(a) - gapOf(b); }).forEach(function (el) { wl.insertBefore(el, wl.querySelector(".fine")); });
       }
+      });
       var cap = money(), tot = 0, n = 0, open = Portfolio.openTrades();
       open.forEach(function (t) {
         var p = px[t.symbol];
@@ -1981,6 +2021,7 @@
       var age = lastTick ? Date.now() - lastTick : null, at = lastTick ? new Date(lastTick + 7 * 3600000).toISOString().slice(11, 19) : "";
       var fs = age === null ? "กำลังต่อราคาสด…" : age > 15000 ? "ราคาสดขาด · ล่าสุด " + at + " น." : (feed === "ws" ? "ราคาสดทุก 1 วินาที" : "ราคาทุก 3 วินาที") + " · " + at + " น.";
       setText("feedSt", fs, age !== null && age > 15000 ? "down" : age !== null ? "live" : "");
+      setText("homeFeed", age === null ? "กำลังต่อ…" : age > 15000 ? "ขาด · " + at.slice(0, 5) : "สด · " + at, age !== null && age > 15000 ? "down" : age !== null ? "up" : "");
       // The same, pinned to a corner so it shows wherever the screen is scrolled.
       var badge = $("liveBadge"), on = document.body.classList.contains("simple") && liveSymbols().length > 0;
       if (badge) {
@@ -2029,6 +2070,13 @@
         var chip = { follow: c.kind === "hold" ? "ระบบจำลองถืออยู่ · ราคายังใกล้จุดเข้า" : st.why === "window" ? "VALID SIGNAL" : "VALID SIGNAL · เข้าช้า",
           hold: st.why === "tp" ? sim + " · ขาย TP1 แล้ว" : st.why === "far" ? sim + " · อย่าไล่ราคา" : sim + " · หมดเวลาเข้า", ended: "จบสัญญาณ · แตะ SL" }[st.g];
         set("[data-st]", chip, "chip " + { follow: "good", hold: "warn", ended: "bad" }[st.g]);
+        var mini = document.querySelector('[data-mini="' + id + '"]');
+        if (mini) {
+          mini.classList.toggle("hidden", st.g !== "follow");
+          var ms = mini.querySelector("[data-mst]"), mx = mini.querySelector("[data-mex]");
+          ms.textContent = c.kind === "hold" ? "ระบบถืออยู่ · ใกล้จุดเข้า" : st.why === "window" ? "VALID SIGNAL" : "VALID · เข้าช้า"; ms.className = "chip good";
+          mx.textContent = ex || ""; mx.className = "chip " + (!ex ? "hidden" : ex === "TRADEABLE" ? "good" : "bad");
+        }
         set("[data-ex]", ex || "", "chip " + (st.g !== "follow" || !ex ? "hidden" : ex === "TRADEABLE" ? "good" : "bad"));
         set("[data-off]", "(" + fmt(c.dir * (p / c.e - 1) * 100, 2, true) + "% · " + fmt(st.off, 2, true) + "R จากจุดเข้า)", tone(Math.round(st.off * 100) / 100));
         var left = c.until - now, mm = function (ms) { var t = Math.max(0, Math.round(ms / 1000)); return Math.floor(t / 60) + ":" + ("0" + t % 60).slice(-2); };
@@ -2091,6 +2139,7 @@
       }
       var show = function (id, on) { var x = $(id); if (x) x.classList.toggle("hidden", !on); };
       show("emptyFollow", !cnt.follow); show("secHold", cnt.hold > 0); show("secEnded", cnt.ended + LCended > 0);
+      show("homeIdle", !cnt.follow); show("navSigDot", cnt.follow > 0); setText("homeCnt", cnt.follow ? String(cnt.follow) : "");
       setText("cntFollow", cnt.follow ? String(cnt.follow) : ""); setText("cntHold", String(cnt.hold)); setText("cntEnded", cnt.ended + LCended ? String(cnt.ended + LCended) : "");
     }
     function bindLive() {
@@ -2107,6 +2156,7 @@
       });
     }
     function show(simple) {
+      if (!simple && $("simpleView").getAttribute("data-on") === "chart") setPane("home");
       document.body.classList.toggle("simple", simple);
       $("simpleView").classList.toggle("hidden", !simple);
       $("fullView").classList.toggle("hidden", simple);
@@ -2119,7 +2169,8 @@
     function render(res, error, rate, info) {
       lastScan = Date.now(); busyNow = false; lastError = error || ""; meta = info || meta;
       if (error) {
-        $("smMain").innerHTML = '<div class="sm-wait"><b>เช็กไม่สำเร็จ</b><small>' + esc(error).slice(0, 160) + " · ตรวจเน็ตแล้วกด เช็กอีกครั้ง</small></div>";
+        $("smMain").innerHTML = '<div class="sm-pane" data-pane="home"><div class="sm-wait"><b>เช็กไม่สำเร็จ</b><small>' + esc(error).slice(0, 160) + " · ตรวจเน็ตแล้วกด เช็กอีกครั้ง (เพิ่มเติม → เช็กสัญญาณอีกครั้ง)</small></div></div>";
+        if ($("simpleView").getAttribute("data-on") !== "home") setPane("home");
         return;
       }
       results = res; fx = rate || fx;
@@ -2130,7 +2181,28 @@
       var ms = TF[curTf()].ms, wait = ms - (Date.now() % ms) + (ms > 900000 ? 45000 : 15000);
       timer = setTimeout(function () { if (!document.hidden) scan(); schedule(); }, wait);
     }
+    // The bottom bar of the simple view: five panes; the chart pane borrows the full view's chart.
+    function setPane(name, scrollId) {
+      var sv = $("simpleView"), prev = sv.getAttribute("data-on");
+      sv.setAttribute("data-on", name);
+      Array.prototype.forEach.call(document.querySelectorAll("#smNav [data-pane]"), function (b) { b.classList.toggle("on", b.getAttribute("data-pane") === name); });
+      try { localStorage.setItem("smPane", name); } catch (e) { /* optional */ }
+      if (name === "chart") { $("paneChart").appendChild($("chartTab")); $("chartTab").classList.remove("hidden"); ChartView.open(); }
+      else if (prev === "chart") { ChartView.stop(); $("fullView").appendChild($("chartTab")); $("chartTab").classList.add("hidden"); }
+      var target = scrollId && $(scrollId);
+      if (target) target.scrollIntoView({ block: "start" }); else window.scrollTo(0, 0);
+    }
     if (location.hash !== "#bg") {
+      Array.prototype.forEach.call(document.querySelectorAll("#smNav [data-pane]"), function (b) { b.onclick = function () { setPane(b.getAttribute("data-pane")); }; });
+      // Taps on the home screen: a signal row opens its card, a summary opens its pane.
+      $("smMain").addEventListener("click", function (e) {
+        var mini = e.target.closest && e.target.closest("[data-mini]"), go = e.target.closest && e.target.closest("[data-goto]");
+        if (mini) setPane("sig", mini.getAttribute("data-mini"));
+        else if (go) setPane(go.getAttribute("data-goto"), go.getAttribute("data-scroll"));
+      });
+      $("smAlerts").onclick = function () { show(false); var b = document.querySelector('[data-tab="guideTab"]'); if (b) b.click(); };
+      $("smFull").onclick = function () { show(false); };
+      try { var saved = localStorage.getItem("smPane"); if (saved && saved !== "chart" && document.querySelector('#smNav [data-pane="' + saved + '"]')) setPane(saved); } catch (e) { /* optional */ }
       $("menuBtn").onclick = function () { show(!document.body.classList.contains("simple")); };
       $("smScan").onclick = function () { scan(); };
       $("smCap").addEventListener("change", function () {

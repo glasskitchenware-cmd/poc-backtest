@@ -128,6 +128,11 @@ final class Alerts {
      */
     static void onScan(Context context, String json) {
         try {
+            prefs(context).edit().putString("widgetPacket", json == null ? "" : json).apply();
+        } catch (Exception ignored) {
+            // the widget keeps its last packet
+        }
+        try {
             SharedPreferences p = prefs(context);
             SignalAlerts.Plan plan = SignalAlerts.plan(json, System.currentTimeMillis(), key -> p.getLong(key, -1));
             if (!plan.ok) {
@@ -158,6 +163,7 @@ final class Alerts {
     static void recordStatus(Context context, boolean ok, String text) {
         prefs(context).edit().putLong("lastScanAt", System.currentTimeMillis()).putBoolean("lastScanOk", ok)
                 .putString("lastScanText", text == null ? "" : text).apply();
+        PocWidget.refresh(context);
     }
 
     static String lastStatusJson(Context context) {

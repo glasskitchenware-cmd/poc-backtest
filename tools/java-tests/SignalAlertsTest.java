@@ -188,6 +188,20 @@ public class SignalAlertsTest {
         SignalAlerts.Note pn = SignalAlerts.plan(packet(240, c4, new JSONArray().put(paused)), n4, key -> -1L).notes.get(0);
         check(pn.title.equals("สัญญาณถูกต้อง แต่ NO TRADE · SHORT SOLUSDT · H4") && pn.body.contains("ระบบเฝ้าระวัง") && pn.kind.equals("BLOCKED"),
             "paused signal: BLOCKED with the payload's own heading and reason");
+
+        // Home-screen widget: entries first, then exits, then valid-but-blocked; at most three lines, NO SIGNAL when empty.
+        java.util.List<String> wl = SignalAlerts.widgetLines(packet(240, c4, new JSONArray().put(blocked).put(trend)));
+        check(wl.size() == 2 && (wl.get(0).startsWith("🔴 เข้า") || wl.get(0).startsWith("🟢 เข้า")), "widget: the entry comes first (" + wl + ")");
+        check(wl.get(wl.size() - 1).equals("⚪ SHORT AVAXUSDT".replace("USDT", "") + " · NO TRADE · ทุนไม่พอ"), "widget: a capital-blocked signal says NO TRADE · ทุนไม่พอ");
+        check(SignalAlerts.widgetLines(packet(240, c4, new JSONArray())).equals(java.util.Arrays.asList("NO SIGNAL · ไม่มีสัญญาณใหม่")), "widget: no signal says NO SIGNAL");
+        check(SignalAlerts.widgetLines("{\"error\":\"timeout\"}").get(0).startsWith("เช็กไม่สำเร็จ: timeout"), "widget: a failed check says so");
+        check(SignalAlerts.widgetLines("not json").get(0).equals("อ่านผลเช็กไม่ได้"), "widget: an unreadable packet never crashes");
+        JSONArray many = new JSONArray();
+        for (String c : new String[]{"BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT", "ADAUSDT"}) many.put(new JSONObject(paused.toString()).put("symbol", c));
+        java.util.List<String> wm = SignalAlerts.widgetLines(packet(240, c4, many));
+        check(wm.size() == 4 && wm.get(3).equals("+2 รายการ · แตะเพื่อดู") && wm.get(0).contains("ระบบเฝ้าระวัง"), "widget: five signals show three and '+2'");
+        String foot = SignalAlerts.widgetFooter(packet(240, c4, new JSONArray()), c4 + 60_000L);
+        check(foot.equals("เช็กล่าสุด " + SignalAlerts.bangkok(c4 + 60_000L, "HH:mm") + " · แท่งถัดไปปิด " + SignalAlerts.bangkok(c4 + 240 * 60_000L, "HH:mm") + " น."), "widget footer: last check and the next 4-hour close (" + foot + ")");
         check(bn.body.startsWith("สัญญาณ SHORT ที่ 9.3041 · SL 10.0162 · TP1 7.1678 · NO TRADE ไม่มีใบสั่ง"), "blocked first line: the signal and that there is no order");
         for (String must : new String[]{"สัญญาณ SHORT ที่ 9.3041", "SL 10.0162", "TP1 7.1678", "27% ของทุน", "≈ 3,950 ฿", "NO TRADE ไม่มีใบสั่ง"}) {
             check(bn.body.contains(must), "blocked body contains: " + must);

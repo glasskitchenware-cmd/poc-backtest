@@ -249,6 +249,14 @@ def main():
           "can follow now: one order card per signal (BTC LONG, ETH SHORT), the full sheet folded inside")
     check("เหลือเวลาเข้า 13:" in follow and re.search(r"\(ถึง \d\d:15 น\.\)", follow) and re.search(r"ตอนนี้ [\d,.]+ \([+-]0\.00% · [+-]0\.00R จากจุดเข้า\)", follow),
           "live: entry countdown and the price against the entry, every second")
+    check(r["navPanes"] == ["home", "sig", "chart", "res", "more"], "v8: a bottom bar with five panes (home, signals, chart, results, more)")
+    hm = r["home"]
+    check(len(r["homeRows"]) == 2 and all("VALID SIGNAL" in x and "TRADEABLE" in x for x in r["homeRows"]) and any("BTC" in x for x in r["homeRows"]) and any("ETH" in x for x in r["homeRows"]),
+          "home: one row per valid signal (BTC, ETH) with its signal status and whether it can be opened")
+    check("เช็กครั้งถัดไป" in hm and "ราคาสด" in hm and "ผล 30 วันของระบบ" in hm and "ความเสี่ยงของไม้นี้" not in hm and "ข่าวดี" not in hm,
+          "home: status, live feed, next check and the 30-day line; no order sheets or news")
+    check("NOT VALIDATED" in r["res"] and "สถานะก่อนใช้เงินจริง" in r["res"] and "ผลแยกช่วง · กฎเดียวกัน" in r["res"], "results pane: validation status (NOT VALIDATED) and results by period")
+    check("ข่าว" in r["more"] and r["routine"], "more pane: the trading plan and the news")
     check(follow.count("VALID SIGNAL") == 2 and follow.count("TRADEABLE") == 2, "signal status (VALID SIGNAL) and execution feasibility (TRADEABLE) are two separate labels")
     check(follow.count("ครบองค์ประกอบสูตร 10/10 (100%)") == 2 and "ไม่ใช่โอกาสชนะ" in follow, "each followable signal shows how completely the rule's conditions are met (10/10)")
     check("ไม้ของระบบที่อยู่ +0.00R แบบนี้ จบกำไร 35%" in follow, "live odds: a trade at its entry ended in profit 35% of the time in 2020-2026")
@@ -329,6 +337,8 @@ def main():
     note = r["smMain"].split("สัญญาณใหม่ · ยังอยู่ในจุดเข้า", 1)[0]
     check("แตะ SL ≈ −1.00R" in ended and "LONG BTC แตะ SL แล้ว · จบสัญญาณ" in note and "ถือ 1 ไม้ต่อ" not in note,
           "the ended card shows its result, and the system's note no longer says it holds BTC")
+    r = run(page, "home_none", {"storage": h4, "capital": 1_000_000, "trendForce": {}, "clickTf": "4h", "waitMs": 15000, "justClosed": 14_400_000}, bg=False)
+    check(r["homeRows"] == [] and "NO SIGNAL" in r["home"] and r["paneOn"] == "home", "home with no signal says NO SIGNAL and lists nothing")
     r = run(page, "live_far", {"storage": h4, "capital": 1_000_000, "trendForce": {"BTCUSDT": "NEAR_LONG"}, "clickTf": "4h", "waitMs": 15000,
                                "justClosed": 14_400_000, "liveMove": {"BTCUSDT": 3}}, bg=False)
     check(r["holds"] == ["card hold l st-hold"] and "ราคาห่างจุดเข้า +0.80R (เกิน 0.5R)" in r["smMain"] and "ตอนนี้ไม่ต้องทำอะไร" in r["smMain"],
