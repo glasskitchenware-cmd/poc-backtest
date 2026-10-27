@@ -256,12 +256,12 @@ final class SignalAlerts {
         String reason = item.optString("reason", "");
         if (entry.isEmpty() || sl.isEmpty() || reason.isEmpty()) return null;
         String key = "sent:BLOCKED:" + tf + ":" + symbol + ":" + side;
-        String title = "ทุนไม่พอ · " + side + " " + symbol + " · " + tf;
+        String title = item.optString("head", "ทุนไม่พอ") + " · " + side + " " + symbol + " · " + tf;
         StringBuilder b = new StringBuilder();
         b.append("สัญญาณ ").append(side).append(" ที่ ").append(entry).append(" · SL ").append(sl);
         String tp1 = item.optString("tp1", "");
         if (!tp1.isEmpty()) b.append(" · TP1 ").append(tp1);
-        b.append(" · ไม่แนะนำให้เข้า");
+        b.append(" · NO TRADE ไม่มีใบสั่ง");
         b.append("\nแท่งปิด ").append(bangkok(candle, "dd/MM HH:mm")).append(" น. (เวลาไทย UTC+7)");
         b.append("\n").append(cut(reason, 220));
         String evidence = item.optString("evidence", "");
@@ -274,7 +274,7 @@ final class SignalAlerts {
         StringBuilder s = new StringBuilder();
         for (Note n : notes) {
             if (s.length() > 0) s.append(" · ");
-            s.append(n.kind.equals("EXIT") ? "ปิด " : n.kind.equals("BLOCKED") ? "ทุนไม่พอ " : "").append(n.symbol.replace("USDT", "")).append(" ").append(n.side);
+            s.append(n.kind.equals("EXIT") ? "ปิด " : n.kind.equals("BLOCKED") ? "NO TRADE " : "").append(n.symbol.replace("USDT", "")).append(" ").append(n.side);
         }
         return s.toString();
     }

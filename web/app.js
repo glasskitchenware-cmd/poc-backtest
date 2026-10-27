@@ -2576,6 +2576,14 @@
       rationale: "แท่ง 4 ชม. ปิด" + (x.dir > 0 ? "ต่ำกว่าจุดต่ำสุด" : "สูงกว่าจุดสูงสุด") + " 10 แท่ง: สูตรออกที่ราคาเปิดแท่งถัดไป" +
         (x.left < 1 ? " · ปิดส่วนที่เหลือ " + fmt(x.left * 100, 0) + "% (ขาย TP ไปแล้ว " + x.fills.length + " ขั้น)" : "") };
   }
+  // A valid Trend signal that cannot be opened (capital short at the set risk, or new entries paused) still notifies,
+  // as BLOCKED: the levels and why there is no order. Never an order to copy.
+  function blockedPayload(r, tf, why, head) {
+    var g = r.signal;
+    return { kind: "BLOCKED", symbol: r.symbol, side: g.dir > 0 ? "LONG" : "SHORT", tf: TF_LABEL[tf], strategy: TREND.id, candle_close: g.candle, expires: g.expires,
+      entry: pxDp(g.entry, g.dp), sl: pxDp(g.stop, g.dp), tp1: g.ladder ? pxDp(g.ladder[0].price, g.dp) : "", head: head, reason: why,
+      evidence: evidenceFor(r.symbol, tf).text, experimental: true };
+  }
   function reportScan(results, end, error, extra) {
     if (!window.NativeHttp || !window.NativeHttp.scanDone || $("sgMode").value !== "futures") return;
     var plan = Portfolio.plan(), tf = curTf();
@@ -2583,11 +2591,16 @@
     // "half" trades on at half the risk (the sizes already use plan.riskPct); "stop" and "day" pause new entries.
     var sigs = (plan.state === "ok" || plan.state === "half") && !(isTrend(tf) && systemPaused()) ? results.filter(function (r) { return r.signal && !r.signal.below_minimum; }) : [];
     var exits = results.filter(function (r) { return r.exit; });
+    var paused = isTrend(tf) && systemPaused(), planStop = !(plan.state === "ok" || plan.state === "half");
+    var blocked = isTrend(tf) ? results.filter(function (r) { return r.signal && sigs.indexOf(r) < 0 && (r.signal.noCapital || ((paused || planStop) && !r.signal.below_minimum)); }).map(function (r) {
+      return r.signal.noCapital ? blockedPayload(r, tf, r.signal.reject, "สัญญาณถูกต้อง แต่ทุนไม่พอ")
+        : blockedPayload(r, tf, paused ? "ระบบเฝ้าระวัง: " + RECENT.N + " ไม้ล่าสุดแย่กว่าที่ผลทดสอบเคยเจอ หยุดเข้าไม้ใหม่" : plan.message, "สัญญาณถูกต้อง แต่ NO TRADE");
+    }) : [];
     window.NativeHttp.scanDone(JSON.stringify({ v: 2, candle: end, interval_minutes: TF[tf].ms / 60000, error: error || "",
       scanned: extra && extra.scanned || 0, failed: extra && extra.failed || [],
       rejected: results.filter(function (r) { return r.signal && r.signal.below_minimum; }).map(function (r) { return r.symbol + ": " + r.signal.reject; }),
       note: plan.state === "ok" ? "" : plan.message, news_filter: newsFilterLabel(),
-      signals: sigs.map(function (r) { return signalPayload(r, tf); }).concat(exits.map(function (r) { return exitPayload(r, tf); })) }));
+      signals: sigs.map(function (r) { return signalPayload(r, tf); }).concat(exits.map(function (r) { return exitPayload(r, tf); }), blocked) }));
   }
 
   function rank(r) { return r.signal ? 0 : r.trend_up && r.strategy ? 1 : r.trend_up ? 2 : 3; }

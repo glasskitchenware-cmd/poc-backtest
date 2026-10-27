@@ -184,8 +184,12 @@ public class SignalAlertsTest {
         SignalAlerts.Note bn = bp.notes.get(0);
         check(bp.notes.size() == 2 && bn.title.equals("ทุนไม่พอ · SHORT AVAXUSDT · H4") && bn.key.startsWith("sent:BLOCKED:") && bn.kind.equals("BLOCKED"),
             "capital-blocked signal: own title and dedup key");
-        check(bn.body.startsWith("สัญญาณ SHORT ที่ 9.3041 · SL 10.0162 · TP1 7.1678 · ไม่แนะนำให้เข้า"), "blocked first line: the signal and that it is not recommended");
-        for (String must : new String[]{"สัญญาณ SHORT ที่ 9.3041", "SL 10.0162", "TP1 7.1678", "27% ของทุน", "≈ 3,950 ฿", "ไม่แนะนำให้เข้า"}) {
+        JSONObject paused = new JSONObject(blocked.toString()).put("symbol", "SOLUSDT").put("head", "สัญญาณถูกต้อง แต่ NO TRADE").put("reason", "ระบบเฝ้าระวัง: 50 ไม้ล่าสุดแย่กว่าที่ผลทดสอบเคยเจอ หยุดเข้าไม้ใหม่");
+        SignalAlerts.Note pn = SignalAlerts.plan(packet(240, c4, new JSONArray().put(paused)), n4, key -> -1L).notes.get(0);
+        check(pn.title.equals("สัญญาณถูกต้อง แต่ NO TRADE · SHORT SOLUSDT · H4") && pn.body.contains("ระบบเฝ้าระวัง") && pn.kind.equals("BLOCKED"),
+            "paused signal: BLOCKED with the payload's own heading and reason");
+        check(bn.body.startsWith("สัญญาณ SHORT ที่ 9.3041 · SL 10.0162 · TP1 7.1678 · NO TRADE ไม่มีใบสั่ง"), "blocked first line: the signal and that there is no order");
+        for (String must : new String[]{"สัญญาณ SHORT ที่ 9.3041", "SL 10.0162", "TP1 7.1678", "27% ของทุน", "≈ 3,950 ฿", "NO TRADE ไม่มีใบสั่ง"}) {
             check(bn.body.contains(must), "blocked body contains: " + must);
         }
         check(SignalAlerts.plan(packet(240, c4, new JSONArray().put(new JSONObject(blocked.toString()).put("reason", ""))), n4, key -> -1L).invalid == 1,

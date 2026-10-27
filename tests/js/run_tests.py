@@ -211,7 +211,7 @@ def main():
     r = run(page, "h4_paused", {"storage": dict(h4, **{"portfolio.v1": json.dumps(loss)}), "capital": 1_000_000,
                                 "trendForce": {"BTCUSDT": "EXIT_LONG", "ETHUSDT": "LONG"}})
     pk = r["packet"]
-    check(pk["note"] != "" and [s["kind"] for s in pk["signals"]] == ["EXIT"], "drawdown stop: new entries paused, the exit still goes out")
+    check(pk["note"] != "" and [s["kind"] for s in pk["signals"]] == ["EXIT", "BLOCKED"], "drawdown stop: new entries paused (the ETH signal notifies as BLOCKED, no order), the exit still goes out")
 
     # Trend 4H stop rule from research/pro: a 15% drawdown is inside the test's range (normal for trend following),
     # so entries go on; past the test's deepest drawdown they stop.
@@ -222,8 +222,8 @@ def main():
     check(r["packet"]["note"] == "" and [s["kind"] for s in r["packet"]["signals"]] == ["ENTRY"], "Trend: 15% drawdown is within the test's range -> entries continue")
     r = run(page, "h4_stop_deep", {"storage": dict(h4, **{"portfolio.v1": json.dumps(loss)}), "capital": 1_000_000, "trendEvidence": ev,
                                    "trendForce": {"BTCUSDT": "EXIT_LONG", "ETHUSDT": "LONG"}})
-    check("เกินที่ผลทดสอบเคยเจอ (30.0%)" in r["packet"]["note"] and [s["kind"] for s in r["packet"]["signals"]] == ["EXIT"],
-          "Trend: drawdown beyond the test's deepest -> new entries stop, exits still go out")
+    check("เกินที่ผลทดสอบเคยเจอ (30.0%)" in r["packet"]["note"] and [s["kind"] for s in r["packet"]["signals"]] == ["EXIT", "BLOCKED"],
+          "Trend: drawdown beyond the test's deepest -> new entries stop (signal notifies as BLOCKED), exits still go out")
     r = run(page, "h4_stop_half", {"storage": dict(h4, **{"portfolio.v1": json.dumps(loss15)}), "capital": 1_000_000, "trendEvidence": evidence_with(NORMAL, "half15", 30.0),
                                    "trendForce": {"ETHUSDT": "LONG"}})
     sg = r["packet"]["signals"]
@@ -287,6 +287,9 @@ def main():
                                "justClosed": 14_400_000, "openDetails": 8000}, bg=False)
     sg = r["packet"]["signals"]
     check(not [x for x in sg if x["kind"] == "ENTRY"], "37 THB: Binance's smallest ETH order would risk far more than 0.25% -> no ENTRY alert (NO TRADE)")
+    bl = [x for x in sg if x["kind"] == "BLOCKED"]
+    check(len(bl) == 1 and bl[0]["symbol"] == "ETHUSDT" and bl[0]["side"] == "SHORT" and "ทุนไม่พอ" in bl[0]["reason"] and bl[0]["entry"] and bl[0]["sl"] and "qty" not in bl[0],
+          "37 THB: the valid ETH signal still notifies, as BLOCKED (levels and why, no order size)")
     check("ทุนไม่พอ ไม่สามารถเข้าไม้ตามความเสี่ยงที่กำหนด" in r["smMain"] and "ETHUSDT Perp" not in r["smMain"] and r["acts"] == ["card act blocked s st-follow"],
           "37 THB: the screen says capital is not enough for the set risk; no order to copy, risk never raised")
     check("VALID SIGNAL" in r["smMain"] and "BELOW EXCHANGE MINIMUM" in r["smMain"] and "ใบสั่ง: NO TRADE" in r["smMain"] and "TRADEABLE" not in r["smMain"],
@@ -342,7 +345,8 @@ def main():
 
     # The system's own last 30 days worse than anything in the test (the mock's bars): watch, and NO TRADE for new entries.
     r = run(page, "watch_mode", {"storage": h4, "capital": 1_000_000, "trendForce": {"BTCUSDT": "LONG", "ETHUSDT": "EXIT_SHORT"}, "realRecent": True})
-    check([x["kind"] for x in r["packet"]["signals"]] == ["EXIT"], "recent record worse than the test ever had: no ENTRY alert, the EXIT still goes out")
+    check([x["kind"] for x in r["packet"]["signals"]] == ["EXIT", "BLOCKED"], "recent record worse than the test ever had: no ENTRY alert, the EXIT still goes out, the BTC signal notifies as BLOCKED")
+    check(r["packet"]["signals"][1]["head"] == "สัญญาณถูกต้อง แต่ NO TRADE" and "ระบบเฝ้าระวัง" in r["packet"]["signals"][1]["reason"], "on watch: the BLOCKED alert says why")
     check(r["packet"]["signals"][0]["kind"] == "EXIT", "exits are never paused")
     r = run(page, "watch_screen", {"storage": h4, "capital": 1_000_000, "trendForce": {"BTCUSDT": "LONG"}, "clickTf": "4h", "waitMs": 15000, "justClosed": 14_400_000,
                                    "realRecent": True}, bg=False)
