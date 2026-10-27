@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       job:
-        description: "mtf10000, skills, evidence, tune, pro, robust, sentiment, meanrev, improve, tf, winrate, signalscore, liveodds, pyramid, recent, longonly, career or newsprobe"
+        description: "mtf10000, skills, evidence, tune, pro, robust, sentiment, meanrev, improve, tf, winrate, signalscore, liveodds, pyramid, recent, longonly, career, priceaction or newsprobe"
         default: "skills"
 
 jobs:
@@ -522,3 +522,36 @@ jobs:
         run: |
           cp research/career/career.json /tmp/career.json
           bash .github/publish_result.sh career /tmp/career.json
+
+  priceaction:
+    # Pin bar / engulfing / three soldiers at support in the trend's direction (research/pa/priceaction.js).
+    if: ${{ inputs.job == 'priceaction' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: python -m pip install requests
+      - name: 1h, 4h and daily bars, 37 coins, through yesterday
+        working-directory: research/evidence
+        run: |
+          python fetch.py BTCUSDT,ETHUSDT,BNBUSDT,SOLUSDT,XRPUSDT,DOGEUSDT,ADAUSDT,AVAXUSDT,LINKUSDT,DOTUSDT,TRXUSDT,LTCUSDT 1h,4h,1d 2020-01 > f1.log 2>&1 &
+          python fetch.py ETCUSDT,BCHUSDT,XLMUSDT,EOSUSDT,ATOMUSDT,NEARUSDT,FILUSDT,AAVEUSDT,UNIUSDT,ALGOUSDT,MATICUSDT,FTMUSDT 1h,4h,1d 2020-01 > f2.log 2>&1 &
+          python fetch.py SANDUSDT,MANAUSDT,AXSUSDT,ICPUSDT,APTUSDT,OPUSDT,ARBUSDT,INJUSDT,SUIUSDT,XTZUSDT,THETAUSDT,VETUSDT,ZECUSDT 1h,4h,1d 2020-01 > f3.log 2>&1 &
+          fail=0; for j in $(jobs -p); do wait $j || fail=1; done
+          cat f1.log f2.log f3.log
+          for tf in 1h 4h 1d; do python fetch_daily.py BTCUSDT,ETHUSDT,BNBUSDT,SOLUSDT,XRPUSDT,DOGEUSDT,ADAUSDT,AVAXUSDT,LINKUSDT,DOTUSDT,TRXUSDT,LTCUSDT $tf 2026-10-01 $(date -u -d yesterday +%F) || true; done
+          exit $fail
+      - working-directory: research/pa
+        run: node --max-old-space-size=6000 priceaction.js BTCUSDT,ETHUSDT,BNBUSDT,SOLUSDT,XRPUSDT,DOGEUSDT,ADAUSDT,AVAXUSDT,LINKUSDT,DOTUSDT,TRXUSDT,LTCUSDT ETCUSDT,BCHUSDT,XLMUSDT,EOSUSDT,ATOMUSDT,NEARUSDT,FILUSDT,AAVEUSDT,UNIUSDT,ALGOUSDT,MATICUSDT,FTMUSDT,SANDUSDT,MANAUSDT,AXSUSDT,ICPUSDT,APTUSDT,OPUSDT,ARBUSDT,INJUSDT,SUIUSDT,XTZUSDT,THETAUSDT,VETUSDT,ZECUSDT $(( $(date -u -d 'today 00:00' +%s) * 1000 ))
+      - name: Publish priceaction.json (branch research-results)
+        run: |
+          cp research/pa/priceaction.json /tmp/priceaction.json
+          bash .github/publish_result.sh priceaction /tmp/priceaction.json
