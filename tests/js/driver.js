@@ -87,6 +87,6 @@
       home: (document.querySelector('#smMain [data-pane="home"]') || {}).textContent || "", res: (document.querySelector('#smMain [data-pane="res"]') || {}).textContent || "",
       homeRows: Array.prototype.filter.call(document.querySelectorAll("#smMain [data-mini]"), function (el) { return !el.classList.contains("hidden"); }).map(function (el) { return el.textContent; }),
       navPanes: Array.prototype.map.call(document.querySelectorAll("#smNav [data-pane]"), function (b) { return b.getAttribute("data-pane"); }),
-      paneOn: document.getElementById("simpleView").getAttribute("data-on"), more: text("smMoreDyn") });
+      paneOn: document.getElementById("simpleView").getAttribute("data-on"), more: text("smMoreDyn"), forwardStore: localStorage.getItem("forward.v1") });
   }, cfg.waitMs || 12000);
 })();

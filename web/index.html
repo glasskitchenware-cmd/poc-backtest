@@ -100,7 +100,7 @@ summary{cursor:pointer;color:var(--muted);font-size:14px}
 .mkthead{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);padding:6px 0}
 .mkt{display:grid;grid-template-columns:auto 1fr auto 56px;align-items:baseline;gap:4px 8px;padding:10px 0;border-top:1px solid var(--line);cursor:pointer}.mkt b{font-size:15px}.mkt span{font-variant-numeric:tabular-nums;font-weight:600}.mkt small:last-child{text-align:right}
 a.mini{background:var(--deep);color:var(--yel);border-radius:8px;font-weight:600}
-body.simple #guideBar{display:none!important}body.simple main{padding-bottom:88px}body:not(.simple) #smNav{display:none}body.simple.coaching main{padding-bottom:200px}
+body.simple #guideBar{display:none!important}body.simple main{padding-bottom:128px}body:not(.simple) #smNav{display:none}body.simple.coaching main{padding-bottom:200px}
 .sm-cap{display:flex;align-items:center;gap:10px;background:var(--panel);border-radius:var(--r);padding:10px 12px 10px 14px}.sm-cap label{margin:0;flex:1;color:var(--ink);font-size:14px;font-weight:600}.sm-cap label small{color:var(--muted);font-weight:400;margin-left:2px}.sm-cap input{width:128px;margin:0;text-align:right;font-weight:700;font-size:17px;font-variant-numeric:tabular-nums}
 .sm-tf{display:flex;gap:6px;margin-top:10px}.sm-tf button{flex:1;margin:0;padding:8px 4px;font-size:13px;background:var(--deep);color:var(--muted)}.sm-tf button.on{background:var(--yel);color:#181a20}
 .sm-exp{margin-top:8px;padding:8px 12px;border-radius:10px;background:rgba(240,185,11,.12);border:1px solid var(--yel);color:var(--yel);font-weight:700;font-size:13px;text-align:center}
@@ -256,7 +256,7 @@ a{color:var(--accent)}
 @keyframes tickUp{from{color:var(--up);background:var(--up-bg)}to{background:transparent}}@keyframes tickDown{from{color:var(--down);background:var(--down-bg)}to{background:transparent}}
 .tick-up{animation:tickUp .7s ease-out}.tick-down{animation:tickDown .7s ease-out}
 @media (prefers-reduced-motion:reduce){.tick-up,.tick-down{animation:none}}
-.card .odds{margin:6px 0 0;font-size:13.5px;font-weight:700}.card .odds:empty{display:none}.odds.up{color:var(--up)}.odds.down{color:var(--down)}.odds.neu{color:var(--yel)}
+.card .odds{margin:6px 0 0;font-size:12.5px;font-weight:600;line-height:1.5}.card .odds:empty{display:none}.odds.up{color:var(--up)}.odds.down{color:var(--down)}.odds.neu{color:var(--yel)}
 .watch-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-top:1px solid var(--line);font-size:13.5px}.watch-row:first-child{border-top:0}.watch-row small{color:var(--muted);font-size:12px;flex:1}.watch-now{font-variant-numeric:tabular-nums}.watch-d{min-width:86px;text-align:right;font-size:12.5px}
 .periods .tbl{overflow-x:auto;margin-top:8px}.periods table{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums}.periods th{color:var(--muted);font-weight:600;text-align:left;padding:4px 6px 4px 0;white-space:nowrap}.periods td{padding:5px 6px 5px 0;border-top:1px solid var(--line);vertical-align:top}.periods td small{display:block;color:var(--muted);font-size:11px}
 .fit{margin-top:6px}.fit summary{font-size:13px;font-weight:700;cursor:pointer}.fit summary.fit-all{color:var(--up)}.fit summary.fit-part{color:var(--yel)}
@@ -278,6 +278,8 @@ a{color:var(--accent)}
 .home-line{display:flex;align-items:center;gap:8px;justify-content:space-between;min-height:44px;cursor:pointer}.home-line b.big{font-size:20px}
 .link-btn{background:none;border:0;color:var(--yel);font-size:14px;padding:10px 0 2px;width:auto;margin:0;cursor:pointer}
 #homeWatch .watch-row:nth-child(n+4){display:none}
+.fwd-bar{margin:8px 0 6px}
+.card-more{margin-top:8px}.card-more>summary{cursor:pointer;color:var(--muted);font-size:13.5px;padding:10px 0;min-height:44px}
 body.simple .live-badge{bottom:calc(72px + env(safe-area-inset-bottom))}
 .mini-row .mr-chips{flex:1 1 auto;min-width:0}.mini-row .mr-px{flex:none;margin-left:6px}
 </style>

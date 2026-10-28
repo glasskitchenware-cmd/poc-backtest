@@ -100,7 +100,7 @@ summary{cursor:pointer;color:var(--muted);font-size:14px}
 .mkthead{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);padding:6px 0}
 .mkt{display:grid;grid-template-columns:auto 1fr auto 56px;align-items:baseline;gap:4px 8px;padding:10px 0;border-top:1px solid var(--line);cursor:pointer}.mkt b{font-size:15px}.mkt span{font-variant-numeric:tabular-nums;font-weight:600}.mkt small:last-child{text-align:right}
 a.mini{background:var(--deep);color:var(--yel);border-radius:8px;font-weight:600}
-body.simple #guideBar{display:none!important}body.simple main{padding-bottom:88px}body:not(.simple) #smNav{display:none}body.simple.coaching main{padding-bottom:200px}
+body.simple #guideBar{display:none!important}body.simple main{padding-bottom:128px}body:not(.simple) #smNav{display:none}body.simple.coaching main{padding-bottom:200px}
 .sm-cap{display:flex;align-items:center;gap:10px;background:var(--panel);border-radius:var(--r);padding:10px 12px 10px 14px}.sm-cap label{margin:0;flex:1;color:var(--ink);font-size:14px;font-weight:600}.sm-cap label small{color:var(--muted);font-weight:400;margin-left:2px}.sm-cap input{width:128px;margin:0;text-align:right;font-weight:700;font-size:17px;font-variant-numeric:tabular-nums}
 .sm-tf{display:flex;gap:6px;margin-top:10px}.sm-tf button{flex:1;margin:0;padding:8px 4px;font-size:13px;background:var(--deep);color:var(--muted)}.sm-tf button.on{background:var(--yel);color:#181a20}
 .sm-exp{margin-top:8px;padding:8px 12px;border-radius:10px;background:rgba(240,185,11,.12);border:1px solid var(--yel);color:var(--yel);font-weight:700;font-size:13px;text-align:center}
@@ -256,7 +256,7 @@ a{color:var(--accent)}
 @keyframes tickUp{from{color:var(--up);background:var(--up-bg)}to{background:transparent}}@keyframes tickDown{from{color:var(--down);background:var(--down-bg)}to{background:transparent}}
 .tick-up{animation:tickUp .7s ease-out}.tick-down{animation:tickDown .7s ease-out}
 @media (prefers-reduced-motion:reduce){.tick-up,.tick-down{animation:none}}
-.card .odds{margin:6px 0 0;font-size:13.5px;font-weight:700}.card .odds:empty{display:none}.odds.up{color:var(--up)}.odds.down{color:var(--down)}.odds.neu{color:var(--yel)}
+.card .odds{margin:6px 0 0;font-size:12.5px;font-weight:600;line-height:1.5}.card .odds:empty{display:none}.odds.up{color:var(--up)}.odds.down{color:var(--down)}.odds.neu{color:var(--yel)}
 .watch-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-top:1px solid var(--line);font-size:13.5px}.watch-row:first-child{border-top:0}.watch-row small{color:var(--muted);font-size:12px;flex:1}.watch-now{font-variant-numeric:tabular-nums}.watch-d{min-width:86px;text-align:right;font-size:12.5px}
 .periods .tbl{overflow-x:auto;margin-top:8px}.periods table{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums}.periods th{color:var(--muted);font-weight:600;text-align:left;padding:4px 6px 4px 0;white-space:nowrap}.periods td{padding:5px 6px 5px 0;border-top:1px solid var(--line);vertical-align:top}.periods td small{display:block;color:var(--muted);font-size:11px}
 .fit{margin-top:6px}.fit summary{font-size:13px;font-weight:700;cursor:pointer}.fit summary.fit-all{color:var(--up)}.fit summary.fit-part{color:var(--yel)}
@@ -278,6 +278,8 @@ a{color:var(--accent)}
 .home-line{display:flex;align-items:center;gap:8px;justify-content:space-between;min-height:44px;cursor:pointer}.home-line b.big{font-size:20px}
 .link-btn{background:none;border:0;color:var(--yel);font-size:14px;padding:10px 0 2px;width:auto;margin:0;cursor:pointer}
 #homeWatch .watch-row:nth-child(n+4){display:none}
+.fwd-bar{margin:8px 0 6px}
+.card-more{margin-top:8px}.card-more>summary{cursor:pointer;color:var(--muted);font-size:13.5px;padding:10px 0;min-height:44px}
 body.simple .live-badge{bottom:calc(72px + env(safe-area-inset-bottom))}
 .mini-row .mr-chips{flex:1 1 auto;min-width:0}.mini-row .mr-px{flex:none;margin-left:6px}
 </style>
@@ -1765,7 +1767,7 @@ window.EVIDENCE_LEDGER = {"now": "2026-10-27T00:00:00Z", "source": "research/led
   }
   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return "&#" + c.charCodeAt(0) + ";"; }); }
   // The app version (android/app/build.gradle versionName; tests/js/run_tests.py checks they match).
-  var APP_VERSION = "8.1";
+  var APP_VERSION = "8.2";
   // One line-icon family for the screen (24px grid, 1.8 stroke, round ends), drawn in the text colour.
   var ICONS = { check: '<path d="M5 12.5l4.2 4.2L19 7"/>', alert: '<path d="M12 4 2.8 19.5h18.4z"/><path d="M12 10v4.5M12 17.3v.2"/>',
     news: '<rect x="3.5" y="5" width="13" height="14" rx="2"/><path d="M16.5 9h3v7.5a2.5 2.5 0 0 1-5 0"/><path d="M7 9h6M7 12.5h6M7 16h3.5"/>',
@@ -2681,6 +2683,28 @@ window.EVIDENCE_LEDGER = {"now": "2026-10-27T00:00:00Z", "source": "research/led
   // NO TRADE for new entries while the system's own last 30 days are worse than anything the test ever had over the same
   // number of trades (the evidence no longer covers it); exits still go out.
   function systemPaused() { return !!(RECENT && RECENT.N && RECENT.lvl === "bad"); }
+  // A trade the app would have sent: leverage from the stop (liquidation 1.5x beyond it) at least 5x, as the evidence.
+  function signalled(t) { return Math.max(1, Math.floor(1 / (1.5 * t.risk / t.entry + FUT.mmrSafe))) >= 5; }
+  // Forward test from this date: the rule's trades on data that did not exist when it was chosen and tested. Closed
+  // trades are kept on the phone (the app sees only the last 250 days of bars), keyed by coin and entry time.
+  var FORWARD_FROM = Date.UTC(2026, 9, 28);
+  var Forward = {
+    merge: function (results) {
+      var store = {};
+      try { store = JSON.parse(localStorage.getItem("forward.v1") || "{}"); } catch (e) { store = {}; }
+      results.forEach(function (r) { (r.forward || []).forEach(function (t) { store[t.symbol + "|" + t.entry_time] = t; }); });
+      try { localStorage.setItem("forward.v1", JSON.stringify(store)); } catch (e) { /* the record still shows this session */ }
+      var closed = Object.keys(store).map(function (k) { return store[k]; }).sort(function (a, b) { return a.exit_time - b.exit_time; });
+      var open = results.map(function (r) { return r.forwardOpen; }).filter(Boolean);
+      var n = closed.length, sum = closed.reduce(function (a, t) { return a + t.r; }, 0);
+      var gp = closed.reduce(function (a, t) { return a + Math.max(0, t.r); }, 0), gl = closed.reduce(function (a, t) { return a - Math.min(0, t.r); }, 0);
+      var months = {}, eq = 1, peak = 1, dd = 0;
+      closed.forEach(function (t) { var m = new Date(t.exit_time + 7 * 3600000).toISOString().slice(0, 7), g = eq * 0.0025 * t.r; months[m] = (months[m] || 0) + g; eq += g; peak = Math.max(peak, eq); dd = Math.max(dd, 1 - eq / peak); });
+      var mv = Object.keys(months).map(function (k) { return months[k]; });
+      return { closed: closed, open: open, n: n, sumR: sum, avgR: n ? sum / n : null, win: n ? 100 * closed.filter(function (t) { return t.r > 0; }).length / n : null,
+        pf: gl ? gp / gl : null, months: mv.length, posMonths: mv.length ? 100 * mv.filter(function (v) { return v > 0; }).length / mv.length : null, ddPct: 100 * dd };
+    }
+  };
   function recentFrom(results) {
     var all = [];
     results.forEach(function (r) { (r.recent || []).forEach(function (t) { all.push(Object.assign({ symbol: r.symbol }, t)); }); });
@@ -2995,6 +3019,22 @@ window.EVIDENCE_LEDGER = {"now": "2026-10-27T00:00:00Z", "source": "research/led
     // days on the selected coins, so a bad stretch is not hidden behind the long average.
     // What is validated for real money and what is not: the locked approval gate (research/hourly, 27 Oct 2026) and, when
     // the independent ledger has run (window.EVIDENCE_LEDGER, research/ledger), its result for each item.
+    // The forward test against the locked gate: the only test on data nobody has seen. Needs 200 closed trades.
+    function forwardHtml(F) {
+      var since = thai(FORWARD_FROM).slice(0, 8), P = function (ok) { return ok ? '<b class="up">ผ่าน</b>' : '<b class="down">ยังไม่ผ่าน</b>'; };
+      var row = function (k, v) { return '<div class="risk-row"><span>' + k + "</span><b>" + v + "</b></div>"; };
+      var enough = F.n >= 200;
+      return '<div class="card fwd-card"><div class="card-hd"><b>ทดสอบล่วงหน้า (Forward)</b><span class="chip ' + (enough ? "good" : "warn") + '">' + F.n + " / 200 ไม้</span></div>" +
+        '<p class="fine">ทุกไม้ที่ระบบให้สัญญาณตั้งแต่ ' + since + " บนข้อมูลใหม่ที่ไม่มีใครเห็นตอนเลือกและทดสอบสูตร · เก็บให้อัตโนมัติ ไม่ต้องบันทึกเอง · เป็นหลักฐานชุดเดียวที่ตัดสินได้จริงว่าใช้เงินจริงได้ไหม</p>" +
+        '<div class="bar fwd-bar"><i style="width:' + Math.min(100, F.n / 2) + '%"></i></div>' +
+        (F.n ? row("ไม้ที่ปิดแล้ว", F.n + " ไม้ · ชนะ " + fmt(F.win, 0) + '% · รวม <span class="' + tone(F.sumR) + '">' + fmt(F.sumR, 1, true) + "R</span> · เฉลี่ย " + fmt(F.avgR, 3, true) + "R") +
+          row("PF ≥ 1.15", (F.pf !== null ? fmt(F.pf, 2) : "—") + " · " + (enough ? P(F.pf >= 1.15) : "รอครบ 200 ไม้")) +
+          row("เดือนบวก ≥ 60%", (F.posMonths !== null ? fmt(F.posMonths, 0) + "% ของ " + F.months + " เดือน" : "—") + " · " + (enough ? P(F.posMonths >= 60) : "รอครบ 200 ไม้")) +
+          row("ลงลึกสุด ≤ 8% (เสี่ยง 0.25%)", fmt(F.ddPct, 1) + "% · " + (enough ? P(F.ddPct <= 8) : "รอครบ 200 ไม้"))
+          : '<p class="fine">ยังไม่มีไม้ที่ปิด · ระบบเข้าไม้ราว 1–2 ไม้ต่อวันรวม 12 เหรียญ ครบ 200 ไม้ราว 4–6 เดือน</p>') +
+        (F.open.length ? row("ถืออยู่", F.open.length + " ไม้ · ตอนนี้ " + fmt(F.open.reduce(function (a, t) { return a + t.r; }, 0), 2, true) + "R") : "") +
+        '<p class="fine">ผลเป็นของระบบจำลองตามสูตร (ค่าธรรมเนียม slippage funding หักแล้ว) ไม่ใช่ไม้ใน Binance ของคุณ · ล้างข้อมูลแอปแล้วไม้ที่เก่ากว่า 250 วันจะหาย</p></div>';
+    }
     function validationHtml() {
       var L = window.EVIDENCE_LEDGER, rows = L && L.gate ? Object.keys(L.gate).map(function (k) { return [k, L.gate[k]]; }) : [
         ["OOS ใหม่ที่ไม่เคยแตะ ≥ 200 ไม้", "UNKNOWN · ยังไม่มี (ข้อมูล 2020–2026 ถูกดูแล้วทั้งหมด)"],
@@ -3068,8 +3108,9 @@ window.EVIDENCE_LEDGER = {"now": "2026-10-27T00:00:00Z", "source": "research/led
           fact("ขนาด", '<span data-q>' + qtyTxt(z.qty) + "</span><small>" + coin + "</small>") +
           fact("Margin", '<span data-m>' + fmt(z.marginB, 0) + "</span><small>บาท</small>") +
           fact("เสี่ยง", '<span data-rk>' + fmt(z.lossB / cap * 100, 2) + '%</span><small data-rb>≈ ' + fmt(z.lossB, 0) + " บาท</small>") + "</div>" +
-        '<p class="fine">Isolated x' + g.lev + " · เข้าภายใน " + thai(g.expires).slice(9, 14) + " น. · ตั้ง SL ใน Binance ทันที · ที่เหลือปิดเมื่อแอปเด้ง \"ปิดไม้\"" +
-          (g.minSize ? " · ขนาดขั้นต่ำของ Binance" : " · ขนาดคิดจากราคาตอนนี้ ให้เสี่ยงเท่าเดิมถึง SL") + "</p>" + riskBox(g, z, v) + marginNote(z.marginB) + moodLine(r.symbol, g.dir) +
+        '<p class="fine">Isolated x' + g.lev + " · เข้าภายใน " + thai(g.expires).slice(9, 14) + " น. · ตั้ง SL ใน Binance ทันที · ที่เหลือปิดเมื่อแอปเด้ง \"ปิดไม้\"</p>" + marginNote(z.marginB) +
+        '<details class="card-more"><summary>ความเสี่ยงของไม้นี้ · ข่าว</summary>' + riskBox(g, z, v) + moodLine(r.symbol, g.dir) +
+          '<p class="fine">' + (g.minSize ? "ขนาดขั้นต่ำของ Binance" : "ขนาดคิดจากราคาตอนนี้ ให้เสี่ยงเท่าเดิมถึง SL") + "</p></details>" +
         '<details class="more-chart" data-draw="sig:' + i + '"><summary>รายละเอียดทั้งหมด + กราฟ</summary>' + tradeSheet(r, g, z, TREND.tf, i) + "</details></div>";
     }
     // A valid signal that cannot be opened (capital short of Binance's smallest order at the set risk, or the system on
@@ -3148,6 +3189,7 @@ window.EVIDENCE_LEDGER = {"now": "2026-10-27T00:00:00Z", "source": "research/led
     // then its last 30 days. Everything else (confidence, news, plan and routine, what is normal) folds into one section.
     function followView(list, items) {
       RECENT = recentFrom(results);
+      var F = Forward.merge(results);
       var sch = trendSchedule(Date.now()), c = trendConfidence(), bg = {}, lc = null, coin = function (r) { return r.symbol.replace("USDT", ""); };
       try { bg = window.NativeHttp && window.NativeHttp.lastScanStatus ? JSON.parse(window.NativeHttp.lastScanStatus() || "{}") : {}; } catch (e) { /* none */ }
       try { lc = JSON.parse(localStorage.getItem("liveCheck") || "null"); } catch (e) { /* none yet */ }
@@ -3223,13 +3265,15 @@ window.EVIDENCE_LEDGER = {"now": "2026-10-27T00:00:00Z", "source": "research/led
       var home = '<div id="smLive">' + liveHtml() + "</div>" + h + noTrade +
         '<div class="card"><div class="card-hd"><b>สัญญาณใหม่</b><span class="cnt" id="homeCnt"></span></div>' + minis +
           '<div class="idle-line" id="homeIdle">' + (busyNow ? "กำลังเช็ก " + selectedCoins().length + " เหรียญ…" : "<b>NO SIGNAL</b> · ตอนนี้ไม่มีสัญญาณที่เข้าได้ · แอปเด้งแจ้งเตือนเมื่อมี") + "</div></div>" +
+        '<div class="card home-line" data-goto="res"><div><b>ทดสอบล่วงหน้า</b><small class="fine" style="display:block">' + F.n + " / 200 ไม้ · เริ่ม " + thai(FORWARD_FROM).slice(0, 8) + " · แตะดู</small></div>" +
+          (F.n ? '<b class="big ' + tone(F.sumR) + '">' + fmt(F.sumR, 1, true) + "R</b>" : '<b class="big muted">—</b>') + "</div>" +
         '<div class="card home-line" data-goto="res"><div><b>ผล 30 วันของระบบ</b><small class="fine" style="display:block">' + cl.length + " ไม้ที่ปิด" + (word30 ? " · " + word30 : "") + " · แตะดูรายละเอียด</small></div>" +
           '<b class="big ' + tone(sum30) + '">' + fmt(sum30, 1, true) + "R</b></div>" +
         (watch.length ? '<div class="card"><div class="card-hd"><b>ใกล้จุดเข้า</b><small>3 เหรียญที่ใกล้สุด · รอแท่ง 4 ชม. ปิด</small></div><div class="watch" id="homeWatch">' + watchRows +
           '<p class="fine hidden"></p></div><button class="link-btn" type="button" data-goto="sig" data-scroll="secWatch">ดูทั้งหมด ' + watch.length + " เหรียญ ›</button></div>" : "");
       // Results: how the rule did, by period, and what is and is not validated.
       var T = window.EVIDENCE_TREND, port = T && T.portfolio && T.portfolio[String(trendRiskPct())];
-      var res = '<div class="pane-hd">ผลทดสอบ</div>' + validationHtml() + periodsHtml() + perfHtml() + confidenceHtml() +
+      var res = '<div class="pane-hd">ผลทดสอบ</div>' + forwardHtml(F) + validationHtml() + periodsHtml() + perfHtml() + confidenceHtml() +
         (normalText() ? '<div class="card"><p>' + esc(normalText()) + '</p><p class="fine">ผลจริงอยู่ในกรอบนี้ = สูตรทำงานปกติ ไม่ใช่สูตรพัง · เทียบผลจริงได้ที่ เพิ่มเติม → เมนูเต็ม → พอร์ต → Paper' +
           (lc ? " (ล่าสุด: " + esc(lc.text.split(":")[0]) + ", " + lc.n + " ไม้)" : "") + "</p></div>" : "") +
         (port ? '<div class="card"><p>ผลทดสอบ ' + trendPeriod() + " (12 เหรียญ, walk-forward): เสี่ยง " + trendRiskPct() + "%/ไม้ → พอร์ตโตเฉลี่ยปีละ " +
@@ -3966,10 +4010,16 @@ window.EVIDENCE_LEDGER = {"now": "2026-10-27T00:00:00Z", "source": "research/led
       bars: bars.slice(-90),
       // The rule's trades that closed in the last 30 days (a calendar window, as the test's 30-day band) and a position
       // still open from them: the system's own record on the main screen.
-      recent: res.trades.filter(function (t) { return t.exit_time >= week; }).map(function (t) {
+      recent: res.trades.filter(function (t) { return t.exit_time >= week && signalled(t); }).map(function (t) {
         return { dir: t.dir, entry: t.entry, entry_time: t.entry_time, exit_time: t.exit_time, r: t.r, open: false, reason: t.reason, cost: t.cost };
-      }).concat(res.pos && res.pos.entry_time >= week ? [{ dir: res.pos.dir, entry: res.pos.entry, entry_time: res.pos.entry_time, open: true,
-        r: res.pos.dir * (last.close - res.pos.entry) / res.pos.risk }] : []) };
+      }).concat(res.pos && res.pos.entry_time >= week && signalled(res.pos) ? [{ dir: res.pos.dir, entry: res.pos.entry, entry_time: res.pos.entry_time, open: true,
+        r: res.pos.dir * (last.close - res.pos.entry) / res.pos.risk }] : []),
+      // The forward test: every trade the app signals from FORWARD_FROM on (new data nobody has looked at).
+      forward: res.trades.filter(function (t) { return t.entry_time >= FORWARD_FROM && signalled(t); }).map(function (t) {
+        return { symbol: symbol, dir: t.dir, entry_time: t.entry_time, exit_time: t.exit_time, r: t.r, reason: t.reason };
+      }),
+      forwardOpen: res.pos && res.pos.entry_time >= FORWARD_FROM && signalled(res.pos) ? { symbol: symbol, dir: res.pos.dir, entry_time: res.pos.entry_time,
+        r: res.pos.dir * (last.close - res.pos.entry) / res.pos.risk } : null };
     var candle = last.close_time + 1, dp = decimalsOf(rule.tick);
     if (res.pos) {
       var p = res.pos;
@@ -4699,7 +4749,7 @@ window.EVIDENCE_LEDGER = {"now": "2026-10-27T00:00:00Z", "source": "research/led
         '<button type="button" class="mini ghost" id="rtRestore" style="width:100%;margin-top:6px">กู้คืนจากข้อความที่วาง</button><div id="rtStatus" class="status-line"></div></details>';
     }
     // Everything the trader built up on this phone, as one JSON text (no keys: the app has none).
-    var KEEP = ["portfolio.v1", "paper.v2", "liveCheck", "routine.v1", "alertCoins", "tradeTf", "tpMode", "pfCapital", "pfRisk", "pfTarget", "alertLev", "guide.flags", "floatSeen"];
+    var KEEP = ["portfolio.v1", "paper.v2", "liveCheck", "routine.v1", "forward.v1", "alertCoins", "tradeTf", "tpMode", "pfCapital", "pfRisk", "pfTarget", "alertLev", "guide.flags", "floatSeen"];
     function backup() {
       var out = { app: "POC Signal", v: 1, at: Date.now(), data: {} };
       KEEP.forEach(function (k) { try { var v = localStorage.getItem(k); if (v !== null) out.data[k] = v; } catch (e) { /* skip */ } });

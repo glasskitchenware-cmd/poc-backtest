@@ -337,6 +337,14 @@ def main():
     note = r["smMain"].split("สัญญาณใหม่ · ยังอยู่ในจุดเข้า", 1)[0]
     check("แตะ SL ≈ −1.00R" in ended and "LONG BTC แตะ SL แล้ว · จบสัญญาณ" in note and "ถือ 1 ไม้ต่อ" not in note,
           "the ended card shows its result, and the system's note no longer says it holds BTC")
+    fwd = {"BTCUSDT|1793232000000": {"symbol": "BTCUSDT", "dir": 1, "entry_time": 1793232000000, "exit_time": 1793404800000, "r": 2.5, "reason": "exit"},
+           "ETHUSDT|1793250000000": {"symbol": "ETHUSDT", "dir": -1, "entry_time": 1793250000000, "exit_time": 1793300000000, "r": -1.04, "reason": "stop"},
+           "SOLUSDT|1793260000000": {"symbol": "SOLUSDT", "dir": 1, "entry_time": 1793260000000, "exit_time": 1793310000000, "r": -0.5, "reason": "exit"}}
+    r = run(page, "forward", {"storage": dict(h4, **{"forward.v1": json.dumps(fwd)}), "capital": 1_000_000, "trendForce": {}, "clickTf": "4h", "waitMs": 15000, "justClosed": 14_400_000}, bg=False)
+    check("ทดสอบล่วงหน้า (Forward)" in r["res"] and ("3 / 200 ไม้" in r["res"] or "/ 200 ไม้" in r["res"]) and "รวม +1.0R" in r["res"] and "เฉลี่ย +0.320R" in r["res"] and "ชนะ 33%" in r["res"],
+          "results: the forward test shows trades kept on the phone (3 trades, +0.96R shown as +1.0R, 33% won) against 200 needed")
+    check("ทดสอบล่วงหน้า" in r["home"] and "/ 200 ไม้" in r["home"], "home: one line with the forward test's progress")
+    check(all(k in (r.get("forwardStore") or "") for k in fwd), "the stored forward trades are kept when the scan merges new ones")
     r = run(page, "home_none", {"storage": h4, "capital": 1_000_000, "trendForce": {}, "clickTf": "4h", "waitMs": 15000, "justClosed": 14_400_000}, bg=False)
     check(r["homeRows"] == [] and "NO SIGNAL" in r["home"] and r["paneOn"] == "home", "home with no signal says NO SIGNAL and lists nothing")
     r = run(page, "live_far", {"storage": h4, "capital": 1_000_000, "trendForce": {"BTCUSDT": "NEAR_LONG"}, "clickTf": "4h", "waitMs": 15000,
