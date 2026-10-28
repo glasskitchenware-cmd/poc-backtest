@@ -306,3 +306,18 @@ at support (EMA50 zone) in the trend's direction (EMA200), stop beyond the patte
 The daily version looked good in 2020-2023 and lost in 2024-2026 (both halves negative, 38% positive months, 12%
 drawdown at 0.25% risk, negative at 2x costs). On 1h and 4h the patterns lost in both periods over thousands of trades.
 None of the patterns raised the win rate above about 46%. Not added to the app.
+
+## Day trades closed within the Thai day (28 Oct 2026, not passed)
+
+`research/intraday/intraday.js`, `research/intraday/intraday_20261028.json`: 1h bars, 12 coins, chosen on 2020-2023,
+tested once on 2024-01..2026-10; every trade opens and closes within the same Thai day (longest hold 19 hours).
+
+| Rule | 2020-2023 trades / win / avg R / PF | 2024-2026 trades / win / avg R / PF |
+|---|---|---|
+| D1 last-hour momentum (day move ≥ 2%) — chosen | 8,243 / 42.4% / −0.073 / 0.76 | 5,737 / 41.6% / −0.095 / 0.71 |
+| D2 opening-range breakout with the daily trend | 7,419 / 35.7% / −0.130 / 0.80 | 5,664 / 37.4% / −0.118 / 0.82 |
+| D3 RSI(2) pullback in the daily trend | 20,114 / 60.7% / −0.050 / 0.79 | 16,155 / 56.1% / −0.084 / 0.68 |
+
+All three lost in both periods and on the 25 unseen coins (D1: 28,929 trades, −0.061R). D3 won 56-61% of its trades and
+still lost: the losers are larger than the winners and each round trip pays about 0.14% in fees and slippage. From D1 at
+1x and 2x costs, its edge before costs is about +0.02R per trade, far less than the costs. Not added to the app.
