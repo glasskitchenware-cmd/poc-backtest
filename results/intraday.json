@@ -1,0 +1,106 @@
+{
+ "generated": "2026-10-28T07:40:27.050Z",
+ "now": "2026-10-28T00:00:00.000Z",
+ "status": "RESEARCH ONLY",
+ "rules": {
+  "D1": {
+   "selection": {
+    "n": 8243,
+    "win": 42.4,
+    "avgR": -0.0733,
+    "sumR": -604.3,
+    "pf": 0.761,
+    "cagrPct": -32.58,
+    "maxDDPct": 82.55,
+    "mar": -0.395,
+    "months": 46,
+    "posMonthsPct": 26.1
+   },
+   "holdout": {
+    "n": 5737,
+    "win": 41.6,
+    "avgR": -0.0949,
+    "sumR": -544.4,
+    "pf": 0.709,
+    "cagrPct": -39.5,
+    "maxDDPct": 76.47,
+    "mar": -0.517,
+    "months": 34,
+    "posMonthsPct": 23.5
+   },
+   "maxHoldHours": 1
+  },
+  "D2": {
+   "selection": {
+    "n": 7419,
+    "win": 35.7,
+    "avgR": -0.13,
+    "sumR": -964.3,
+    "pf": 0.795,
+    "cagrPct": -46.75,
+    "maxDDPct": 92.08,
+    "mar": -0.508,
+    "months": 47,
+    "posMonthsPct": 14.9
+   },
+   "holdout": {
+    "n": 5664,
+    "win": 37.4,
+    "avgR": -0.1175,
+    "sumR": -665.7,
+    "pf": 0.815,
+    "cagrPct": -46.25,
+    "maxDDPct": 83.96,
+    "mar": -0.551,
+    "months": 34,
+    "posMonthsPct": 20.6
+   },
+   "maxHoldHours": 19
+  },
+  "D3": {
+   "selection": {
+    "n": 20114,
+    "win": 60.7,
+    "avgR": -0.0496,
+    "sumR": -998,
+    "pf": 0.791,
+    "cagrPct": -47.45,
+    "maxDDPct": 92.71,
+    "mar": -0.512,
+    "months": 47,
+    "posMonthsPct": 14.9
+   },
+   "holdout": {
+    "n": 16155,
+    "win": 56.1,
+    "avgR": -0.0841,
+    "sumR": -1358.7,
+    "pf": 0.677,
+    "cagrPct": -70.65,
+    "maxDDPct": 96.88,
+    "mar": -0.729,
+    "months": 34,
+    "posMonthsPct": 2.9
+   },
+   "maxHoldHours": 14.5
+  }
+ },
+ "chosen": "D1",
+ "unseen": {
+  "n": 28929,
+  "win": 43.7,
+  "avgR": -0.0613,
+  "sumR": -1772.5,
+  "pf": 0.798
+ },
+ "gate": {
+  ">= 200 trades": "PASS 5737",
+  "PF >= 1.15": "FAIL 0.709",
+  "both halves profitable": "FAIL -219.1R / -325.3R",
+  ">= 60% positive months": "FAIL 23.5%",
+  "max DD <= 8% at 0.25%": "FAIL 76.47%",
+  "positive at 2x costs": "FAIL -0.2118R/trade",
+  "forward paper": "UNKNOWN"
+ },
+ "passed": false
+}
